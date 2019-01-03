@@ -1,0 +1,116 @@
+%
+% File:   popcnt_sieve.qasm
+% Date:   28-Nov-18
+% Author: E. W. Postlethwaite
+%
+% Simple illustration of a circuit we might want to implement during quantum sieving
+%
+%     defbox  add4,4,0,'\texttt{add}'
+% 
+%     qubit   v0
+%     qubit   a0,0
+%     qubit   w0
+%     qubit   w1
+%     qubit   a1,0
+%     qubit   v1
+%     qubit   v2
+%     qubit   a2,0
+%     qubit   w2
+%     qubit   w3
+%     qubit   a3,0
+%     qubit   v3
+% 
+%     cnot    v0,w0
+%     cnot    v1,w1
+%     cnot    v2,w2
+%     cnot    v3,w3
+% 
+%     add4    a0,w0,w1,a1
+%     add4    a2,w2,w3,a3
+
+%  Time 01:
+%    Gate 00 cnot(v0,w0)
+%    Gate 01 cnot(v1,w1)
+%    Gate 02 cnot(v2,w2)
+%    Gate 03 cnot(v3,w3)
+%  Time 02:
+%    Gate 04 add4(a0,w0,w1,a1)
+%    Gate 05 add4(a2,w2,w3,a3)
+
+% Qubit circuit matrix:
+%
+% v0: gAxA, n  , n  
+% a0: n  , gBxB, n  
+% w0: gAxC, gBxC, n  
+% w1: gAxD, gBxD, n  
+% a1: n  , gBxE, n  
+% v1: gAxF, n  , n  
+% v2: gAxG, n  , n  
+% a2: n  , gBxH, n  
+% w2: gAxI, gBxI, n  
+% w3: gAxJ, gBxJ, n  
+% a3: n  , gBxK, n  
+% v3: gAxL, n  , n  
+
+\documentclass[11pt]{article}
+\input{xyqcirc.tex}
+
+% definitions for the circuit elements
+
+\def\gAxA{\b\w\A{gAxA}}
+\def\gAxC{\o\w\A{gAxC}}
+\def\gAxF{\b\w\A{gAxF}}
+\def\gAxD{\o\w\A{gAxD}}
+\def\gAxG{\b\w\A{gAxG}}
+\def\gAxI{\o\w\A{gAxI}}
+\def\gAxL{\b\w\A{gAxL}}
+\def\gAxJ{\o\w\A{gAxJ}}
+\def\gBxB{\gnqubit{\texttt{add}}{ddd}\w\A{gBxB}}
+\def\gBxC{\gspace{\texttt{add}}\w\A{gBxC}}
+\def\gBxD{\gspace{\texttt{add}}\w\A{gBxD}}
+\def\gBxE{\gspace{\texttt{add}}\w\A{gBxE}}
+\def\gBxH{\gnqubit{\texttt{add}}{ddd}\w\A{gBxH}}
+\def\gBxI{\gspace{\texttt{add}}\w\A{gBxI}}
+\def\gBxJ{\gspace{\texttt{add}}\w\A{gBxJ}}
+\def\gBxK{\gspace{\texttt{add}}\w\A{gBxK}}
+
+% definitions for bit labels and initial states
+
+\def\bA{ \q{v_{0}}}
+\def\bB{\qv{a_{0}}{0}}
+\def\bC{ \q{w_{0}}}
+\def\bD{ \q{w_{1}}}
+\def\bE{\qv{a_{1}}{0}}
+\def\bF{ \q{v_{1}}}
+\def\bG{ \q{v_{2}}}
+\def\bH{\qv{a_{2}}{0}}
+\def\bI{ \q{w_{2}}}
+\def\bJ{ \q{w_{3}}}
+\def\bK{\qv{a_{3}}{0}}
+\def\bL{ \q{v_{3}}}
+
+% The quantum circuit as an xymatrix
+
+\xymatrix@R=5pt@C=10pt{
+    \bA & \gAxA &\n   &\n  
+\\  \bB & \n   &\gBxB &\n  
+\\  \bC & \gAxC &\gBxC &\n  
+\\  \bD & \gAxD &\gBxD &\n  
+\\  \bE & \n   &\gBxE &\n  
+\\  \bF & \gAxF &\n   &\n  
+\\  \bG & \gAxG &\n   &\n  
+\\  \bH & \n   &\gBxH &\n  
+\\  \bI & \gAxI &\gBxI &\n  
+\\  \bJ & \gAxJ &\gBxJ &\n  
+\\  \bK & \n   &\gBxK &\n  
+\\  \bL & \gAxL &\n   &\n  
+%
+% Vertical lines and other post-xymatrix latex
+%
+\ar@{-}"gAxC";"gAxA"
+\ar@{-}"gAxD";"gAxF"
+\ar@{-}"gAxI";"gAxG"
+\ar@{-}"gAxJ";"gAxL"
+}
+
+\end{document}

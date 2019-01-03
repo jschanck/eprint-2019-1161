@@ -1,0 +1,63 @@
+%
+% File:   nexclusive_or.qasm
+% Date:   29-Nov-2018
+% Author: E. W. Postlethwaite
+%
+% A non exclusive reversible OR gate. If a is instead 1, then a performs NOT non exclusive OR
+%
+% 
+%     qubit   a,0
+%     qubit   x
+%     qubit   y
+% 
+%     toffoli x,y,a
+%     cnot    y,x
+%     cnot    a,x
+
+%  Time 01:
+%    Gate 00 toffoli(x,y,a)
+%  Time 02:
+%    Gate 01 cnot(y,x)
+%  Time 03:
+%    Gate 02 cnot(a,x)
+
+% Qubit circuit matrix:
+%
+% a: gAxA, n  , gCxA, n  
+% x: gAxB, gBxB, gCxB, n  
+% y: gAxC, gBxC, n  , n  
+
+\documentclass[11pt]{article}
+\input{xyqcirc.tex}
+
+% definitions for the circuit elements
+
+\def\gAxB{\b\w\A{gAxB}}
+\def\gAxC{\b\w\A{gAxC}}
+\def\gAxA{\o\w\A{gAxA}}
+\def\gBxC{\b\w\A{gBxC}}
+\def\gBxB{\o\w\A{gBxB}}
+\def\gCxA{\b\w\A{gCxA}}
+\def\gCxB{\o\w\A{gCxB}}
+
+% definitions for bit labels and initial states
+
+\def\bA{\qv{a}{0}}
+\def\bB{ \q{x}}
+\def\bC{ \q{y}}
+
+% The quantum circuit as an xymatrix
+
+\xymatrix@R=5pt@C=10pt{
+    \bA & \gAxA &\n   &\gCxA &\n  
+\\  \bB & \gAxB &\gBxB &\gCxB &\n  
+\\  \bC & \gAxC &\gBxC &\n   &\n  
+%
+% Vertical lines and other post-xymatrix latex
+%
+\ar@{-}"gAxA";"gAxB"\ar@{-}"gAxA";"gAxC"
+\ar@{-}"gBxB";"gBxC"
+\ar@{-}"gCxB";"gCxA"
+}
+
+\end{document}

@@ -1,0 +1,94 @@
+%
+% File:   popcnt_sieve.qasm
+% Date:   28-Nov-18
+% Author: E. W. Postlethwaite
+%
+% Simple illustration of a circuit we might want to implement during quantum sieving
+%
+%     defbox  add6,6,0,'\texttt{add}'
+% 
+%     qubit   w1
+%     qubit   w3
+%     qubit   a0
+%     qubit   s^{01}_{0}
+%     qubit   s^{23}_{0}
+%     qubit   s^{01}_{1}
+%     qubit   s^{23}_{1}
+%     qubit   a2
+%     qubit   v0
+%     qubit   v1
+%     qubit   v2
+%     qubit   v3
+% 
+%     add6    a0,s^{01}_{0},s^{23}_{0},s^{01}_{1},s^{23}_{1},a2
+% 
+%     nop     w1
+
+%  Time 01:
+%    Gate 00 add6(a0,s^{01}_{0},s^{23}_{0},s^{01}_{1},s^{23}_{1},a2)
+%    Gate 01 nop(w1)
+
+% Qubit circuit matrix:
+%
+% w1: gAxA, n  
+% w3: n  , n  
+% a0: gAxC, n  
+% s^{01}_{0}: gAxD, n  
+% s^{23}_{0}: gAxE, n  
+% s^{01}_{1}: gAxF, n  
+% s^{23}_{1}: gAxG, n  
+% a2: gAxH, n  
+% v0: n  , n  
+% v1: n  , n  
+% v2: n  , n  
+% v3: n  , n  
+
+\documentclass[11pt]{article}
+\input{xyqcirc.tex}
+
+% definitions for the circuit elements
+
+\def\gAxC{\gnqubit{\texttt{add}}{ddddd}\w\A{gAxC}}
+\def\gAxD{\gspace{\texttt{add}}\w\A{gAxD}}
+\def\gAxE{\gspace{\texttt{add}}\w\A{gAxE}}
+\def\gAxF{\gspace{\texttt{add}}\w\A{gAxF}}
+\def\gAxG{\gspace{\texttt{add}}\w\A{gAxG}}
+\def\gAxH{\gspace{\texttt{add}}\w\A{gAxH}}
+\def\gAxA{*-{}\w\A{gAxA}}
+
+% definitions for bit labels and initial states
+
+\def\bA{ \q{w_{1}}}
+\def\bB{ \q{w_{3}}}
+\def\bC{ \q{a_{0}}}
+\def\bD{ \q{s^{01}_{0}}}
+\def\bE{ \q{s^{23}_{0}}}
+\def\bF{ \q{s^{01}_{1}}}
+\def\bG{ \q{s^{23}_{1}}}
+\def\bH{ \q{a_{2}}}
+\def\bI{ \q{v_{0}}}
+\def\bJ{ \q{v_{1}}}
+\def\bK{ \q{v_{2}}}
+\def\bL{ \q{v_{3}}}
+
+% The quantum circuit as an xymatrix
+
+\xymatrix@R=5pt@C=10pt{
+    \bA & \gAxA &\n  
+\\  \bB & \n   &\n  
+\\  \bC & \gAxC &\n  
+\\  \bD & \gAxD &\n  
+\\  \bE & \gAxE &\n  
+\\  \bF & \gAxF &\n  
+\\  \bG & \gAxG &\n  
+\\  \bH & \gAxH &\n  
+\\  \bI & \n   &\n  
+\\  \bJ & \n   &\n  
+\\  \bK & \n   &\n  
+\\  \bL & \n   &\n  
+%
+% Vertical lines and other post-xymatrix latex
+%
+}
+
+\end{document}

@@ -1,0 +1,103 @@
+%
+% File:   popcnt_sieve.qasm
+% Date:   28-Nov-18
+% Author: E. W. Postlethwaite
+%
+% Simple illustration of a circuit we might want to implement during quantum sieving
+%
+% 
+%     qubit   v0
+%     qubit   v1
+%     qubit   v2
+%     qubit   v3
+%     qubit   s^{0123}_{0}
+%     qubit   a0
+%     qubit   s^{0123}_{1}
+%     qubit   s^{0123}_{2}
+%     qubit   w1
+%     qubit   w3
+%     qubit   s^{23}_{0}
+%     qubit   s^{23}_{1}
+% 
+%     toffoli s^{0123}_{1},s^{0123}_{2},a0
+%     cnot    s^{0123}_{2},s^{0123}_{1}
+%     cnot    a0,s^{0123}_{1}
+% 
+%     nop     v0
+
+%  Time 01:
+%    Gate 00 toffoli(s^{0123}_{1},s^{0123}_{2},a0)
+%    Gate 03 nop(v0)
+%  Time 02:
+%    Gate 01 cnot(s^{0123}_{2},s^{0123}_{1})
+%  Time 03:
+%    Gate 02 cnot(a0,s^{0123}_{1})
+
+% Qubit circuit matrix:
+%
+% v0: gAxA, n  , n  , n  
+% v1: n  , n  , n  , n  
+% v2: n  , n  , n  , n  
+% v3: n  , n  , n  , n  
+% s^{0123}_{0}: n  , n  , n  , n  
+% a0: gAxF, n  , gCxF, n  
+% s^{0123}_{1}: gAxG, gBxG, gCxG, n  
+% s^{0123}_{2}: gAxH, gBxH, n  , n  
+% w1: n  , n  , n  , n  
+% w3: n  , n  , n  , n  
+% s^{23}_{0}: n  , n  , n  , n  
+% s^{23}_{1}: n  , n  , n  , n  
+
+\documentclass[11pt]{article}
+\input{xyqcirc.tex}
+
+% definitions for the circuit elements
+
+\def\gAxG{\b\w\A{gAxG}}
+\def\gAxH{\b\w\A{gAxH}}
+\def\gAxF{\o\w\A{gAxF}}
+\def\gBxH{\b\w\A{gBxH}}
+\def\gBxG{\o\w\A{gBxG}}
+\def\gCxF{\b\w\A{gCxF}}
+\def\gCxG{\o\w\A{gCxG}}
+\def\gAxA{*-{}\w\A{gAxA}}
+
+% definitions for bit labels and initial states
+
+\def\bA{ \q{v_{0}}}
+\def\bB{ \q{v_{1}}}
+\def\bC{ \q{v_{2}}}
+\def\bD{ \q{v_{3}}}
+\def\bE{ \q{s^{0123}_{0}}}
+\def\bF{ \q{a_{0}}}
+\def\bG{ \q{s^{0123}_{1}}}
+\def\bH{ \q{s^{0123}_{2}}}
+\def\bI{ \q{w_{1}}}
+\def\bJ{ \q{w_{3}}}
+\def\bK{ \q{s^{23}_{0}}}
+\def\bL{ \q{s^{23}_{1}}}
+
+% The quantum circuit as an xymatrix
+
+\xymatrix@R=5pt@C=10pt{
+    \bA & \gAxA &\n   &\n   &\n  
+\\  \bB & \n   &\n   &\n   &\n  
+\\  \bC & \n   &\n   &\n   &\n  
+\\  \bD & \n   &\n   &\n   &\n  
+\\  \bE & \n   &\n   &\n   &\n  
+\\  \bF & \gAxF &\n   &\gCxF &\n  
+\\  \bG & \gAxG &\gBxG &\gCxG &\n  
+\\  \bH & \gAxH &\gBxH &\n   &\n  
+\\  \bI & \n   &\n   &\n   &\n  
+\\  \bJ & \n   &\n   &\n   &\n  
+\\  \bK & \n   &\n   &\n   &\n  
+\\  \bL & \n   &\n   &\n   &\n  
+%
+% Vertical lines and other post-xymatrix latex
+%
+\ar@{-}"gAxF";"gAxG"\ar@{-}"gAxF";"gAxH"
+\ar@{-}"gBxG";"gBxH"
+\ar@{-}"gCxG";"gCxF"
+}
+
+\end{document}
