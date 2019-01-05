@@ -95,16 +95,36 @@ An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is give
 
 We require at most $d$ ancillae as inputs to the \texttt{add} gates, with one definitely remaining in the state $\ket{0}$.
 Furthermore, we require $O(n)$ ancillae for the \texttt{OR} gates.
-In terms of $d$ this is $d + O(\log_{2}d)$ ancillae. The width of the circuit is therefore $3d + O(\log_{2}d)$, $2d$ of which represents $v, w$.
+In terms of $d$ this is $d + O(\log_{2}d)$ ancillae. The width of the circuit is therefore $3d + O(\log_{2}d)$, $2d$ of which represent $v, w$.
 
 The $d$ \texttt{CNOT}s require\dots\ $d$ \texttt{CNOT} gates.
 There are $d/2^{i}$ \texttt{add} gates which add two $i$ bit numbers together, for $i \in \{1, \dots, \lceil \log_{2}d\rceil\}$. Each has a number, linear in $i$, of \texttt{Toffoli} and \texttt{CNOT} gates. Therefore the number of such gates required is $O(d)$.
 The $O(n)$ \texttt{OR} gates require $O(n)$ \texttt{CNOT} and \texttt{Toffoli} gates, or $O(\log_{2}d)$ of both.
 In total the circuit has $O(d)$ \texttt{CNOT} and \texttt{Toffoli} gates.
 
-The depth of the circuit is $O\left({(\log_{2}d)}^{2}\right)$.
+The depth of the circuit is $O\left({(\log_{2}d)}^{2}\right)$. This is calculated as
+\[
+    \displaystyle\sum\limits_{i = 1}^{\lceil\log_{2}d\rceil}{O(i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} = O\left({(\log_{2} d)}^{2}\right) + O\left(\log_{2}(\log_{2}d)\right) = O\left({(\log_{2} d)}^{2}\right).
+\]
 
 \section*{Depth, Width and Size of Circuit with~\cite{Takahashi:2008:FQC} adder}
+
+The size of this circuit is the same, namely $O(d)$ \texttt{Toffoli} and \texttt{CNOT} gates.
+The ancillae requirements are higher, although still linear.
+Indeed, in~\cite{Takahashi:2008:FQC}, for large $n$ they give the number of ancillae to be $3n/\log n - O(\log n)$, and so the total number of ancillae required for the \texttt{add} gates is less than
+\[
+    \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{\frac{3id}{2^{i}}} \leq 6d.
+\]
+Therefore we require at most $6d + O(\log_{2}d)$ ancillae for a total width of at most $8d + O(\log_{2}d)$.
+Finally the depth of the circuit is calculated as
+\begin{align*}
+    \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{O(\log i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} &= O\left.\left(\frac{1}{2}\log(2\pi) + t(\log t - 1) + O(\log t)\right)\right|_{t = \lceil\log_{2}d\rceil} + O\left(\log_{2}(\log_{2}d)\right)\\
+    &= O\left(\log_{2}d\left(\log_{2}(\log_{2}d)\right)\right) + O\left(\log_{2}(\log_{d}d)\right)\\
+    &= O\left(\log_{2}d\left(\log_{2}(\log_{2}d)\right)\right),
+\end{align*}
+where the first sum is evaluated using a truncation of the Euler--Maclaurin formula. % chktex 8
+As expected this is a smaller depth than above.
+These results are summarised in Table~\ref{tab:GDW}.
 
 \bibliographystyle{alpha}
 \bibliography{local}
