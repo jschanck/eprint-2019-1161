@@ -37,12 +37,13 @@
 
 \maketitle
 
-Using the adder of~\cite{cuccaro2004new} we build a reversible circuit that takes as input the bitstring representation of two lattice vectors, takes a bitwise \texttt{CNOT}, determines the Hamming weight of the outcome and further determines whether this Hamming weight is greater than some bound.
+Using the adder of~\cite{cuccaro2004new} we build a reversible circuit that takes as input bitstring representatives of two lattice vectors, takes a bitwise \texttt{CNOT}, determines the Hamming weight of the outcome and further determines whether this Hamming weight is greater than some bound.
 This exact operation is the most frequently used operation in state of the art lattice sieving techniques.
 
-Throughout qubits $a_{i}$ are ancillae and are initialised as $\ket{0}$, the $v_{i}, w_{i} \in \{0, 1\}, i \in \{0, \dots, d - 1\}$ form the bitstring representations of lattice vectors $v, w$.
-These representations are calculated as the signs of the entries of $v$ and $w$, i.e.~a negative entry is mapped to $0$ and a positive or zero entry to $1$.
+Throughout qubits $a_{i}$ are ancillae and are initialised as $\ket{0}$, the $v_{i}, w_{i} \in \{0, 1\}, i \in \{0, \dots, d - 1\}$ form the bitstring representatives of lattice vectors $v, w$.
+These are calculated as the signs of the entries of $v$ and $w$, i.e.~a negative entry is mapped to $0$ and a positive or zero entry to $1$.
 This provides a lossy sketch of the lattice vectors under consideration.
+The \texttt{CNOT} gate is written as \texttt{CNOT}$(x, y) = (x, x \oplus y)$.
 The gates labelled \texttt{add} are the optimised adder of~\cite{cuccaro2004new}.
 To sum two $\ell$ bit numbers, this gate \texttt{add} takes $2\ell + 2$ inputs, the topmost and bottommost are ancillae and those inbetween are the interleaved bits of the numbers to be added.
 More precisely let $x = x_{\ell-1}\dots x_{0}$ and $y = y_{\ell-1}\dots y_{0}$ be two numbers to be added represented in binary, then \texttt{add}$(a_{0}, x_{0}, y_{0}, \dots, x_{\ell-1}, y_{\ell-1}, a_{1}) = (a_{0}, s_{0}, y_{0}, \dots, s_{\ell-1}, y_{\ell-1}, s_{\ell})$ with $s_{i}$ as bit $i$ of the sum.
@@ -51,12 +52,12 @@ We need some number, linear in $d$, of the \texttt{add} gates described above.
 
 The notation $s^{i\dots j}_{k}$ in Figure~\ref{fig:naive_popcnt} denotes bit $k$ of the sum (over the integers)
 \[
-    \displaystyle\sum\limits_{l=i}^{j}{\texttt{CNOT}(v_{l} \oplus w_{l})}.
+    \displaystyle\sum\limits_{l=i}^{j}{v_{l} \oplus w_{l}}.
 \]
 Finally the \texttt{OR} gate in Figure~\ref{subfig:naive_popcnt3} consumes an ancillary, \texttt{OR}$(a, x, y) = (a \oplus (xy), x\vee y, y)$.
 
-A reduction between $v$ and $w$ is likely if the sum over the \texttt{CNOT}$(v_{i}, w_{i})$ is less than some bound, here $2^{k}, k \in \mathbb{Z}_{\geq 1}$.
-Let the bit length of the sum over the \texttt{CNOT}$(v_{i}, w_{i})$ be $n = \lfloor\log_{2}d\rfloor + 1$.
+A reduction between $v$ and $w$ is likely if the sum of the $v_{i} \oplus w_{i}$ is less than some bound, here $2^{k}, k \in \mathbb{Z}_{\geq 1}$.
+Let the bit length of this sum be $n = \lfloor\log_{2}d\rfloor + 1$.
 We therefore take a (non exclusive) \texttt{OR} over the $n - k$ high bits of the sum and reject pair $(v, w)$ for further testing if we receive a $\ket{1}$.
 We require some number, linear in $n$, of the \texttt{OR} gates described above.
 An example with $d = 4, k = 1$ is given in Figure~\ref{fig:naive_popcnt}.
@@ -90,8 +91,6 @@ The $2n' - 1$ \texttt{OR} gates require $4n' - 2$ \texttt{CNOT}s and $2n' - 1$ \
 In total the circuit has $O(d)$ \texttt{CNOT} and \texttt{Toffoli} gates.
 
 The depth of the circuit is $O\left({(\log_{2}d)}^{2}\right)$.
-
-Currently the qubit swaps are neither counted nor optimised, as I am lacking some theoretical knowledge about when or if they are required, hence the ellipses between the subfigures. Equally it will be entirely possible to count \textit{exactly} how deep and wide the circuit is, and how many of each gate it contains, but I did not think it too interesting here and now.
 
 The adder circuit chosen here uses two ancillae but has linear depth in the bit length, $n$, of the numbers being added. There exist~\cite{Takahashi:2008:FQC} quantum adders which match the depth, $O(\log n)$, of the asymptotically optimal classical adders, but however require $O(n/\log n)$ ancillae. The choice made here simply follows~\cite{SHA2} but could just as easily not.
 
