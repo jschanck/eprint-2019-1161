@@ -124,7 +124,20 @@ Finally the depth of the circuit is calculated as
 \end{align*}
 where the first sum is evaluated using a truncation of the Euler--Maclaurin formula. % chktex 8
 As expected this is a smaller depth than above.
-These results are summarised in Table~\ref{tab:GDW}.
+These results are summarised in Figure~\ref{tab:GDW}.
+
+\begin{figure}
+    \centering
+    \begin{tabular}{lrrr}
+        \toprule
+                                    & size      & depth & width\\
+        \midrule
+        \cite{cuccaro2004new}       & $O(d)$    & $O\left({(\log_{2}d)}^{2}\right)$ & $3d + O(\log_{2}d)$\\ % chktex 2
+        \cite{Takahashi:2008:FQC}   & $O(d)$    & $O\left(\log_{2}d\left(\log_{2}(\log_{d}d)\right)\right)$ & $8d + O(\log_{2}d)$\\ % chktex 2
+        \bottomrule
+    \end{tabular}
+    \caption{A summary of the size, depth and width of circuit when using different adders.}\label{tab:GDW}
+\end{figure}
 
 \bibliographystyle{alpha}
 \bibliography{local}
