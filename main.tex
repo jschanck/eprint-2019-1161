@@ -31,6 +31,11 @@
 \newtheorem*{mydef}{Definition}
 \newtheorem*{heu}{Heuristic}
 
+\definecolor{niceorange}{HTML}{FFDD00}
+\usepackage[color=niceorange]{todonotes}
+\usepackage{xspace}
+\newcommand{\malb}[2][inline]{\todo[#1]{\textbf{malb:} #2}\xspace}
+
 \usepackage{geometry}
 
 \begin{document}
@@ -39,7 +44,7 @@
 
 \section*{Introduction and Preliminaries}
 
-Using the adders of~\cite{cuccaro2004new,Takahashi:2008:FQC} we build reversible circuits that take as input bitstring representatives of two lattice vectors, take a bitwise \texttt{CNOT}, determine the Hamming weight of the outcome and further determine whether this Hamming weight is smaller than some bound.
+Using the adders of~\cite{cuccaro2004new,Takahashi:2008:FQC} we build reversible circuits that take as input bitstring representatives of two lattice vectors, take a bitwise \texttt{CNOT},\malb[]{Why not call it XOR?} determine the Hamming weight of the outcome and further determine whether this Hamming weight is smaller than some bound.
 This exact operation is the most frequently used operation in state of the art lattice sieving techniques.
 
 Throughout qubits $a_{i}$ are ancillae and are initialised as $\ket{0}$.
@@ -64,11 +69,11 @@ The notation $s^{i\dots j}_{k}$ in Figure~\ref{fig:naive_popcnt} denotes bit $k$
 \]
 Finally the \texttt{OR} gate in Figure~\ref{subfig:naive_popcnt3} consumes an ancillary, \texttt{OR}$(a, x, y) = (a \oplus (xy), x\vee y, y)$.
 
-A reduction between $v$ and $w$ is likely if the sum of the $v_{i} \oplus w_{i}$ is less than some bound, here $2^{k}, k \in \mathbb{Z}_{\geq 1}$.
+A reduction between $v$ and $w$ is likely if the sum of bits (considered as Integers) of $v_{i} \oplus w_{i}$ is less than some bound, here $2^{k}, k \in \mathbb{Z}_{\geq 1}$.
 Let the bit length of this sum be denoted $n = \lfloor\log_{2}d\rfloor + 1$.
 We therefore take a (non exclusive) \texttt{OR} over the $n - k$ high bits of the sum and reject pair $(v, w)$ for further testing if we receive a $\ket{1}$.
 We require some number, linear in $n$, of the \texttt{OR} gates described above.
-An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is given in Figure~\ref{fig:naive_popcnt}.
+An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is given in Figure~\ref{fig:naieve_popcnt}.\malb[]{In subfigure (c), is that a three-way XOR?}
 
 \begin{figure}
     \begin{subfigure}{.3\textwidth}
@@ -98,9 +103,9 @@ Furthermore, we require $O(n)$ ancillae for the \texttt{OR} gates.
 In terms of $d$ this is $d + O(\log_{2}d)$ ancillae. The width of the circuit is therefore $3d + O(\log_{2}d)$, $2d$ of which represent $v, w$.
 
 The $d$ \texttt{CNOT}s require\dots\ $d$ \texttt{CNOT} gates.
-There are $d/2^{i}$ \texttt{add} gates which add two $i$ bit numbers together, for $i \in \{1, \dots, \lceil \log_{2}d\rceil\}$. Each has a number, linear in $i$, of \texttt{Toffoli} and \texttt{CNOT} gates. Therefore the number of such gates required is $O(d)$.
+There are $d/2^{i}$ \texttt{add} gates which add two $i$ bit numbers together, for $i \in \{1, \dots, \lceil \log_{2}d\rceil\}$. Each has a number, linear in $i$, of \texttt{Toffoli} and \texttt{CNOT} gates. Therefore the number of such gates required is $O(d)$.\malb[]{I don't follow here}
 The $O(n)$ \texttt{OR} gates require $O(n)$ \texttt{CNOT} and \texttt{Toffoli} gates, or $O(\log_{2}d)$ of both.
-In total the circuit has $O(d)$ \texttt{CNOT} and \texttt{Toffoli} gates.
+In total the circuit has $O(d)$ \texttt{CNOT} and \texttt{Toffoli} gates.\malb[]{Is that what you mean by ``size'' in the Figure? Maybe rename to gates}
 
 The depth of the circuit is $O\left({(\log_{2}d)}^{2}\right)$. This is calculated as
 \[
@@ -116,7 +121,7 @@ Indeed, in~\cite{Takahashi:2008:FQC}, for large $n$ they give the number of anci
     \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{\frac{3id}{2^{i}}} \leq 6d.
 \]
 Therefore we require at most $6d + O(\log_{2}d)$ ancillae for a total width of at most $8d + O(\log_{2}d)$.
-Finally the depth of the circuit is calculated as
+Finally the depth of the circuit is calculated as\malb[]{What does the \({t = \lceil\log_{2}d\rceil}\) notation mean?}
 \begin{align*}
     \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{O(\log i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} &= O\left.\left(\frac{1}{2}\log(2\pi) + t(\log t - 1) + O(\log t)\right)\right|_{t = \lceil\log_{2}d\rceil} + O\left(\log_{2}(\log_{2}d)\right)\\
     &= O\left(\log_{2}d\left(\log_{2}(\log_{2}d)\right)\right) + O\left(\log_{2}(\log_{d}d)\right)\\
@@ -143,3 +148,8 @@ These results are summarised in Figure~\ref{tab:GDW}.
 \bibliography{local}
 
 \end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
