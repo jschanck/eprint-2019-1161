@@ -35,6 +35,7 @@
 \usepackage[color=niceorange]{todonotes}
 \usepackage{xspace}
 \newcommand{\malb}[2][inline]{\todo[#1]{\textbf{malb:} #2}\xspace}
+\newcommand{\eamonn}[2][inline]{\todo[#1]{\textbf{eamonn:} #2}\xspace}
 
 \usepackage{geometry}
 
@@ -44,7 +45,7 @@
 
 \section*{Introduction and Preliminaries}
 
-Using the adders of~\cite{cuccaro2004new,Takahashi:2008:FQC} we build reversible circuits that take as input bitstring representatives of two lattice vectors, take a bitwise \texttt{CNOT},\malb[]{Why not call it XOR?} determine the Hamming weight of the outcome and further determine whether this Hamming weight is smaller than some bound.
+Using the adders of~\cite{cuccaro2004new,Takahashi:2008:FQC} we build reversible circuits that take as input bitstring representatives of two lattice vectors, take a bitwise \texttt{CNOT},\malb[]{Why not call it XOR?}\eamonn[]{Just to get into the quantum computational language as early as possible.} determine the Hamming weight of the outcome and further determine whether this Hamming weight is smaller than some bound.
 This exact operation is the most frequently used operation in state of the art lattice sieving techniques.
 
 Throughout qubits $a_{i}$ are ancillae and are initialised as $\ket{0}$.
@@ -73,7 +74,9 @@ A reduction between $v$ and $w$ is likely if the sum of bits (considered as Inte
 Let the bit length of this sum be denoted $n = \lfloor\log_{2}d\rfloor + 1$.
 We therefore take a (non exclusive) \texttt{OR} over the $n - k$ high bits of the sum and reject pair $(v, w)$ for further testing if we receive a $\ket{1}$.
 We require some number, linear in $n$, of the \texttt{OR} gates described above.
-An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is given in Figure~\ref{fig:naieve_popcnt}.\malb[]{In subfigure (c), is that a three-way XOR?}
+An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is given in Figure~\ref{fig:naieve_popcnt}.
+\malb[]{In subfigure (c), is that a three-way XOR?}
+\eamonn[]{No, it's a non exclusive OR as given above, it just needs an ancillary because it isn't reversible otherwise.}
 
 \begin{figure}
     \begin{subfigure}{.3\textwidth}
@@ -96,32 +99,37 @@ An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is give
     \caption{A simple quantum circuit for determining whether a specific \texttt{popcount} is greater than a given bound.}\label{fig:naive_popcnt}
 \end{figure}
 
-\section*{Depth, Width and Size of Circuit with~\cite{cuccaro2004new} adder}
+\section*{Depth, Width and Gates of Circuit with~\cite{cuccaro2004new} adder}
 
 We require at most $d$ ancillae as inputs to the \texttt{add} gates, with one definitely remaining in the state $\ket{0}$.
 Furthermore, we require $O(n)$ ancillae for the \texttt{OR} gates.
 In terms of $d$ this is $d + O(\log_{2}d)$ ancillae. The width of the circuit is therefore $3d + O(\log_{2}d)$, $2d$ of which represent $v, w$.
 
 The $d$ \texttt{CNOT}s require\dots\ $d$ \texttt{CNOT} gates.
-There are $d/2^{i}$ \texttt{add} gates which add two $i$ bit numbers together, for $i \in \{1, \dots, \lceil \log_{2}d\rceil\}$. Each has a number, linear in $i$, of \texttt{Toffoli} and \texttt{CNOT} gates. Therefore the number of such gates required is $O(d)$.\malb[]{I don't follow here}
+There are $d/2^{i}$ \texttt{add} gates which add two $i$ bit numbers together, for $i \in \{1, \dots, \lceil \log_{2}d\rceil\}$. Each has a number, linear in $i$, of \texttt{Toffoli} and \texttt{CNOT} gates. The number of such gates required is $O(d)$ as
+\[
+    \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2} d\rceil}{O(i)} \cdot \frac{d}{2^{i}} = d \cdot \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d \rceil}{\frac{O(i)}{2^{i}}} = d \cdot O(1) = O(d).
+\]
 The $O(n)$ \texttt{OR} gates require $O(n)$ \texttt{CNOT} and \texttt{Toffoli} gates, or $O(\log_{2}d)$ of both.
-In total the circuit has $O(d)$ \texttt{CNOT} and \texttt{Toffoli} gates.\malb[]{Is that what you mean by ``size'' in the Figure? Maybe rename to gates}
+In total the circuit has $O(d)$ \texttt{CNOT} and \texttt{Toffoli} gates.
 
 The depth of the circuit is $O\left({(\log_{2}d)}^{2}\right)$. This is calculated as
 \[
     \displaystyle\sum\limits_{i = 1}^{\lceil\log_{2}d\rceil}{O(i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} = O\left({(\log_{2} d)}^{2}\right) + O\left(\log_{2}(\log_{2}d)\right) = O\left({(\log_{2} d)}^{2}\right).
 \]
 
-\section*{Depth, Width and Size of Circuit with~\cite{Takahashi:2008:FQC} adder}
+\section*{Depth, Width and Gates of Circuit with~\cite{Takahashi:2008:FQC} adder}
 
-The size of this circuit is the same, namely $O(d)$ \texttt{Toffoli} and \texttt{CNOT} gates.
+The number of gates for this circuit is the same, namely $O(d)$ \texttt{Toffoli} and \texttt{CNOT} gates.
 The ancillae requirements are higher, although still linear.
 Indeed, in~\cite{Takahashi:2008:FQC}, for large $n$ they give the number of ancillae to be $3n/\log n - O(\log n)$, and so the total number of ancillae required for the \texttt{add} gates is less than
 \[
     \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{\frac{3id}{2^{i}}} \leq 6d.
 \]
 Therefore we require at most $6d + O(\log_{2}d)$ ancillae for a total width of at most $8d + O(\log_{2}d)$.
-Finally the depth of the circuit is calculated as\malb[]{What does the \({t = \lceil\log_{2}d\rceil}\) notation mean?}
+Finally the depth of the circuit is calculated as
+\malb[]{What does the \({t = \lceil\log_{2}d\rceil}\) notation mean?}
+\eamonn[]{I'm introducing a dummy variable for the Euler--Maclaurin method, then evaluating it at this value.} % chktex 8
 \begin{align*}
     \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{O(\log i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} &= O\left.\left(\frac{1}{2}\log(2\pi) + t(\log t - 1) + O(\log t)\right)\right|_{t = \lceil\log_{2}d\rceil} + O\left(\log_{2}(\log_{2}d)\right)\\
     &= O\left(\log_{2}d\left(\log_{2}(\log_{2}d)\right)\right) + O\left(\log_{2}(\log_{d}d)\right)\\
@@ -135,13 +143,13 @@ These results are summarised in Figure~\ref{tab:GDW}.
     \centering
     \begin{tabular}{lrrr}
         \toprule
-                                    & size      & depth & width\\
+                                    & gates      & depth & width\\
         \midrule
         \cite{cuccaro2004new}       & $O(d)$    & $O\left({(\log_{2}d)}^{2}\right)$ & $3d + O(\log_{2}d)$\\ % chktex 2
         \cite{Takahashi:2008:FQC}   & $O(d)$    & $O\left(\log_{2}d\left(\log_{2}(\log_{d}d)\right)\right)$ & $8d + O(\log_{2}d)$\\ % chktex 2
         \bottomrule
     \end{tabular}
-    \caption{A summary of the size, depth and width of circuit when using different adders.}\label{tab:GDW}
+    \caption{A summary of the number of gates, depth and width of circuit when using different adders.}\label{tab:GDW}
 \end{figure}
 
 \bibliographystyle{alpha}
