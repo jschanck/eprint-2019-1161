@@ -45,8 +45,7 @@
 
 \section*{Introduction and Preliminaries}
 
-Using the adders of~\cite{cuccaro2004new,Takahashi:2008:FQC} we build reversible circuits that take as input bitstring representatives of two lattice vectors, take a bitwise \texttt{CNOT},\malb[]{Why not call it XOR?}\eamonn[]{Just to get into the quantum computational language as early as possible.} determine the Hamming weight of the outcome and further determine whether this Hamming weight is smaller than some bound.
-This exact operation is the most frequently used operation in state of the art lattice sieving techniques.
+Using the adders of~\cite{cuccaro2004new,Takahashi:2008:FQC} we build reversible circuits that take as input bitstring representatives of two lattice vectors, take a bitwise \texttt{CNOT}, determine the Hamming weight of the outcome and further determine whether this Hamming weight is smaller than some bound. This exact operation is the most frequently used operation in state of the art lattice sieving techniques.
 
 Throughout qubits $a_{i}$ are ancillae and are initialised as $\ket{0}$.
 The $v_{i}, w_{i} \in \{0, 1\}, i \in \{0, \dots, d - 1\}$ form the bitstring representatives of lattice vectors $v, w$.
@@ -74,9 +73,8 @@ A reduction between $v$ and $w$ is likely if the sum of bits (considered as Inte
 Let the bit length of this sum be denoted $n = \lfloor\log_{2}d\rfloor + 1$.
 We therefore take a (non exclusive) \texttt{OR} over the $n - k$ high bits of the sum and reject pair $(v, w)$ for further testing if we receive a $\ket{1}$.
 We require some number, linear in $n$, of the \texttt{OR} gates described above.
-An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is given in Figure~\ref{fig:naieve_popcnt}.
-\malb[]{In subfigure (c), is that a three-way XOR?}
-\eamonn[]{No, it's a non exclusive OR as given above, it just needs an ancillary because it isn't reversible otherwise.}
+An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is given in Figure~\ref{fig:naive_popcnt}.
+\malb[]{How should I read each of the lines involving \(\oplus\)? What is XORed with what?}
 
 \begin{figure}
     \begin{subfigure}{.3\textwidth}
@@ -127,9 +125,7 @@ Indeed, in~\cite{Takahashi:2008:FQC}, for large $n$ they give the number of anci
     \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{\frac{3id}{2^{i}}} \leq 6d.
 \]
 Therefore we require at most $6d + O(\log_{2}d)$ ancillae for a total width of at most $8d + O(\log_{2}d)$.
-Finally the depth of the circuit is calculated as
-\malb[]{What does the \({t = \lceil\log_{2}d\rceil}\) notation mean?}
-\eamonn[]{I'm introducing a dummy variable for the Euler--Maclaurin method, then evaluating it at this value.} % chktex 8
+Finally the depth of the circuit is calculated as  % chktex 8
 \begin{align*}
     \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{O(\log i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} &= O\left.\left(\frac{1}{2}\log(2\pi) + t(\log t - 1) + O(\log t)\right)\right|_{t = \lceil\log_{2}d\rceil} + O\left(\log_{2}(\log_{2}d)\right)\\
     &= O\left(\log_{2}d\left(\log_{2}(\log_{2}d)\right)\right) + O\left(\log_{2}(\log_{d}d)\right)\\
