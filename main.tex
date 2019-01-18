@@ -128,9 +128,9 @@ Indeed, in~\cite{Takahashi:2008:FQC}, for large $n$ they give the number of anci
 Therefore we require at most $6d + O(\log_{2}d)$ ancillae for a total width of at most $8d + O(\log_{2}d)$.
 Finally the depth of the circuit is calculated as  % chktex 8
 \begin{align*}
-    \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{O(\log i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} &= O\left.\left(\frac{1}{2}\log(2\pi) + t(\log t - 1) + O(\log t)\right)\right|_{t = \lceil\log_{2}d\rceil} + O\left(\log_{2}(\log_{2}d)\right)\\
-    &= O\left(\log_{2}d\left(\log_{2}(\log_{2}d)\right)\right) + O\left(\log_{2}(\log_{d}d)\right)\\
-    &= O\left(\log_{2}d\left(\log_{2}(\log_{2}d)\right)\right),
+    \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}d\rceil}{O(\log i)} + \displaystyle\sum\limits_{i = 1}^{\lceil \log_{2}n\rceil}{O(1)} &= O\Big(t(\log t - 1) + O(\log t)\Big)\Big|_{t = \lceil\log_{2}d\rceil} + O\left(\log_{2}(\log_{2}d)\right)\\
+    &= O\left(\log_{2}d\left(\log(\log_{2}d)\right)\right) + O\left(\log_{2}(\log_{d}d)\right)\\
+    &= O\left(\log_{2}d\left(\log(\log_{2}d)\right)\right),
 \end{align*}
 where the first sum is evaluated using a truncation of the Euler--Maclaurin formula. % chktex 8
 As expected this is a smaller depth than above.
@@ -143,7 +143,7 @@ These results are summarised in Figure~\ref{tab:GDW}.
                                     & gates      & depth & width\\
         \midrule
         \cite{cuccaro2004new}       & $O(d)$    & $O\left({(\log_{2}d)}^{2}\right)$ & $3d + O(\log_{2}d)$\\ % chktex 2
-        \cite{Takahashi:2008:FQC}   & $O(d)$    & $O\left(\log_{2}d\left(\log_{2}(\log_{d}d)\right)\right)$ & $8d + O(\log_{2}d)$\\ % chktex 2
+        \cite{Takahashi:2008:FQC}   & $O(d)$    & $O\left(\log_{2}d\left(\log(\log_{2}d)\right)\right)$ & $8d + O(\log_{2}d)$\\ % chktex 2
         \bottomrule
     \end{tabular}
     \caption{A summary of the number of gates, depth and width of circuit when using different adders.}\label{tab:GDW}
