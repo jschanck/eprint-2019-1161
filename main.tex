@@ -75,6 +75,7 @@ We therefore take a (non exclusive) \texttt{OR} over the $n - k$ high bits of th
 We require some number, linear in $n$, of the \texttt{OR} gates described above.
 An example with $d = 4, k = 1$, using the adder of~\cite{cuccaro2004new} is given in Figure~\ref{fig:naive_popcnt}.
 \malb[]{How should I read each of the lines involving \(\oplus\)? What is XORed with what?}
+\eamonn[]{Oh sorry! I misunderstood the question. The first in the OR is a Toffoli gate, the wire with the $\oplus$ is flipped iff both others are 1. The second and third gates in the OR are CNOT gates, the wires with $\oplus$ flip iff the respective wires with the thick dot are 1.}
 
 \begin{figure}
     \begin{subfigure}{.3\textwidth}
