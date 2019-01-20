@@ -107,6 +107,7 @@ def main():
             popcnt_suc += 1*check
 
     ratio = popcnt_suc/float(popcnt_tot)
+    print popcnt_suc, popcnt_tot
     print ratio
 
     # calculate my estimate for number of further tests.
