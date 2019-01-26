@@ -7,17 +7,32 @@ import numpy as np
 import sys
 
 
+def gauss_reduced(vec1, vec2):
+    """
+    Check whether two vectors sampled i.i.d. uniformly from the unit sphere are
+    Gauss reduced.
+    .. note:: This test is only true for vectors of equal norm!
+
+    :param vec1: the first vector on the sphere
+    :param vec2: the second vector on the sphere
+    :returns: ``True`` if Gauss reduced and ``False`` otherwise
+    """
+    cos_theta = np.inner(vec1, vec2)
+    if 0.5 < abs(cos_theta) < 1:
+        return False
+    return True
+
+
 def sign(value):
     """
     Utility function for computing the sign of real number.
 
     :param value: a float or int
-    :returns: ``True`` if value is >= 0, else ``False``.
+    :returns: ``True`` if value is >= 0, else ``False``
     """
     if value >= 0:
         return 1
-    else:
-        return 0
+    return 0
 
 
 def uniform_iid_sphere(dim, num):
@@ -27,7 +42,7 @@ def uniform_iid_sphere(dim, num):
 
     :param dim: the dimension of the unit sphere
     :param num: number of points to be sampled uniformly and i.i.d
-    :returns: an OrderedDict with keys which enumerate the points as values.
+    :returns: an OrderedDict with keys which enumerate the points as values
     """
     sphere_points = OrderedDict()
     for point in range(num):
@@ -45,9 +60,9 @@ def lossy_sketch(vec, popcnt_dict):
     In particular form a vector of the signs of the inner product of the point
     with some fixed points on the sphere.
 
-    :param vec: the point on the sphere to make a SimHash of.
-    :param popcnt_dict: the fixed vectors with which to make the SimHash.
-    :returns: an integer numpy array with values in {0, 1}, a SimHash.
+    :param vec: the point on the sphere to make a SimHash of
+    :param popcnt_dict: the fixed vectors with which to make the SimHash
+    :returns: an integer numpy array with values in {0, 1}, a SimHash
     """
     lossy_vec = np.zeros(len(popcnt_dict))
     for index, popcnt_vec in popcnt_dict.items():
@@ -55,23 +70,23 @@ def lossy_sketch(vec, popcnt_dict):
     return lossy_vec
 
 
-def hamming_compare(lossy_vec1, lossy_vec2, popcnt_num, threshold):
+def hamming_compare(lossy_vec1, lossy_vec2, threshold):
     """
     Takes an XOR of two SimHashes and checks the popcnt is above or below a
     threshold.
 
-    :param lossy_vec1: the SimHash of the first point on the sphere.
-    :param lossy_vec2: the SimHash of the second point on the sphere.
-    :param popcnt_num: the number of fixed vectors used to make SimHashes.
-    :param threshold: the acceptance/rejection threshold for popcnts.
-    :returns: ``True`` if the pair need further testing, ``False`` otherwise.
+    :param lossy_vec1: the SimHash of the first point on the sphere
+    :param lossy_vec2: the SimHash of the second point on the sphere
+    :param threshold: the acceptance/rejection threshold for popcnts
+    :returns: ``True`` if the pair passed the filter, ``False`` otherwise
     """
+    assert len(lossy_vec1) == len(lossy_vec2), "Different dimension sketches!"
+    popcnt_num = len(lossy_vec1)
     hamming_xor = sum(np.bitwise_xor(lossy_vec1.astype(int),
                                      lossy_vec2.astype(int)))
     if hamming_xor <= threshold or hamming_xor >= popcnt_num - threshold:
         return True
-    else:
-        return False
+    return False
 
 
 def main():
@@ -82,74 +97,83 @@ def main():
     popcnt_num = int(popcnt_num)
     threshold = int(threshold)
 
-    # initialise popcnt counters
-    popcnt_suc = 0
+    # initialise counters
+    # (n)gr = (not) Gauss reduced, (n)pf = (did not) pass filter
+    gr_pf = 0
+    gr_npf = 0
+    ngr_pf = 0
+    ngr_npf = 0
     popcnt_tot = 1./2. * num * (num - 1)
+    gauss_tot = 1./2. * num * (num - 1)
 
-    # get dictionaries of points to be tested, used to form SimHashes and an
-    # empty dictionary for the SimHashes
+    # get dictionaries of points to be tested and used to form SimHashes
     popcnt_dict = uniform_iid_sphere(dim, popcnt_num)
     vec_dict = uniform_iid_sphere(dim, num)
-    lossy_dict = OrderedDict()
 
     # create SimHashes
     for index, vec in vec_dict.items():
-        lossy_vec = lossy_sketch(vec, popcnt_dict)
-        lossy_dict[index] = lossy_vec
+        vec_dict[index] = [vec, lossy_sketch(vec, popcnt_dict)]
 
-    # compare pairwise different SimHashes and count those for further tests.
-    for index1, lossy_vec1 in lossy_dict.items():
-        for index2, lossy_vec2 in lossy_dict.items():
+    # compare pairwise different SimHashes and count those for full tests
+    for index1, vecs1 in vec_dict.items():
+        for index2, vecs2 in vec_dict.items():
             if index1 >= index2:
                 continue
-            check = hamming_compare(lossy_vec1, lossy_vec2, popcnt_num,
-                                    threshold)
-            popcnt_suc += 1*check
+            gauss_check = gauss_reduced(vecs1[0], vecs2[0])
+            lossy_check = hamming_compare(vecs1[1], vecs2[1], threshold)
 
-    ratio = popcnt_suc/float(popcnt_tot)
-    print popcnt_suc, popcnt_tot
-    print ratio
+            # information about filter pass/fail and Gauss reduction for pair
+            if gauss_check and lossy_check:
+                gr_pf += 1
+            if gauss_check and not lossy_check:
+                gr_npf += 1
+            if not gauss_check and lossy_check:
+                ngr_pf += 1
+            if not gauss_check and not lossy_check:
+                ngr_npf += 1
 
-    # calculate my estimate for number of further tests.
+    gauss_red = gr_pf + gr_npf
+    popcnt_suc = gr_pf + ngr_pf
+
+    gauss_ratio = gauss_red/float(gauss_tot)
+    popcnt_ratio = popcnt_suc/float(popcnt_tot)
+
+    print "Pairs passing filter %d, of a total %d" % (popcnt_suc, popcnt_tot)
+    print "This is a ratio of %.6f" % popcnt_ratio
+    print
+    print "Pairs Gauss reduced %d, of a total %d" % (gauss_red, gauss_tot)
+    print "This is a ratio of %.6f" % gauss_ratio
+    print
+
+    # calculate my estimate for ratio of full tests
     est1 = (1./2.)**(popcnt_num - 1)
     est2 = sum([int(comb(popcnt_num, i)) for i in range(0, threshold + 1)])
-    print est1 * est2
+    print "My estimate for the filter ratio is %.6f" % (est1 * est2)
+    # this will eventually come from the beautiful Fitzpatrick paper
+    print "The estimate for the Gauss reduced pairs is... soon"
+    print
 
+    print "The correct cases are ngr_pf %d, gr_npf %d" % (ngr_pf, gr_npf)
+    if popcnt_suc == 0:
+        cor_ratio_pf = 0
+        print "Nothing passed the filter"
+    else:
+        cor_ratio_pf = ngr_pf/float(popcnt_suc)
+    cor_ratio_npf = gr_npf/float(popcnt_tot - popcnt_suc)
+    print "The ratio ngr_pf/*_pf %.6f, gr_npf/*_npf %.6f" % (cor_ratio_pf,
+                                                             cor_ratio_npf)
+    print
+    print "The incorrect cases are ngr_npf %d, gr_pf %d" % (ngr_npf, gr_pf)
+    ncor_ratio_npf = ngr_npf/float(popcnt_tot - popcnt_suc)
+    if popcnt_suc == 0:
+        ncor_ratio_pf = 0
+        print "Nothing passed the filter"
+    else:
+        ncor_ratio_pf = gr_pf/float(popcnt_suc)
+    print "The ratio ngr_npf/*_npf %.6f, gr_pf/*_pf %.6f" % (ncor_ratio_npf,
+                                                             ncor_ratio_pf)
 
-def dim_inc_test():
-    # test that as dim -> popcnt_num my estimate gets more accurate
-    popcnt_num = 128
-    threshold = 32
-    for dim in range(40, 129):
-        print dim
-        popcnt_suc = 0
-        popcnt_tot = 500 * 999
-
-        popcnt_dict = uniform_iid_sphere(dim, 128)
-        vec_dict = uniform_iid_sphere(dim, 1000)
-        lossy_dict = OrderedDict()
-
-        for index, vec in vec_dict.items():
-            lossy_vec = lossy_sketch(vec, popcnt_dict)
-            lossy_dict[index] = lossy_vec
-
-        for index1, lossy_vec1 in lossy_dict.items():
-            for index2, lossy_vec2 in lossy_dict.items():
-                if index1 >= index2:
-                    continue
-                check = hamming_compare(lossy_vec1, lossy_vec2, popcnt_num,
-                                        threshold)
-                popcnt_suc += 1*check
-
-        ratio = popcnt_suc/float(popcnt_tot)
-        print ratio
-
-        est1 = (1./2.)**(popcnt_num - 1)
-        est2 = sum([int(comb(popcnt_num, i)) for i in range(0, threshold + 1)])
-        print est1 * est2
-
-        print ratio/float(est1 * est2)
-        print
+    # estimates of (n)gr and n(pf) incoming..!
 
 
 if __name__ == '__main__':
