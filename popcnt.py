@@ -72,7 +72,7 @@ def lossy_sketch(vec, popcnt_dict):
 
 def hamming_compare(lossy_vec1, lossy_vec2, threshold):
     """
-    Takes an XOR of two SimHashes and checks the popcnt is above or below a
+    Takes an XOR of two SimHashes and checks the popcnt is above= or below= a
     threshold.
 
     :param lossy_vec1: the SimHash of the first point on the sphere
@@ -140,17 +140,16 @@ def main():
 
     print "Pairs passing filter %d, of a total %d" % (popcnt_suc, popcnt_tot)
     print "This is a ratio of %.6f" % popcnt_ratio
-    print
-    print "Pairs Gauss reduced %d, of a total %d" % (gauss_red, gauss_tot)
-    print "This is a ratio of %.6f" % gauss_ratio
-    print
-
-    # calculate my estimate for ratio of full tests
     est1 = (1./2.)**(popcnt_num - 1)
     est2 = sum([int(comb(popcnt_num, i)) for i in range(0, threshold + 1)])
     print "My estimate for the filter ratio is %.6f" % (est1 * est2)
-    # this will eventually come from the beautiful Fitzpatrick paper
-    print "The estimate for the Gauss reduced pairs is... soon"
+    print
+    print "Pairs Gauss reduced %d, of a total %d" % (gauss_red, gauss_tot)
+    print "This is a ratio of %.6f" % gauss_ratio
+    # I_{z}(a, b) is the regularised incomplete beta function
+    gauss_red_est = "1 - I_{3/4}((%d - 1)/2, 1/2)" % dim
+    print "My estimate for the Gauss reduced pairs is " + gauss_red_est
+    print "https://www.wolframalpha.com/input/?i=1+-++BetaRegularized(3%2F4,+" + str(dim - 1) + "%2F2,+1%2F2)" # noqa
     print
 
     print "The correct cases are ngr_pf %d, gr_npf %d" % (ngr_pf, gr_npf)
@@ -172,8 +171,28 @@ def main():
         ncor_ratio_pf = gr_pf/float(popcnt_suc)
     print "The ratio ngr_npf/*_npf %.6f, gr_pf/*_pf %.6f" % (ncor_ratio_npf,
                                                              ncor_ratio_pf)
+    print '-------------------------------------------------------------------'
 
-    # estimates of (n)gr and n(pf) incoming..!
+
+def gauss_test(dim, num):
+    """
+    Quick function to generate experimental results for the proportion of
+    i.i.d. vectors on the unit sphere S^{dim - 1} \subset R^{dim} which are
+    and are not Gauss reduced.
+
+    :param dim: the dimension of real space
+    :param num: the number of vectors to sample and test
+    """
+    counter = 0
+    compar_tot = float(num) * float(num - 1) * 0.5
+    gauss_dict = uniform_iid_sphere(dim, num)
+    for index1, vec1 in gauss_dict.items():
+        for index2, vec2 in gauss_dict.items():
+            if index1 <= index2:
+                continue
+            counter += 1*gauss_reduced(vec1, vec2)
+    print 'Fraction already reduced:', float(counter)/float(compar_tot)
+    print 'Fraction not yet reduced:', 1 - float(counter)/float(compar_tot)
 
 
 if __name__ == '__main__':
