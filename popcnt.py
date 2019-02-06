@@ -37,7 +37,7 @@ def sign(value):
 
 def uniform_iid_sphere(dim, num):
     """
-    Samples points uniformly on the unit sphere in dimension dim.
+    Samples points uniformly on the unit sphere in R^{dim}, i.e. S^{d - 1}.
     It samples from dim many zero centred Gaussians and normalises the vector.
 
     :param dim: the dimension of the unit sphere
@@ -46,6 +46,7 @@ def uniform_iid_sphere(dim, num):
     """
     sphere_points = OrderedDict()
     for point in range(num):
+        np.random.seed()
         vec = np.random.randn(dim)
         vec /= np.linalg.norm(vec)
         sphere_points[point] = vec
@@ -193,6 +194,43 @@ def gauss_test(dim, num):
             counter += 1*gauss_reduced(vec1, vec2)
     print 'Fraction already reduced:', float(counter)/float(compar_tot)
     print 'Fraction not yet reduced:', 1 - float(counter)/float(compar_tot)
+
+
+def filter_test(dim, num, popcnt_num, threshold):
+    popcnt_pass = 0
+    popcnt_tot = 1./2. * num * (num - 1)
+    popcnt_dict = uniform_iid_sphere(dim, popcnt_num)
+    vec_dict = uniform_iid_sphere(dim, num)
+    for index, vec in vec_dict.items():
+        vec_dict[index] = [vec, lossy_sketch(vec, popcnt_dict)]
+    for index1, vecs1 in vec_dict.items():
+        for index2, vecs2 in vec_dict.items():
+            if index1 >= index2:
+                continue
+            passed = hamming_compare(vecs1[1], vecs2[1], threshold)
+            popcnt_pass += passed
+    return float(popcnt_pass)/popcnt_tot
+
+
+def filter_estimate(dim, popcnt_num, threshold):
+    assert dim > popcnt_num, "For independence criteria!"
+    est1 = (1./2.)**(popcnt_num - 1)
+    est2 = sum([int(comb(popcnt_num, i)) for i in range(0, threshold + 1)])
+    return est1 * est2
+
+
+def filter_wrapper(dims, num, popcnt_nums, thresholds):
+    for dim in dims:
+        for popcnt_num in popcnt_nums:
+            for threshold in thresholds:
+                print "dim %d, popcnt_num %d, threshold %d" % (dim,
+                                                               popcnt_num,
+                                                               threshold)
+                filter_pass = filter_test(dim, num, popcnt_num, threshold)
+                est = filter_estimate(dim, popcnt_num, threshold)
+                print "experimental %.6f, estimate %.6f" % (filter_pass, est)
+                print
+                print "======================================================="
 
 
 if __name__ == '__main__':
