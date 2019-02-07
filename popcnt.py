@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
-from gmpy import comb
+from math import pi, sin
+from scipy.special import binom
+
 import numpy as np
+import scipy.integrate as scint
 import sys
 
 
@@ -142,7 +145,7 @@ def main():
     print "Pairs passing filter %d, of a total %d" % (popcnt_suc, popcnt_tot)
     print "This is a ratio of %.6f" % popcnt_ratio
     est1 = (1./2.)**(popcnt_num - 1)
-    est2 = sum([int(comb(popcnt_num, i)) for i in range(0, threshold + 1)])
+    est2 = sum([int(binom(popcnt_num, i)) for i in range(0, threshold + 1)])
     print "My estimate for the filter ratio is %.6f" % (est1 * est2)
     print
     print "Pairs Gauss reduced %d, of a total %d" % (gauss_red, gauss_tot)
@@ -213,10 +216,25 @@ def filter_test(dim, num, popcnt_num, threshold):
 
 
 def filter_estimate(dim, popcnt_num, threshold):
-    assert dim > popcnt_num, "For independence criteria!"
-    est1 = (1./2.)**(popcnt_num - 1)
-    est2 = sum([int(comb(popcnt_num, i)) for i in range(0, threshold + 1)])
-    return est1 * est2
+    d = dim
+    n = popcnt_num
+    k = threshold
+
+    coeffs = [binom(n, i) for i in range(0, k + 1)]
+    coeffs += [0] * (n - (2 * k) - 1)
+    coeffs += [binom(n, i) for i in range(n - k, n + 1)]
+
+    prob = 0
+    for i in range(n + 1):
+        coeff = coeffs[i]
+
+        def f(x): return (sin(x)**(d-1))*coeff*((x/pi)**i)*((1-(x/pi))**(n-i))
+        prob += scint.quad(f, 0, pi)[0]
+
+    def n(x): return (sin(x)**(d-1))
+
+    norm = 1./scint.quad(n, 0, pi)[0]
+    return norm * prob
 
 
 def filter_wrapper(dims, num, popcnt_nums, thresholds):
