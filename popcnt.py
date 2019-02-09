@@ -107,20 +107,19 @@ def main():
     gr_npf = 0
     ngr_pf = 0
     ngr_npf = 0
-    popcnt_tot = 1./2. * num * (num - 1)
-    gauss_tot = 1./2. * num * (num - 1)
+    tot = 1./2. * num * (num - 1)
 
     # get dictionaries of points to be tested and used to form SimHashes
-    popcnt_dict = uniform_iid_sphere(dim, popcnt_num)
-    vec_dict = uniform_iid_sphere(dim, num)
+    popcnt = uniform_iid_sphere(dim, popcnt_num)
+    vector = uniform_iid_sphere(dim, num)
 
     # create SimHashes
-    for index, vec in vec_dict.items():
-        vec_dict[index] = [vec, lossy_sketch(vec, popcnt_dict)]
+    for index, vec in vector.items():
+        vector[index] = [vec, lossy_sketch(vec, popcnt)]
 
-    # compare pairwise different SimHashes and count those for full tests
-    for index1, vecs1 in vec_dict.items():
-        for index2, vecs2 in vec_dict.items():
+    # compare pairwise different vectors and their SimHashes
+    for index1, vecs1 in vector.items():
+        for index2, vecs2 in vector.items():
             if index1 >= index2:
                 continue
             gauss_check = gauss_reduced(vecs1[0], vecs2[0])
@@ -136,45 +135,47 @@ def main():
             if not gauss_check and not lossy_check:
                 ngr_npf += 1
 
-    gauss_red = gr_pf + gr_npf
-    popcnt_suc = gr_pf + ngr_pf
+    gr = gr_pf + gr_npf
+    pf = gr_pf + ngr_pf
 
-    gauss_ratio = gauss_red/float(gauss_tot)
-    popcnt_ratio = popcnt_suc/float(popcnt_tot)
+    # collect all stats, of form [absolute value, tot_ratio, est]
+    stats = OrderedDict()
+    est = 1-2*estimate(dim, popcnt_num, threshold, int_u=pi/3, use_filt=False)
+    stats['gr'] = [gr, gr/float(tot), est]
+    est = estimate(dim, popcnt_num, threshold)
+    stats['pf'] = [pf, pf/float(tot), est]
+    est = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3)
+    stats['gr_pf'] = [gr_pf, gr_pf/float(tot), est]
+    est = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
+                   pass_filt=False)
+    stats['gr_npf'] = [gr_npf, gr_npf/float(tot), est]
+    est = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
+    stats['ngr_pf'] = [ngr_pf, ngr_pf/float(tot), est]
+    est = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3, pass_filt=False)
+    stats['ngr_npf'] = [ngr_npf, ngr_npf/float(tot), est]
 
-    print "Pairs passing filter %d, of a total %d" % (popcnt_suc, popcnt_tot)
-    print "This is a ratio of %.6f" % popcnt_ratio
-    est1 = (1./2.)**(popcnt_num - 1)
-    est2 = sum([int(binom(popcnt_num, i)) for i in range(0, threshold + 1)])
-    print "My estimate for the filter ratio is %.6f" % (est1 * est2)
-    print
-    print "Pairs Gauss reduced %d, of a total %d" % (gauss_red, gauss_tot)
-    print "This is a ratio of %.6f" % gauss_ratio
-    # I_{z}(a, b) is the regularised incomplete beta function
-    gauss_red_est = "1 - I_{3/4}((%d - 1)/2, 1/2)" % dim
-    print "My estimate for the Gauss reduced pairs is " + gauss_red_est
-    print "https://www.wolframalpha.com/input/?i=1+-++BetaRegularized(3%2F4,+" + str(dim - 1) + "%2F2,+1%2F2)" # noqa
-    print
+    est1 = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3)
+    est2 = estimate(dim, popcnt_num, threshold)
+    est = est1/float(est2)
+    stats['gr_pf/pf'] = [None, gr_pf/float(pf), est]
+    est1 = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
+                    pass_filt=False)
+    est2 = 1 - estimate(dim, popcnt_num, threshold)
+    est = est1/float(est2)
+    stats['gr_npf/npf'] = [None, gr_npf/float(tot - pf), est]
 
-    print "The correct cases are ngr_pf %d, gr_npf %d" % (ngr_pf, gr_npf)
-    if popcnt_suc == 0:
-        cor_ratio_pf = 0
-        print "Nothing passed the filter"
-    else:
-        cor_ratio_pf = ngr_pf/float(popcnt_suc)
-    cor_ratio_npf = gr_npf/float(popcnt_tot - popcnt_suc)
-    print "The ratio ngr_pf/*_pf %.6f, gr_npf/*_npf %.6f" % (cor_ratio_pf,
-                                                             cor_ratio_npf)
+    est1 = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3)
+    est2 = 1-2*estimate(dim, popcnt_num, threshold, int_u=pi/3, use_filt=False)
+    est = est1/float(est2)
+    stats['gr_pf/gr'] = [None, gr_pf/float(gr), est]
+    est1 = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
+    est2 = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3, use_filt=False)
+    est = est1/float(est2)
+    stats['ngr_pf/ngr'] = [None, ngr_pf/float(tot - gr), est]
+
+    for key, value in stats.items():
+        print key, "\texp_ratio\t", value[1], "\test_ratio\t", value[2]
     print
-    print "The incorrect cases are ngr_npf %d, gr_pf %d" % (ngr_npf, gr_pf)
-    ncor_ratio_npf = ngr_npf/float(popcnt_tot - popcnt_suc)
-    if popcnt_suc == 0:
-        ncor_ratio_pf = 0
-        print "Nothing passed the filter"
-    else:
-        ncor_ratio_pf = gr_pf/float(popcnt_suc)
-    print "The ratio ngr_npf/*_npf %.6f, gr_pf/*_pf %.6f" % (ncor_ratio_npf,
-                                                             ncor_ratio_pf)
     print '-------------------------------------------------------------------'
 
 
@@ -215,21 +216,32 @@ def filter_test(dim, num, popcnt_num, threshold):
     return float(popcnt_pass)/popcnt_tot
 
 
-def filter_estimate(dim, popcnt_num, threshold):
+def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
+             pass_filt=True):
     d = dim
     n = popcnt_num
     k = threshold
 
-    coeffs = [binom(n, i) for i in range(0, k + 1)]
-    coeffs += [0] * (n - (2 * k) - 1)
-    coeffs += [binom(n, i) for i in range(n - k, n + 1)]
+    if use_filt:
+        if pass_filt:
+            coeffs = [binom(n, i) for i in range(0, k + 1)]
+            coeffs += [0] * (n - (2 * k) - 1)
+            coeffs += [binom(n, i) for i in range(n - k, n + 1)]
+        else:
+            coeffs = [0]*(k + 1)
+            coeffs += [binom(n, i) for i in range(k + 1, n - k)]
+            coeffs += [0]*(k + 1)
 
-    prob = 0
-    for i in range(n + 1):
-        coeff = coeffs[i]
+        prob = 0
+        for i in range(n + 1):
+            co = coeffs[i]
 
-        def f(x): return (sin(x)**(d-1))*coeff*((x/pi)**i)*((1-(x/pi))**(n-i))
-        prob += scint.quad(f, 0, pi)[0]
+            def f(x): return (sin(x)**(d-1))*co*((x/pi)**i)*((1-(x/pi))**(n-i))
+            prob += scint.quad(f, int_l, int_u)[0]
+    else:
+
+        def f(x): return (sin(x)**(d-1))
+        prob = scint.quad(f, int_l, int_u)[0]
 
     def n(x): return (sin(x)**(d-1))
 
@@ -245,7 +257,7 @@ def filter_wrapper(dims, num, popcnt_nums, thresholds):
                                                                popcnt_num,
                                                                threshold)
                 filter_pass = filter_test(dim, num, popcnt_num, threshold)
-                est = filter_estimate(dim, popcnt_num, threshold)
+                est = estimate(dim, popcnt_num, threshold)
                 print "experimental %.6f, estimate %.6f" % (filter_pass, est)
                 print
                 print "======================================================="
