@@ -175,7 +175,7 @@ def main():
     stats['ngr_npf'] = [ngr_npf, ngr_npf/float(tot), est_ngr_npf]
 
     if gr == 0:
-        print "No Gauss reduced, setting gr to 1, this should not happen"
+        print "None Gauss reduced, setting gr to 1, this should not happen"
         gr = 1
     elif gr == tot:
         print "All Gauss reduced, setting gr to tot - 1, pick a larger num"
@@ -194,10 +194,14 @@ def main():
     stats['gr_pf/gr'] = [0, gr_pf/float(gr), est_gr_pf/est_gr]
     stats['ngr_pf/ngr'] = [0, ngr_pf/float(tot - gr), est_ngr_pf/(1 - est_gr)]
 
+    mkeyl = 0
+    for key in stats.keys():
+        mkeyl = max(mkeyl, len(key))
+
     for key, value in stats.items():
-        print key, "\texp_ratio\t", value[1], "\test_ratio\t", value[2]
+        print key, " "*(mkeyl-len(key)), "\texp:", value[1], "\test:", value[2]
     print
-    print '-------------------------------------------------------------------'
+    print '='*25
 
 
 def gauss_test(dim, num):
@@ -340,14 +344,14 @@ def filter_wrapper(dims, num, popcnt_nums, thresholds):
     for dim in dims:
         for popcnt_num in popcnt_nums:
             for threshold in thresholds:
+                print
                 print "dim %d, popcnt_num %d, threshold %d" % (dim,
                                                                popcnt_num,
                                                                threshold)
                 pf = filter_test(dim, num, popcnt_num, threshold)
                 est = estimate(dim, popcnt_num, threshold)
-                print "experimental %.6f, estimate %.6f" % (pf, est)
-                print
-                print "======================================================="
+                print "(exp, est): (%.6f, %.6f)" % (pf, est)
+                print "="*25
 
 
 def gauss_wrapper(dims, num):
@@ -359,12 +363,12 @@ def gauss_wrapper(dims, num):
     :param num: the number of vectors to sample and test
     """
     for dim in dims:
+        print
         print "dim %d" % dim
         gr = gauss_test(dim, num)
         est = estimate(dim, 0, 0, int_l=pi/3, int_u=(2*pi)/3, use_filt=False)
-        print "experimental %.6f, estimate %.6f" % (gr, est)
-        print
-        print "==============================================================="
+        print "(exp, est): (%.6f, %.6f)" % (gr, est)
+        print "="*25
 
 
 if __name__ == '__main__':
