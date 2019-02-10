@@ -294,12 +294,12 @@ def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
 
             def f(x): return (sin(x)**(d-2))*co*((x/pi)**i)*((1-(x/pi))**(n-i))
             prob += ty_gauss(f, int_l, int_u, tol=1.49e-12, rtol=1.49e-12,
-                             maxiter=50)[0]
+                             maxiter=100)[0]
     else:
 
         def f(x): return (sin(x)**(d-2))
         prob = ty_gauss(f, int_l, int_u, tol=1.49e-12, rtol=1.49e-12,
-                        maxiter=50)[0]
+                        maxiter=100)[0]
 
     def normaliser(dim):
         """
