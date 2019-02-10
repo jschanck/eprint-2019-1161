@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
-from math import pi, sin
+from numpy import pi, sin
+from scipy.integrate import quadrature as ty_gauss
 from scipy.special import binom
 
 import numpy as np
-import scipy.integrate as scint
 import sys
 
 
@@ -33,6 +33,10 @@ def sign(value):
     :param value: a float or int
     :returns: ``True`` if value is >= 0, else ``False``
     """
+    if abs(value) == 0:
+        print 'it happened! it is a lucky day!'
+        if value == -0.0:
+            value = 0
     if value >= 0:
         return 1
     return 0
@@ -43,20 +47,22 @@ def uniform_iid_sphere(dim, num):
     Samples points uniformly on the unit sphere in R^{dim}, i.e. S^{d - 1}.
     It samples from dim many zero centred Gaussians and normalises the vector.
 
-    :param dim: the dimension of the unit sphere
+    :param dim: the dimension of real space
     :param num: number of points to be sampled uniformly and i.i.d
     :returns: an OrderedDict with keys which enumerate the points as values
     """
     sphere_points = OrderedDict()
     for point in range(num):
+        # good randomness seems quite pertinent
         np.random.seed()
+
         vec = np.random.randn(dim)
         vec /= np.linalg.norm(vec)
         sphere_points[point] = vec
     return sphere_points
 
 
-def lossy_sketch(vec, popcnt_dict):
+def lossy_sketch(vec, popcnt):
     """
     Creates a lossy sketch of a point on the sphere a la the [Ducas18]
     extension to the [Charikar02] SimHash. The sketch will be called SimHash.
@@ -65,11 +71,11 @@ def lossy_sketch(vec, popcnt_dict):
     with some fixed points on the sphere.
 
     :param vec: the point on the sphere to make a SimHash of
-    :param popcnt_dict: the fixed vectors with which to make the SimHash
+    :param popcnt: the fixed vectors with which to make the SimHash
     :returns: an integer numpy array with values in {0, 1}, a SimHash
     """
-    lossy_vec = np.zeros(len(popcnt_dict))
-    for index, popcnt_vec in popcnt_dict.items():
+    lossy_vec = np.zeros(len(popcnt))
+    for index, popcnt_vec in popcnt.items():
         lossy_vec[index] = int(sign(np.inner(vec, popcnt_vec)))
     return lossy_vec
 
@@ -94,12 +100,21 @@ def hamming_compare(lossy_vec1, lossy_vec2, threshold):
 
 
 def main():
+    """
+    Detailed stats output for all relevant probabilities given real dimension
+    dim, number of vectors to trial num, number of popcnt vectors popcnt_num
+    and popcnt threshold popcnt.
+    """
     dim, num, popcnt_num, threshold = sys.argv[1:]
 
     dim = int(dim)
     num = int(num)
     popcnt_num = int(popcnt_num)
     threshold = int(threshold)
+
+    if num <= 2:
+        print "Please pick num > 2"
+        return
 
     # initialise counters
     # (n)gr = (not) Gauss reduced, (n)pf = (did not) pass filter
@@ -140,38 +155,44 @@ def main():
 
     # collect all stats, of form [absolute value, tot_ratio, est]
     stats = OrderedDict()
-    est = 1-2*estimate(dim, popcnt_num, threshold, int_u=pi/3, use_filt=False)
-    stats['gr'] = [gr, gr/float(tot), est]
-    est = estimate(dim, popcnt_num, threshold)
-    stats['pf'] = [pf, pf/float(tot), est]
-    est = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3)
-    stats['gr_pf'] = [gr_pf, gr_pf/float(tot), est]
-    est = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
-                   pass_filt=False)
-    stats['gr_npf'] = [gr_npf, gr_npf/float(tot), est]
-    est = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
-    stats['ngr_pf'] = [ngr_pf, ngr_pf/float(tot), est]
-    est = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3, pass_filt=False)
-    stats['ngr_npf'] = [ngr_npf, ngr_npf/float(tot), est]
 
-    est1 = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3)
-    est2 = estimate(dim, popcnt_num, threshold)
-    est = est1/float(est2)
-    stats['gr_pf/pf'] = [None, gr_pf/float(pf), est]
-    est1 = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
-                    pass_filt=False)
-    est2 = 1 - estimate(dim, popcnt_num, threshold)
-    est = est1/float(est2)
-    stats['gr_npf/npf'] = [None, gr_npf/float(tot - pf), est]
+    est_gr = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
+                      use_filt=False)
+    est_pf = estimate(dim, popcnt_num, threshold)
+    est_gr_pf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
+                         int_u=(2*pi)/3)
+    est_gr_npf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
+                          int_u=(2*pi)/3, pass_filt=False)
+    est_ngr_pf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
+    est_ngr_npf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3,
+                             pass_filt=False)
 
-    est1 = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3)
-    est2 = 1-2*estimate(dim, popcnt_num, threshold, int_u=pi/3, use_filt=False)
-    est = est1/float(est2)
-    stats['gr_pf/gr'] = [None, gr_pf/float(gr), est]
-    est1 = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
-    est2 = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3, use_filt=False)
-    est = est1/float(est2)
-    stats['ngr_pf/ngr'] = [None, ngr_pf/float(tot - gr), est]
+    stats['gr'] = [gr, gr/float(tot), est_gr]
+    stats['pf'] = [pf, pf/float(tot), est_pf]
+    stats['gr_pf'] = [gr_pf, gr_pf/float(tot), est_gr_pf]
+    stats['gr_npf'] = [gr_npf, gr_npf/float(tot), est_gr_npf]
+    stats['ngr_pf'] = [ngr_pf, ngr_pf/float(tot), est_ngr_pf]
+    stats['ngr_npf'] = [ngr_npf, ngr_npf/float(tot), est_ngr_npf]
+
+    if gr == 0:
+        print "No Gauss reduced, setting gr to 1, this should not happen"
+        gr = 1
+    elif gr == tot:
+        print "All Gauss reduced, setting gr to tot - 1, pick a larger num"
+        gr = tot - 1
+
+    if pf == 0:
+        print "Nothing passed filter, setting pf to 1, pick larger k"
+        pf = 1
+    elif pf == tot:
+        print "Everything passed filter, setting pf to tot - 1, pick smaller k"
+        pf = tot - 1
+
+    # conditional probabilities, e.g. the first is gr given that pf
+    stats['gr_pf/pf'] = [0, gr_pf/float(pf), est_gr_pf/est_pf]
+    stats['gr_npf/npf'] = [0, gr_npf/float(tot - pf), est_gr_npf/(1 - est_pf)]
+    stats['gr_pf/gr'] = [0, gr_pf/float(gr), est_gr_pf/est_gr]
+    stats['ngr_pf/ngr'] = [0, ngr_pf/float(tot - gr), est_ngr_pf/(1 - est_gr)]
 
     for key, value in stats.items():
         print key, "\texp_ratio\t", value[1], "\test_ratio\t", value[2]
@@ -187,37 +208,66 @@ def gauss_test(dim, num):
 
     :param dim: the dimension of real space
     :param num: the number of vectors to sample and test
+    :returns: the proportion of vector pairs which are Gauss reduced
     """
-    counter = 0
-    compar_tot = float(num) * float(num - 1) * 0.5
-    gauss_dict = uniform_iid_sphere(dim, num)
-    for index1, vec1 in gauss_dict.items():
-        for index2, vec2 in gauss_dict.items():
+    gr = 0
+    tot = 1./2. * num * (num - 1)
+    vector = uniform_iid_sphere(dim, num)
+    for index1, vec1 in vector.items():
+        for index2, vec2 in vector.items():
             if index1 <= index2:
                 continue
-            counter += 1*gauss_reduced(vec1, vec2)
-    print 'Fraction already reduced:', float(counter)/float(compar_tot)
-    print 'Fraction not yet reduced:', 1 - float(counter)/float(compar_tot)
+            gr += 1*gauss_reduced(vec1, vec2)
+    return float(gr)/tot
 
 
 def filter_test(dim, num, popcnt_num, threshold):
-    popcnt_pass = 0
-    popcnt_tot = 1./2. * num * (num - 1)
-    popcnt_dict = uniform_iid_sphere(dim, popcnt_num)
-    vec_dict = uniform_iid_sphere(dim, num)
-    for index, vec in vec_dict.items():
-        vec_dict[index] = [vec, lossy_sketch(vec, popcnt_dict)]
-    for index1, vecs1 in vec_dict.items():
-        for index2, vecs2 in vec_dict.items():
+    """
+    Quick function to generate experimental results for the proportion of
+    i.i.d. vectors on the unit sphere S^{dim - 1} \subset R^{dim} which do and
+    do not pass the filter with popcnt_num tests and threshold k.
+
+    :param dim: the dimension of real space
+    :param num: the number of vectors to sample and test
+    :param popcnt_num: the number of vectors with which to make the SimHash
+    :param threshold: the acceptance/rejection threshold for popcnts
+    :returns: the proportion of vector pairs passing the filter
+    """
+    pf = 0
+    tot = 1./2. * num * (num - 1)
+    popcnt = uniform_iid_sphere(dim, popcnt_num)
+    vector = uniform_iid_sphere(dim, num)
+    for index, vec in vector.items():
+        vector[index] = [vec, lossy_sketch(vec, popcnt)]
+    for index1, vecs1 in vector.items():
+        for index2, vecs2 in vector.items():
             if index1 >= index2:
                 continue
-            passed = hamming_compare(vecs1[1], vecs2[1], threshold)
-            popcnt_pass += passed
-    return float(popcnt_pass)/popcnt_tot
+            pf += hamming_compare(vecs1[1], vecs2[1], threshold)
+    return float(pf)/tot
 
 
 def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
              pass_filt=True):
+    """
+    A function for computing the various probabilities we are interested in.
+
+    If we are not considering the filter at all (e.g. when calculating Gauss
+    reduced probabilities) set use_filt to ``False``, in which case pass_filt,
+    popcnt_num and threshold are ignored.
+
+    If we want to calculate probabilities when pairs do not pass the filter,
+    set pass_filt to ``False``.
+
+    :param dim: the dimension of real space
+    :param popcnt_num: the number of vectors with which to make the SimHash
+    :param threshold: the acceptance/rejection threshold for popcnts
+    :param int_l: the lower bound of the integration in [0, pi]
+    :param int_u: the upper bound of the integration in [0, pi]
+    :param use_filt: boolean whether to consider the filter
+    :param pass_filt: boolean whether to consider passing/failing the filter
+    :returns: the chosen probability
+    """
     d = dim
     n = popcnt_num
     k = threshold
@@ -235,32 +285,86 @@ def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
         prob = 0
         for i in range(n + 1):
             co = coeffs[i]
+            if co == 0:
+                continue
 
-            def f(x): return (sin(x)**(d-1))*co*((x/pi)**i)*((1-(x/pi))**(n-i))
-            prob += scint.quad(f, int_l, int_u)[0]
+            def f(x): return (sin(x)**(d-2))*co*((x/pi)**i)*((1-(x/pi))**(n-i))
+            prob += ty_gauss(f, int_l, int_u, tol=1.49e-12, rtol=1.49e-12,
+                             maxiter=50)[0]
     else:
 
-        def f(x): return (sin(x)**(d-1))
-        prob = scint.quad(f, int_l, int_u)[0]
+        def f(x): return (sin(x)**(d-2))
+        prob = ty_gauss(f, int_l, int_u, tol=1.49e-12, rtol=1.49e-12,
+                        maxiter=50)[0]
 
-    def n(x): return (sin(x)**(d-1))
+    def normaliser(dim):
+        """
+        The normalisation constant (dependent on dim) has a closed form!
+        .. note:: we are interested in the relative surface area of
+        (hyper)spheres on the surface of S^{dim - 1}, hence dim - 2.
 
-    norm = 1./scint.quad(n, 0, pi)[0]
-    return norm * prob
+        :param dim: the dimension of real space
+        :returns: the normalisation constant for the integral estimates
+        """
+        d = dim - 2
+        norm = 1
+        if d % 2 == 0:
+            for i in range(1, d + 1):
+                if i % 2 == 0:
+                    norm *= float(i**(-1))
+                else:
+                    norm *= i
+            norm *= pi
+        else:
+            for i in range(2, d + 1):
+                if i % 2 == 0:
+                    norm *= i
+                else:
+                    norm *= float(i**(-1))
+            norm *= 2
+        return 1./norm
+
+    return normaliser(d) * prob
 
 
 def filter_wrapper(dims, num, popcnt_nums, thresholds):
+    """
+    Quick check of accuracy of filter proportion estimates for lists of dims,
+    popcnt_nums and thresholds to try. Prints basic stats.
+
+    :param dims: a list of dim to be tried
+    :param num: the number of vectors to sample and test
+    :param popcnt_nums: a list of popcnt_num to be tried
+    :param thresholds: a list of thresholds to be tried
+    """
     for dim in dims:
         for popcnt_num in popcnt_nums:
             for threshold in thresholds:
                 print "dim %d, popcnt_num %d, threshold %d" % (dim,
                                                                popcnt_num,
                                                                threshold)
-                filter_pass = filter_test(dim, num, popcnt_num, threshold)
+                pf = filter_test(dim, num, popcnt_num, threshold)
                 est = estimate(dim, popcnt_num, threshold)
-                print "experimental %.6f, estimate %.6f" % (filter_pass, est)
+                print "experimental %.6f, estimate %.6f" % (pf, est)
                 print
                 print "======================================================="
+
+
+def gauss_wrapper(dims, num):
+    """
+    Quick check of accuracy of reduced proportion estimates for lists of dims.
+    Prints basic stats.
+
+    :param dims: a list of dim to be tried
+    :param num: the number of vectors to sample and test
+    """
+    for dim in dims:
+        print "dim %d" % dim
+        gr = gauss_test(dim, num)
+        est = estimate(dim, 0, 0, int_l=pi/3, int_u=(2*pi)/3, use_filt=False)
+        print "experimental %.6f, estimate %.6f" % (gr, est)
+        print
+        print "==============================================================="
 
 
 if __name__ == '__main__':
