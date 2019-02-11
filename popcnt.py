@@ -103,7 +103,7 @@ def main():
     """
     Detailed stats output for all relevant probabilities given real dimension
     dim, number of vectors to trial num, number of popcnt vectors popcnt_num
-    and popcnt threshold popcnt.
+    and popcnt threshold threshold.
     """
     dim, num, popcnt_num, threshold = sys.argv[1:]
 
@@ -341,6 +341,12 @@ def filter_wrapper(dims, num, popcnt_nums, thresholds):
     :param popcnt_nums: a list of popcnt_num to be tried
     :param thresholds: a list of thresholds to be tried
     """
+    if type(dims) is not list:
+        dims = [dims]
+    if type(popcnt_nums) is not list:
+        popcnt_nums = [popcnt_nums]
+    if type(thresholds) is not list:
+        thresholds = [thresholds]
     for dim in dims:
         for popcnt_num in popcnt_nums:
             for threshold in thresholds:
@@ -362,6 +368,8 @@ def gauss_wrapper(dims, num):
     :param dims: a list of dim to be tried
     :param num: the number of vectors to sample and test
     """
+    if type(dims) is not list:
+        dims = [dims]
     for dim in dims:
         print
         print "dim %d" % dim
