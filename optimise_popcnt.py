@@ -109,13 +109,12 @@ def maximise_optimising_function(dim, f=None, max_popcnt_num=256):
     return solution_value, solution_key
 
 
-def optimisation(dim, gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
+def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
     """
     A potentially naive optimisation function that tries to maximise the ratio
     of good to bad events, while ensuring that at least half of reductions are
     found.
 
-    :param dim: the dimension of real space
     :param gr: expected proportion of vector pairs: Gauss reduced
     :param pf: expected proportion of vector pairs: pass popcnt filter
     :param gr_pf: expected proportion of vector pairs: gr and pf
