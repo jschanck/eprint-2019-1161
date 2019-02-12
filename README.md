@@ -6,7 +6,7 @@ However qasm2pdf seems quite shell specific and qasm2png requires some non stand
 
 
 popcnt.py
-========
+=========
 
 This python file has all the necessary functions for experimentally vindicating the probabilities arrived at in the main document. A general overview, for a dimension ``d`` lattice, using ``n`` vectors to create SimHashes and a threshold ``k``, and using ``db`` many vectors to get experimental results, is given by
 
@@ -26,7 +26,7 @@ One can also do quick tests using ``filter_wrapper`` and ``gauss_wrapper`` as fo
 
 
 optimise_popcnt.py
-=================
+==================
 
 This python file creates and saves estimated probabilities for all possible popcnt parameters (up to caller defined limit of vectors used to create the SimHashes) for a given dimension. It also allows optimisation over a (caller defined) function of the probabilities estimated, for a given dimension.
 
@@ -46,4 +46,4 @@ To optimise over a function (not the naive default), where a higher value is bet
             # return some function of the arguments
     >>> max_opt(d, f=f, max_popcnt_num=n_max)                               # where create_estimates(d, max_popcnt_num=n_max) has been called
 
-and the maximum of the function f over the input popcnt parameters will be returned and the tuple ``(d, n, k)`` which first achieved them.
+The maximum of the function f over the input popcnt parameters will be returned and the tuple ``(d, n, k)`` which first achieved it.
