@@ -101,7 +101,7 @@ def maximise_optimising_function(dim, f=None, max_popcnt_num=256):
     solution_key = None
     for key, estimates in all_estimates.items():
         probs = Namespace(**estimates)
-        new_value = f(dim, probs.gr, probs.pf, probs.gr_pf, probs.gr_npf,
+        new_value = f(probs.gr, probs.pf, probs.gr_pf, probs.gr_npf,
                       probs.ngr_pf, probs.ngr_npf)
         if new_value > solution_value or solution_value is None:
             solution_value = new_value
