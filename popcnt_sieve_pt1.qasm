@@ -7,23 +7,23 @@
 #
     defbox  add4,4,0,'\texttt{add}'
 
-    qubit   v0
+    qubit   u0
     qubit   a0,0
-    qubit   w0
-    qubit   w1
-    qubit   a1,0
+    qubit   v0
     qubit   v1
-    qubit   v2
+    qubit   a1,0
+    qubit   u1
+    qubit   u2
     qubit   a2,0
-    qubit   w2
-    qubit   w3
-    qubit   a3,0
+    qubit   v2
     qubit   v3
+    qubit   a3,0
+    qubit   u3
 
-    cnot    v0,w0
-    cnot    v1,w1
-    cnot    v2,w2
-    cnot    v3,w3
+    cnot    u0,v0
+    cnot    u1,v1
+    cnot    u2,v2
+    cnot    u3,v3
 
-    add4    a0,w0,w1,a1
-    add4    a2,w2,w3,a3
+    add4    a0,v0,v1,a1
+    add4    a2,v2,v3,a3

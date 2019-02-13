@@ -7,50 +7,50 @@
 %
 %     defbox  add4,4,0,'\texttt{add}'
 % 
-%     qubit   v0
+%     qubit   u0
 %     qubit   a0,0
-%     qubit   w0
-%     qubit   w1
-%     qubit   a1,0
+%     qubit   v0
 %     qubit   v1
-%     qubit   v2
+%     qubit   a1,0
+%     qubit   u1
+%     qubit   u2
 %     qubit   a2,0
-%     qubit   w2
-%     qubit   w3
-%     qubit   a3,0
+%     qubit   v2
 %     qubit   v3
+%     qubit   a3,0
+%     qubit   u3
 % 
-%     cnot    v0,w0
-%     cnot    v1,w1
-%     cnot    v2,w2
-%     cnot    v3,w3
+%     cnot    u0,v0
+%     cnot    u1,v1
+%     cnot    u2,v2
+%     cnot    u3,v3
 % 
-%     add4    a0,w0,w1,a1
-%     add4    a2,w2,w3,a3
+%     add4    a0,v0,v1,a1
+%     add4    a2,v2,v3,a3
 
 %  Time 01:
-%    Gate 00 cnot(v0,w0)
-%    Gate 01 cnot(v1,w1)
-%    Gate 02 cnot(v2,w2)
-%    Gate 03 cnot(v3,w3)
+%    Gate 00 cnot(u0,v0)
+%    Gate 01 cnot(u1,v1)
+%    Gate 02 cnot(u2,v2)
+%    Gate 03 cnot(u3,v3)
 %  Time 02:
-%    Gate 04 add4(a0,w0,w1,a1)
-%    Gate 05 add4(a2,w2,w3,a3)
+%    Gate 04 add4(a0,v0,v1,a1)
+%    Gate 05 add4(a2,v2,v3,a3)
 
 % Qubit circuit matrix:
 %
-% v0: gAxA, n  , n  
+% u0: gAxA, n  , n  
 % a0: n  , gBxB, n  
-% w0: gAxC, gBxC, n  
-% w1: gAxD, gBxD, n  
+% v0: gAxC, gBxC, n  
+% v1: gAxD, gBxD, n  
 % a1: n  , gBxE, n  
-% v1: gAxF, n  , n  
-% v2: gAxG, n  , n  
+% u1: gAxF, n  , n  
+% u2: gAxG, n  , n  
 % a2: n  , gBxH, n  
-% w2: gAxI, gBxI, n  
-% w3: gAxJ, gBxJ, n  
+% v2: gAxI, gBxI, n  
+% v3: gAxJ, gBxJ, n  
 % a3: n  , gBxK, n  
-% v3: gAxL, n  , n  
+% u3: gAxL, n  , n  
 
 \documentclass[11pt]{article}
 \input{xyqcirc.tex}
@@ -76,18 +76,18 @@
 
 % definitions for bit labels and initial states
 
-\def\bA{ \q{v_{0}}}
+\def\bA{ \q{u_{0}}}
 \def\bB{\qv{a_{0}}{0}}
-\def\bC{ \q{w_{0}}}
-\def\bD{ \q{w_{1}}}
+\def\bC{ \q{v_{0}}}
+\def\bD{ \q{v_{1}}}
 \def\bE{\qv{a_{1}}{0}}
-\def\bF{ \q{v_{1}}}
-\def\bG{ \q{v_{2}}}
+\def\bF{ \q{u_{1}}}
+\def\bG{ \q{u_{2}}}
 \def\bH{\qv{a_{2}}{0}}
-\def\bI{ \q{w_{2}}}
-\def\bJ{ \q{w_{3}}}
+\def\bI{ \q{v_{2}}}
+\def\bJ{ \q{v_{3}}}
 \def\bK{\qv{a_{3}}{0}}
-\def\bL{ \q{v_{3}}}
+\def\bL{ \q{u_{3}}}
 
 % The quantum circuit as an xymatrix
 

@@ -6,28 +6,28 @@
 % Simple illustration of a circuit we might want to implement during quantum sieving
 %
 % 
-%     qubit   v0
 %     qubit   v1
-%     qubit   v2
 %     qubit   v3
+%     qubit   s^{23}_{0}
+%     qubit   s^{23}_{1}
 %     qubit   s^{0123}_{0}
 %     qubit   a0
 %     qubit   s^{0123}_{1}
 %     qubit   s^{0123}_{2}
-%     qubit   w1
-%     qubit   w3
-%     qubit   s^{23}_{0}
-%     qubit   s^{23}_{1}
+%     qubit   u0
+%     qubit   u1
+%     qubit   u2
+%     qubit   u3
 % 
 %     toffoli s^{0123}_{1},s^{0123}_{2},a0
 %     cnot    s^{0123}_{2},s^{0123}_{1}
 %     cnot    a0,s^{0123}_{1}
 % 
-%     nop     v0
+%     nop     v1
 
 %  Time 01:
 %    Gate 00 toffoli(s^{0123}_{1},s^{0123}_{2},a0)
-%    Gate 03 nop(v0)
+%    Gate 03 nop(v1)
 %  Time 02:
 %    Gate 01 cnot(s^{0123}_{2},s^{0123}_{1})
 %  Time 03:
@@ -35,18 +35,18 @@
 
 % Qubit circuit matrix:
 %
-% v0: gAxA, n  , n  , n  
-% v1: n  , n  , n  , n  
-% v2: n  , n  , n  , n  
+% v1: gAxA, n  , n  , n  
 % v3: n  , n  , n  , n  
+% s^{23}_{0}: n  , n  , n  , n  
+% s^{23}_{1}: n  , n  , n  , n  
 % s^{0123}_{0}: n  , n  , n  , n  
 % a0: gAxF, n  , gCxF, n  
 % s^{0123}_{1}: gAxG, gBxG, gCxG, n  
 % s^{0123}_{2}: gAxH, gBxH, n  , n  
-% w1: n  , n  , n  , n  
-% w3: n  , n  , n  , n  
-% s^{23}_{0}: n  , n  , n  , n  
-% s^{23}_{1}: n  , n  , n  , n  
+% u0: n  , n  , n  , n  
+% u1: n  , n  , n  , n  
+% u2: n  , n  , n  , n  
+% u3: n  , n  , n  , n  
 
 \documentclass[11pt]{article}
 \input{xyqcirc.tex}
@@ -64,18 +64,18 @@
 
 % definitions for bit labels and initial states
 
-\def\bA{ \q{v_{0}}}
-\def\bB{ \q{v_{1}}}
-\def\bC{ \q{v_{2}}}
-\def\bD{ \q{v_{3}}}
+\def\bA{ \q{v_{1}}}
+\def\bB{ \q{v_{3}}}
+\def\bC{ \q{s^{23}_{0}}}
+\def\bD{ \q{s^{23}_{1}}}
 \def\bE{ \q{s^{0123}_{0}}}
 \def\bF{ \q{a_{0}}}
 \def\bG{ \q{s^{0123}_{1}}}
 \def\bH{ \q{s^{0123}_{2}}}
-\def\bI{ \q{w_{1}}}
-\def\bJ{ \q{w_{3}}}
-\def\bK{ \q{s^{23}_{0}}}
-\def\bL{ \q{s^{23}_{1}}}
+\def\bI{ \q{u_{0}}}
+\def\bJ{ \q{u_{1}}}
+\def\bK{ \q{u_{2}}}
+\def\bL{ \q{u_{3}}}
 
 % The quantum circuit as an xymatrix
 
