@@ -7,6 +7,7 @@ from scipy.integrate import quadrature as ty_gauss
 from scipy.special import binom
 
 import numpy as np
+import random
 import sys
 
 
@@ -42,13 +43,15 @@ def sign(value):
     return 0
 
 
-def uniform_iid_sphere(dim, num):
+def uniform_iid_sphere(dim, num, popcnt_flag=False):
     """
     Samples points uniformly on the unit sphere in R^{dim}, i.e. S^{d - 1}.
     It samples from dim many zero centred Gaussians and normalises the vector.
 
     :param dim: the dimension of real space
     :param num: number of points to be sampled uniformly and i.i.d
+    :param popcnt_flag: if ``False`` popcnt vectors come from the unit sphere,
+                        else they mimic the behaviour of G6K
     :returns: an OrderedDict with keys which enumerate the points as values
     """
     sphere_points = OrderedDict()
@@ -56,8 +59,21 @@ def uniform_iid_sphere(dim, num):
         # good randomness seems quite pertinent
         np.random.seed()
 
-        vec = np.random.randn(dim)
-        vec /= np.linalg.norm(vec)
+        if popcnt_flag:
+            secure_random = random.SystemRandom()
+            indices = secure_random.sample(range(dim), 6)
+            plus = secure_random.sample(indices, 3)
+            minus = [index for index in indices if index not in plus]
+            vec = [0]*dim
+            for index in plus:
+                vec[index] = 1
+            for index in minus:
+                vec[index] = -1
+            vec = np.array(vec)
+        else:
+            vec = np.random.randn(dim)
+            vec /= np.linalg.norm(vec)
+
         sphere_points[point] = vec
     return sphere_points
 
@@ -102,15 +118,20 @@ def hamming_compare(lossy_vec1, lossy_vec2, threshold):
 def main():
     """
     Detailed stats output for all relevant probabilities given real dimension
-    dim, number of vectors to trial num, number of popcnt vectors popcnt_num
-    and popcnt threshold threshold.
+    dim, number of vectors to trial num, number of popcnt vectors popcnt_num,
+    popcnt threshold threshold and a switch whether the popcnt vectors should
+    mimic G6K.
     """
-    dim, num, popcnt_num, threshold = sys.argv[1:]
+    dim, num, popcnt_num, threshold, popcnt_flag = sys.argv[1:]
 
     dim = int(dim)
     num = int(num)
     popcnt_num = int(popcnt_num)
     threshold = int(threshold)
+    popcnt_flag = eval(popcnt_flag)
+
+    if popcnt_flag:
+        print "Ignore integration based estimates!\n"
 
     if num <= 2:
         print "Please pick num > 2"
@@ -125,7 +146,7 @@ def main():
     tot = 1./2. * num * (num - 1)
 
     # get dictionaries of points to be tested and used to form SimHashes
-    popcnt = uniform_iid_sphere(dim, popcnt_num)
+    popcnt = uniform_iid_sphere(dim, popcnt_num, popcnt_flag=popcnt_flag)
     vector = uniform_iid_sphere(dim, num)
 
     # create SimHashes
@@ -225,7 +246,7 @@ def gauss_test(dim, num):
     return float(gr)/tot
 
 
-def filter_test(dim, num, popcnt_num, threshold):
+def filter_test(dim, num, popcnt_num, threshold, popcnt_flag=False):
     """
     Quick function to generate experimental results for the proportion of
     i.i.d. vectors on the unit sphere S^{dim - 1} \subset R^{dim} which do and
@@ -235,11 +256,13 @@ def filter_test(dim, num, popcnt_num, threshold):
     :param num: the number of vectors to sample and test
     :param popcnt_num: the number of vectors with which to make the SimHash
     :param threshold: the acceptance/rejection threshold for popcnts
+    :param popcnt_flag: if ``False`` popcnt vectors come from the unit sphere,
+                        else they mimic the behaviour of G6K
     :returns: the proportion of vector pairs passing the filter
     """
     pf = 0
     tot = 1./2. * num * (num - 1)
-    popcnt = uniform_iid_sphere(dim, popcnt_num)
+    popcnt = uniform_iid_sphere(dim, popcnt_num, popcnt_flag=popcnt_flag)
     vector = uniform_iid_sphere(dim, num)
     for index, vec in vector.items():
         vector[index] = [vec, lossy_sketch(vec, popcnt)]
