@@ -54,18 +54,28 @@ def uniform_iid_sphere(dim, num, popcnt_flag=False):
                         else they mimic the behaviour of G6K
     :returns: an OrderedDict with keys which enumerate the points as values
     """
+    sphere_points = OrderedDict()
 
     if not popcnt_flag:
-        sphere_points = OrderedDict()
         for point in range(num):
             # good randomness seems quite pertinent
             np.random.seed()
             vec = np.random.randn(dim)
             vec /= np.linalg.norm(vec)
             sphere_points[point] = vec
-        return sphere_points
     else:
-        sphere_points = OrderedDict()
+        # for point in range(num):
+        #     secure_random = random.SystemRandom()
+        #     indices = secure_random.sample(range(dim), 6)
+        #     plus = secure_random.sample(indices, 3)
+        #     minus = [index for index in indices if index not in plus]
+        #     vec = [0]*dim
+        #     for index in plus:
+        #         vec[index] = 1
+        #     for index in minus:
+        #         vec[index] = -1
+        #     sphere_points[point] = np.array(vec)
+
         for point, line in enumerate(open("spherical_coding/sc_{dim}_{num}.def".format(dim=dim, num=num)).readlines()):
             idx = map(int, line.split(" "))
             vec = [0]*dim
@@ -74,7 +84,7 @@ def uniform_iid_sphere(dim, num, popcnt_flag=False):
             for i in idx[3:]:
                 vec[i] = -1
             sphere_points[point] = np.array(vec)
-        return sphere_points
+    return sphere_points
 
 
 def lossy_sketch(vec, popcnt):
