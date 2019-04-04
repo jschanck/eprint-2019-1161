@@ -7,19 +7,19 @@
 #
     defbox  add6,6,0,'\texttt{add}'
 
-    qubit   v1
-    qubit   v3
+    qubit   \tilde{v}_{1}
+    qubit   \tilde{v}_{3}
     qubit   a0
     qubit   s^{01}_{0}
     qubit   s^{23}_{0}
     qubit   s^{01}_{1}
     qubit   s^{23}_{1}
     qubit   a2
-    qubit   u0
-    qubit   u1
-    qubit   u2
-    qubit   u3
+    qubit   \tilde{u}_{0}
+    qubit   \tilde{u}_{1}
+    qubit   \tilde{u}_{2}
+    qubit   \tilde{u}_{3}
 
     add6    a0,s^{01}_{0},s^{23}_{0},s^{01}_{1},s^{23}_{1},a2
 
-    nop     v1
+    nop     \tilde{v}_{1}

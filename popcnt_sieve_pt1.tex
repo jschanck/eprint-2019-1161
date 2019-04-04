@@ -7,50 +7,50 @@
 %
 %     defbox  add4,4,0,'\texttt{add}'
 % 
-%     qubit   u0
+%     qubit   \tilde{u}_{0}
 %     qubit   a0,0
-%     qubit   v0
-%     qubit   v1
+%     qubit   \tilde{v}_{0}
+%     qubit   \tilde{v}_{1}
 %     qubit   a1,0
-%     qubit   u1
-%     qubit   u2
+%     qubit   \tilde{u}_{1}
+%     qubit   \tilde{u}_{2}
 %     qubit   a2,0
-%     qubit   v2
-%     qubit   v3
+%     qubit   \tilde{v}_{2}
+%     qubit   \tilde{v}_{3}
 %     qubit   a3,0
-%     qubit   u3
+%     qubit   \tilde{u}_{3}
 % 
-%     cnot    u0,v0
-%     cnot    u1,v1
-%     cnot    u2,v2
-%     cnot    u3,v3
+%     cnot    \tilde{u}_{0},\tilde{v}_{0}
+%     cnot    \tilde{u}_{1},\tilde{v}_{1}
+%     cnot    \tilde{u}_{2},\tilde{v}_{2}
+%     cnot    \tilde{u}_{3},\tilde{v}_{3}
 % 
-%     add4    a0,v0,v1,a1
-%     add4    a2,v2,v3,a3
+%     add4    a0,\tilde{v}_{0},\tilde{v}_{1},a1
+%     add4    a2,\tilde{v}_{2},\tilde{v}_{3},a3
 
 %  Time 01:
-%    Gate 00 cnot(u0,v0)
-%    Gate 01 cnot(u1,v1)
-%    Gate 02 cnot(u2,v2)
-%    Gate 03 cnot(u3,v3)
+%    Gate 00 cnot(\tilde{u}_{0},\tilde{v}_{0})
+%    Gate 01 cnot(\tilde{u}_{1},\tilde{v}_{1})
+%    Gate 02 cnot(\tilde{u}_{2},\tilde{v}_{2})
+%    Gate 03 cnot(\tilde{u}_{3},\tilde{v}_{3})
 %  Time 02:
-%    Gate 04 add4(a0,v0,v1,a1)
-%    Gate 05 add4(a2,v2,v3,a3)
+%    Gate 04 add4(a0,\tilde{v}_{0},\tilde{v}_{1},a1)
+%    Gate 05 add4(a2,\tilde{v}_{2},\tilde{v}_{3},a3)
 
 % Qubit circuit matrix:
 %
-% u0: gAxA, n  , n  
+% \tilde{u}_{0}: gAxA, n  , n  
 % a0: n  , gBxB, n  
-% v0: gAxC, gBxC, n  
-% v1: gAxD, gBxD, n  
+% \tilde{v}_{0}: gAxC, gBxC, n  
+% \tilde{v}_{1}: gAxD, gBxD, n  
 % a1: n  , gBxE, n  
-% u1: gAxF, n  , n  
-% u2: gAxG, n  , n  
+% \tilde{u}_{1}: gAxF, n  , n  
+% \tilde{u}_{2}: gAxG, n  , n  
 % a2: n  , gBxH, n  
-% v2: gAxI, gBxI, n  
-% v3: gAxJ, gBxJ, n  
+% \tilde{v}_{2}: gAxI, gBxI, n  
+% \tilde{v}_{3}: gAxJ, gBxJ, n  
 % a3: n  , gBxK, n  
-% u3: gAxL, n  , n  
+% \tilde{u}_{3}: gAxL, n  , n  
 
 \documentclass[11pt]{article}
 \input{xyqcirc.tex}
@@ -76,18 +76,18 @@
 
 % definitions for bit labels and initial states
 
-\def\bA{ \q{u_{0}}}
+\def\bA{ \q{\tilde{u}_{0}}}
 \def\bB{\qv{a_{0}}{0}}
-\def\bC{ \q{v_{0}}}
-\def\bD{ \q{v_{1}}}
+\def\bC{ \q{\tilde{v}_{0}}}
+\def\bD{ \q{\tilde{v}_{1}}}
 \def\bE{\qv{a_{1}}{0}}
-\def\bF{ \q{u_{1}}}
-\def\bG{ \q{u_{2}}}
+\def\bF{ \q{\tilde{u}_{1}}}
+\def\bG{ \q{\tilde{u}_{2}}}
 \def\bH{\qv{a_{2}}{0}}
-\def\bI{ \q{v_{2}}}
-\def\bJ{ \q{v_{3}}}
+\def\bI{ \q{\tilde{v}_{2}}}
+\def\bJ{ \q{\tilde{v}_{3}}}
 \def\bK{\qv{a_{3}}{0}}
-\def\bL{ \q{u_{3}}}
+\def\bL{ \q{\tilde{u}_{3}}}
 
 % The quantum circuit as an xymatrix
 

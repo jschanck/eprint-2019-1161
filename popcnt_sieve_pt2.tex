@@ -7,41 +7,41 @@
 %
 %     defbox  add6,6,0,'\texttt{add}'
 % 
-%     qubit   v1
-%     qubit   v3
+%     qubit   \tilde{v}_{1}
+%     qubit   \tilde{v}_{3}
 %     qubit   a0
 %     qubit   s^{01}_{0}
 %     qubit   s^{23}_{0}
 %     qubit   s^{01}_{1}
 %     qubit   s^{23}_{1}
 %     qubit   a2
-%     qubit   u0
-%     qubit   u1
-%     qubit   u2
-%     qubit   u3
+%     qubit   \tilde{u}_{0}
+%     qubit   \tilde{u}_{1}
+%     qubit   \tilde{u}_{2}
+%     qubit   \tilde{u}_{3}
 % 
 %     add6    a0,s^{01}_{0},s^{23}_{0},s^{01}_{1},s^{23}_{1},a2
 % 
-%     nop     v1
+%     nop     \tilde{v}_{1}
 
 %  Time 01:
 %    Gate 00 add6(a0,s^{01}_{0},s^{23}_{0},s^{01}_{1},s^{23}_{1},a2)
-%    Gate 01 nop(v1)
+%    Gate 01 nop(\tilde{v}_{1})
 
 % Qubit circuit matrix:
 %
-% v1: gAxA, n  
-% v3: n  , n  
+% \tilde{v}_{1}: gAxA, n  
+% \tilde{v}_{3}: n  , n  
 % a0: gAxC, n  
 % s^{01}_{0}: gAxD, n  
 % s^{23}_{0}: gAxE, n  
 % s^{01}_{1}: gAxF, n  
 % s^{23}_{1}: gAxG, n  
 % a2: gAxH, n  
-% u0: n  , n  
-% u1: n  , n  
-% u2: n  , n  
-% u3: n  , n  
+% \tilde{u}_{0}: n  , n  
+% \tilde{u}_{1}: n  , n  
+% \tilde{u}_{2}: n  , n  
+% \tilde{u}_{3}: n  , n  
 
 \documentclass[11pt]{article}
 \input{xyqcirc.tex}
@@ -58,18 +58,18 @@
 
 % definitions for bit labels and initial states
 
-\def\bA{ \q{v_{1}}}
-\def\bB{ \q{v_{3}}}
+\def\bA{ \q{\tilde{v}_{1}}}
+\def\bB{ \q{\tilde{v}_{3}}}
 \def\bC{ \q{a_{0}}}
 \def\bD{ \q{s^{01}_{0}}}
 \def\bE{ \q{s^{23}_{0}}}
 \def\bF{ \q{s^{01}_{1}}}
 \def\bG{ \q{s^{23}_{1}}}
 \def\bH{ \q{a_{2}}}
-\def\bI{ \q{u_{0}}}
-\def\bJ{ \q{u_{1}}}
-\def\bK{ \q{u_{2}}}
-\def\bL{ \q{u_{3}}}
+\def\bI{ \q{\tilde{u}_{0}}}
+\def\bJ{ \q{\tilde{u}_{1}}}
+\def\bK{ \q{\tilde{u}_{2}}}
+\def\bL{ \q{\tilde{u}_{3}}}
 
 % The quantum circuit as an xymatrix
 

@@ -7,23 +7,23 @@
 #
     defbox  add4,4,0,'\texttt{add}'
 
-    qubit   u0
+    qubit   \tilde{u}_{0}
     qubit   a0,0
-    qubit   v0
-    qubit   v1
+    qubit   \tilde{v}_{0}
+    qubit   \tilde{v}_{1}
     qubit   a1,0
-    qubit   u1
-    qubit   u2
+    qubit   \tilde{u}_{1}
+    qubit   \tilde{u}_{2}
     qubit   a2,0
-    qubit   v2
-    qubit   v3
+    qubit   \tilde{v}_{2}
+    qubit   \tilde{v}_{3}
     qubit   a3,0
-    qubit   u3
+    qubit   \tilde{u}_{3}
 
-    cnot    u0,v0
-    cnot    u1,v1
-    cnot    u2,v2
-    cnot    u3,v3
+    cnot    \tilde{u}_{0},\tilde{v}_{0}
+    cnot    \tilde{u}_{1},\tilde{v}_{1}
+    cnot    \tilde{u}_{2},\tilde{v}_{2}
+    cnot    \tilde{u}_{3},\tilde{v}_{3}
 
-    add4    a0,v0,v1,a1
-    add4    a2,v2,v3,a3
+    add4    a0,\tilde{v}_{0},\tilde{v}_{1},a1
+    add4    a2,\tilde{v}_{2},\tilde{v}_{3},a3
