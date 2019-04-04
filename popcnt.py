@@ -7,7 +7,7 @@ from scipy.integrate import quadrature as ty_gauss
 from scipy.special import binom
 
 import numpy as np
-import random
+# import random
 import sys
 
 
@@ -76,7 +76,7 @@ def uniform_iid_sphere(dim, num, popcnt_flag=False):
         #         vec[index] = -1
         #     sphere_points[point] = np.array(vec)
 
-        for point, line in enumerate(open("spherical_coding/sc_{dim}_{num}.def".format(dim=dim, num=num)).readlines()):
+        for point, line in enumerate(open("spherical_coding/sc_{dim}_{num}.def".format(dim=dim, num=num)).readlines()): # noqa
             idx = map(int, line.split(" "))
             vec = [0]*dim
             for i in idx[:3]:
@@ -326,7 +326,7 @@ def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
 
             def f(x): return (sin(x)**(d-2))*co*((x/pi)**i)*((1-(x/pi))**(n-i))
             prob += ty_gauss(f, int_l, int_u, tol=1.49e-18, rtol=1.49e-18,
-                             maxiter=1000)[0]
+                             maxiter=5000)[0]
     else:
 
         def f(x): return (sin(x)**(d-2))
