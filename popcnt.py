@@ -107,7 +107,7 @@ def lossy_sketch(vec, popcnt):
 
 def hamming_compare(lossy_vec1, lossy_vec2, threshold):
     """
-    Takes an XOR of two SimHashes and checks the popcnt is above= or below= a
+    Takes an XOR of two SimHashes and checks the popcnt is above or below a
     threshold.
 
     :param lossy_vec1: the SimHash of the first point on the sphere
@@ -119,7 +119,7 @@ def hamming_compare(lossy_vec1, lossy_vec2, threshold):
     popcnt_num = len(lossy_vec1)
     hamming_xor = sum(np.bitwise_xor(lossy_vec1.astype(int),
                                      lossy_vec2.astype(int)))
-    if hamming_xor <= threshold or hamming_xor >= popcnt_num - threshold:
+    if hamming_xor < threshold or hamming_xor > popcnt_num - threshold:
         return True
     return False
 
@@ -310,13 +310,13 @@ def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
 
     if use_filt:
         if pass_filt:
-            coeffs = [binom(n, i) for i in range(0, k + 1)]
-            coeffs += [0] * (n - (2 * k) - 1)
-            coeffs += [binom(n, i) for i in range(n - k, n + 1)]
+            coeffs = [binom(n, i) for i in range(0, k)]
+            coeffs += [0] * (n - (2 * k) + 1)
+            coeffs += [binom(n, i) for i in range(n - k + 1, n + 1)]
         else:
-            coeffs = [0]*(k + 1)
-            coeffs += [binom(n, i) for i in range(k + 1, n - k)]
-            coeffs += [0]*(k + 1)
+            coeffs = [0]*k
+            coeffs += [binom(n, i) for i in range(k, n - k + 1)]
+            coeffs += [0]*k
 
         prob = 0
         for i in range(n + 1):
