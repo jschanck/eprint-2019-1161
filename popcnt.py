@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
+from math import log
 from numpy import pi, sin
 from scipy.integrate import quadrature as ty_gauss
 from scipy.special import binom
@@ -131,15 +132,16 @@ def main():
     popcnt threshold threshold and a switch whether the popcnt vectors should
     mimic G6K.
     """
-    dim, num, popcnt_num, threshold, popcnt_flag = sys.argv[1:]
+    dim, num, popcnt_num, threshold, popcnt_flag, est_flag = sys.argv[1:]
 
     dim = int(dim)
     num = int(num)
     popcnt_num = int(popcnt_num)
     threshold = int(threshold)
     popcnt_flag = eval(popcnt_flag)
+    est_flag = eval(est_flag)
 
-    if popcnt_flag:
+    if popcnt_flag or not est_flag:
         print "Ignore integration based estimates!\n"
 
     if num <= 2:
@@ -183,27 +185,6 @@ def main():
     gr = gr_pf + gr_npf
     pf = gr_pf + ngr_pf
 
-    # collect all stats, of form [absolute value, tot_ratio, est]
-    stats = OrderedDict()
-
-    est_gr = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
-                      use_filt=False)
-    est_pf = estimate(dim, popcnt_num, threshold)
-    est_gr_pf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
-                         int_u=(2*pi)/3)
-    est_gr_npf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
-                          int_u=(2*pi)/3, pass_filt=False)
-    est_ngr_pf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
-    est_ngr_npf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3,
-                             pass_filt=False)
-
-    stats['gr'] = [gr, gr/float(tot), est_gr]
-    stats['pf'] = [pf, pf/float(tot), est_pf]
-    stats['gr_pf'] = [gr_pf, gr_pf/float(tot), est_gr_pf]
-    stats['gr_npf'] = [gr_npf, gr_npf/float(tot), est_gr_npf]
-    stats['ngr_pf'] = [ngr_pf, ngr_pf/float(tot), est_ngr_pf]
-    stats['ngr_npf'] = [ngr_npf, ngr_npf/float(tot), est_ngr_npf]
-
     if gr == 0:
         print "None Gauss reduced, setting gr to 1, this should not happen"
         gr = 1
@@ -218,18 +199,55 @@ def main():
         print "Everything passed filter, setting pf to tot - 1, pick smaller k"
         pf = tot - 1
 
+    # collect all stats, of form [absolute value, tot_ratio, est]
+    stats = OrderedDict()
+
+    if est_flag:
+        est_gr = estimate(dim, popcnt_num, threshold, int_l=pi/3,
+                          int_u=(2*pi)/3, use_filt=False)
+        est_pf = estimate(dim, popcnt_num, threshold)
+        est_gr_pf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
+                             int_u=(2*pi)/3)
+        est_gr_npf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
+                              int_u=(2*pi)/3, pass_filt=False)
+        est_ngr_pf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
+        est_ngr_npf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3,
+                                 pass_filt=False)
+    else:
+        est_gr = 2
+        est_pf = 2
+        est_gr_pf = 2
+        est_gr_npf = 2
+        est_ngr_pf = 2
+        est_ngr_npf = 2
+
+    stats['gr'] = [int(gr), gr/float(tot), est_gr]
+    stats['ngr'] = [int(tot-gr), (tot-gr)/float(tot), 1-est_gr]
+    stats['pf'] = [int(pf), pf/float(tot), est_pf]
+    stats['npf'] = [int(tot-pf), (tot-pf)/float(tot), 1 - est_pf]
+    stats['gr_pf'] = [int(gr_pf), gr_pf/float(tot), est_gr_pf]
+    stats['gr_npf'] = [int(gr_npf), gr_npf/float(tot), est_gr_npf]
+    stats['ngr_pf'] = [int(ngr_pf), ngr_pf/float(tot), est_ngr_pf]
+    stats['ngr_npf'] = [int(ngr_npf), ngr_npf/float(tot), est_ngr_npf]
+
     # conditional probabilities, e.g. the first is gr given that pf
-    stats['gr_pf/pf'] = [0, gr_pf/float(pf), est_gr_pf/est_pf]
-    stats['gr_npf/npf'] = [0, gr_npf/float(tot - pf), est_gr_npf/(1 - est_pf)]
-    stats['gr_pf/gr'] = [0, gr_pf/float(gr), est_gr_pf/est_gr]
-    stats['ngr_pf/ngr'] = [0, ngr_pf/float(tot - gr), est_ngr_pf/(1 - est_gr)]
+    tot_len = int(log(tot, 10))
+    space = '-'*tot_len
+    stats['gr|pf'] = [space, gr_pf/float(pf), est_gr_pf/est_pf]
+    stats['gr|npf'] = [space, gr_npf/float(tot-pf), est_gr_npf/(1-est_pf)]
+    stats['pf|gr'] = [space, gr_pf/float(gr), est_gr_pf/est_gr]
+    stats['pf|ngr'] = [space, ngr_pf/float(tot-gr), est_ngr_pf/(1-est_gr)]
+    stats['ngr|pf'] = [space, ngr_pf/float(pf), est_ngr_pf/est_pf]
+    stats['ngr|npf'] = [space, ngr_npf/float(tot-pf), est_ngr_npf/(1-est_pf)]
+    stats['npf|gr'] = [space, gr_npf/float(gr), est_gr_npf/est_gr]
+    stats['npf|ngr'] = [space, ngr_npf/float(tot-gr), est_ngr_npf/(1-est_gr)]
 
     mkeyl = 0
     for key in stats.keys():
         mkeyl = max(mkeyl, len(key))
 
     for key, value in stats.items():
-        print key, " "*(mkeyl-len(key)), "\texp:", value[1], "\test:", value[2]
+        print key, " "*(mkeyl-len(key)), "\tabs:", value[0], "  \t\texp:", value[1], "\test:", value[2] # noqa
     print
     print '='*25
 
