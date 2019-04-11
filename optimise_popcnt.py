@@ -1,12 +1,15 @@
 #!/usr/bin/env sage
 # -*- coding: utf-8 -*-
 
+import cPickle
+
 from argparse import Namespace
 from collections import OrderedDict
+from mpmath import mp
 from numpy import pi
 from popcnt import estimate
-
-import cPickle
+# make sure this is the same as in popcnt.py
+mp.prec = 212
 
 
 def estimate_wrapper(dim, popcnt_num, threshold):
@@ -31,10 +34,10 @@ def estimate_wrapper(dim, popcnt_num, threshold):
     gr_npf = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
                       pass_filt=False)
     estimates['gr_npf'] = gr_npf
-    ngr_pf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
+    ngr_pf = mp.mpf('2')*estimate(dim, popcnt_num, threshold, int_u=pi/3)
     estimates['ngr_pf'] = ngr_pf
-    ngr_npf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3,
-                         pass_filt=False)
+    ngr_npf = mp.mpf('2')*estimate(dim, popcnt_num, threshold, int_u=pi/3,
+                                   pass_filt=False)
     estimates['ngr_npf'] = ngr_npf
     return estimates
 
@@ -56,70 +59,68 @@ def pretty_probs(estimates):
                 estimates[key] -= 0.1
 
     print 'gr:\t\t', estimates['gr']
-    print 'ngr:\t\t', 1 - estimates['gr']
+    print 'ngr:\t\t', mp.mpf('1') - estimates['gr']
     print 'pf:\t\t', estimates['pf']
-    print 'npf:\t\t', 1 - estimates['pf']
+    print 'npf:\t\t', mp.mpf('1') - estimates['pf']
     print 'gr_pf:\t\t', estimates['gr_pf']
     print 'gr_npf:\t\t', estimates['gr_npf']
     print 'ngr_pf:\t\t', estimates['ngr_pf']
     print 'ngr_npf:\t', estimates['ngr_npf']
     print 'gr|pf:\t\t', estimates['gr_pf']/estimates['pf']
-    print 'gr|npf:\t\t', estimates['gr_npf']/(1 - estimates['pf'])
+    print 'gr|npf:\t\t', estimates['gr_npf']/(mp.mpf('1') - estimates['pf'])
     print 'pf|gr:\t\t', estimates['gr_pf']/estimates['gr']
-    print 'pf|ngr:\t\t', estimates['ngr_pf']/(1 - estimates['gr'])
+    print 'pf|ngr:\t\t', estimates['ngr_pf']/(mp.mpf('1') - estimates['gr'])
     print 'ngr|pf:\t\t', estimates['ngr_pf']/estimates['pf']
-    print 'ngr|npf:\t', estimates['ngr_npf']/(1 - estimates['pf'])
+    print 'ngr|npf:\t', estimates['ngr_npf']/(mp.mpf('1') - estimates['pf'])
     print 'npf|gr:\t\t', estimates['gr_npf']/estimates['gr']
-    print 'npf|ngr:\t', estimates['ngr_npf']/(1 - estimates['gr'])
+    print 'npf|ngr:\t', estimates['ngr_npf']/(mp.mpf('1') - estimates['gr'])
     print
 
 
-def create_estimates(dim, max_popcnt_num=256, save=True):
+def create_estimates(dim, popcnt_num=256, save=True):
     """
     Calculate estimates for all useful probabilities for a given dimension
     and a maximum allowed number of popcnt vectors.
 
     :param dim: the dimension of real space
-    :param max_popcnt_num: the maximum number of popcnt vectors to consider
-                           when making a SimHash
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
     :param save: if ``True`` saves output OrderedDict as a pickle, if ``False``
                  returns OrderedDict
     :returns: an OrderedDict with keys tuples: (dim, popcnt_num, threshold)
     """
     all_estimates = OrderedDict()
-    for popcnt_num in range(16, max_popcnt_num + 1, 8):
-        for threshold in range(1, int(popcnt_num/2.)):
-            key = (dim, popcnt_num, threshold)
-            all_estimates[key] = estimate_wrapper(dim, popcnt_num, threshold)
+    for threshold in range(1, int(popcnt_num/2.)):
+        print popcnt_num, threshold
+        key = (dim, popcnt_num, threshold)
+        all_estimates[key] = estimate_wrapper(dim, popcnt_num, threshold)
 
     if save:
-        filename = 'probabilities/' + str(dim) + '_' + str(max_popcnt_num)
+        filename = 'probabilities/' + str(dim) + '_' + str(popcnt_num)
         with open(filename, 'wb') as f:
             cPickle.dump(all_estimates, f, -1)
     else:
         return all_estimates
 
 
-def load_estimates(dim, max_popcnt_num=256):
+def load_estimates(dim, popcnt_num=256):
     """
     Loads, if one exists, a pickle of the OrderedDict of OrderedDicts output
-    by create_estimates(dim, max_popcnt_num=max_popcnt_num, save=save).
+    by create_estimates(dim, popcnt_num=popcnt_num, save=save).
 
     :param dim: the dimension of real space
-    :param max_popcnt_num: the maximum number of popcnt vectors to consider
-                           when making a SimHash
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
     :returns: an OrderedDict with keys tuples: (dim, popcnt_num, threshold)
     """
-    filename = 'probabilities/' + str(dim) + '_' + str(max_popcnt_num)
+    filename = 'probabilities/' + str(dim) + '_' + str(popcnt_num)
     try:
         with open(filename, 'rb') as f:
             all_estimates = cPickle.load(f)
         return all_estimates
     except IOError:
-        print 'Please run create_estimates(%d, %d)' % (dim, max_popcnt_num)
+        print 'Please run create_estimates(%d, %d)' % (dim, popcnt_num)
 
 
-def maximise_optimising_func(dim, f=None, max_popcnt_num=256, verbose=False):
+def maximise_optimising_func(dim, f=None, popcnt_num=256, verbose=False):
     """
     Apply a function f to all parameter choices (and their associated
     probabilities) for popcnts in a given dimension to optimise the popcnt
@@ -128,14 +129,13 @@ def maximise_optimising_func(dim, f=None, max_popcnt_num=256, verbose=False):
     :param dim: the dimension of real space
     :param f: the function to maximise, if ``None`` uses default optimisation
               function ``optimisation`` defined below
-    :param max_popcnt_num: the maximum number of popcnt vectors to consider
-                           when making a SimHash
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
     :param verbose: if ``True`` print probabilities for each improving tuple
     :returns: a tuple (maximum of f, tuple of parameters that achieve it)
     """
     if f is None:
         f = optimisation
-    all_estimates = load_estimates(dim, max_popcnt_num=max_popcnt_num)
+    all_estimates = load_estimates(dim, popcnt_num=popcnt_num)
     if all_estimates is None:
         return
     solution_value = None
@@ -147,15 +147,16 @@ def maximise_optimising_func(dim, f=None, max_popcnt_num=256, verbose=False):
         if new_value > solution_value or solution_value is None:
             solution_value = new_value
             solution_key = key
-            print solution_value, solution_key
-            pretty_probs(estimates)
+            if verbose:
+                print solution_value, solution_key
+                pretty_probs(estimates)
     return solution_value, solution_key
 
 
 def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
     # we want pf|ngr >= c, then to maximise ngr_pf/pf
-    if ngr_pf/float(1 - gr) >= .01:
-        return ngr_pf/float(pf)
+    if ngr_pf/(mp.mpf('1') - gr) >= mp.fraction(1, 2):
+        return ngr_pf/pf
     else:
         return None
 

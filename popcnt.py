@@ -1,15 +1,14 @@
 #!/usr/bin/env sage
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
-from math import log
-from numpy import pi, sin
-from scipy.integrate import quadrature as ty_gauss
-from scipy.special import binom
-
 import numpy as np
 # import random
 import sys
+
+from collections import OrderedDict
+from mpmath import mp
+# control the precision of the integrals
+mp.prec = 212
 
 
 def gauss_reduced(vec1, vec2):
@@ -148,14 +147,6 @@ def main():
         print "Please pick num > 2"
         return
 
-    # initialise counters
-    # (n)gr = (not) Gauss reduced, (n)pf = (did not) pass filter
-    gr_pf = 0
-    gr_npf = 0
-    ngr_pf = 0
-    ngr_npf = 0
-    tot = 1./2. * num * (num - 1)
-
     # get dictionaries of points to be tested and used to form SimHashes
     popcnt = uniform_iid_sphere(dim, popcnt_num, popcnt_flag=popcnt_flag)
     vector = uniform_iid_sphere(dim, num)
@@ -163,6 +154,19 @@ def main():
     # create SimHashes
     for index, vec in vector.items():
         vector[index] = [vec, lossy_sketch(vec, popcnt)]
+
+    dim = mp.mpf(dim)
+    num = mp.mpf(num)
+    popcnt_num = mp.mpf(popcnt_num)
+    threshold = mp.mpf(threshold)
+
+    # initialise counters
+    # (n)gr = (not) Gauss reduced, (n)pf = (did not) pass filter
+    gr_pf = mp.mpf('0')
+    gr_npf = mp.mpf('0')
+    ngr_pf = mp.mpf('0')
+    ngr_npf = mp.mpf('0')
+    tot = mp.fraction(1, 2) * num * (num - mp.mpf('1'))
 
     # compare pairwise different vectors and their SimHashes
     for index1, vecs1 in vector.items():
@@ -174,45 +178,48 @@ def main():
 
             # information about filter pass/fail and Gauss reduction for pair
             if gauss_check and lossy_check:
-                gr_pf += 1
+                gr_pf += mp.mpf('1')
             if gauss_check and not lossy_check:
-                gr_npf += 1
+                gr_npf += mp.mpf('1')
             if not gauss_check and lossy_check:
-                ngr_pf += 1
+                ngr_pf += mp.mpf('1')
             if not gauss_check and not lossy_check:
-                ngr_npf += 1
+                ngr_npf += mp.mpf('1')
 
     gr = gr_pf + gr_npf
     pf = gr_pf + ngr_pf
 
     if gr == 0:
         print "None Gauss reduced, setting gr to 1, this should not happen"
-        gr = 1
+        gr = mp.mpf('1')
     elif gr == tot:
         print "All Gauss reduced, setting gr to tot - 1, pick a larger num"
-        gr = tot - 1
+        gr = tot - mp.mpf('1')
 
     if pf == 0:
         print "Nothing passed filter, setting pf to 1, pick larger k"
-        pf = 1
+        pf = mp.mpf('1')
     elif pf == tot:
         print "Everything passed filter, setting pf to tot - 1, pick smaller k"
-        pf = tot - 1
+        pf = tot - mp.mpf('1')
 
     # collect all stats, of form [absolute value, tot_ratio, est]
     stats = OrderedDict()
 
     if est_flag:
-        est_gr = estimate(dim, popcnt_num, threshold, int_l=pi/3,
-                          int_u=(2*pi)/3, use_filt=False)
+        est_gr = estimate(dim, popcnt_num, threshold, int_l=mp.pi/mp.mpf('3'),
+                          int_u=(2*mp.pi)/mp.mpf('3'), use_filt=False)
         est_pf = estimate(dim, popcnt_num, threshold)
-        est_gr_pf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
-                             int_u=(2*pi)/3)
-        est_gr_npf = estimate(dim, popcnt_num, threshold, int_l=pi/3,
-                              int_u=(2*pi)/3, pass_filt=False)
-        est_ngr_pf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3)
-        est_ngr_npf = 2*estimate(dim, popcnt_num, threshold, int_u=pi/3,
-                                 pass_filt=False)
+        est_gr_pf = estimate(dim, popcnt_num, threshold,
+                             int_l=mp.pi/mp.mpf('3'),
+                             int_u=(2*mp.pi)/mp.mpf('3'))
+        est_gr_npf = estimate(dim, popcnt_num, threshold,
+                              int_l=mp.pi/mp.mpf('3'),
+                              int_u=(2*mp.pi)/mp.mpf('3'), pass_filt=False)
+        est_ngr_pf = 2*estimate(dim, popcnt_num, threshold,
+                                int_u=mp.pi/mp.mpf('3'))
+        est_ngr_npf = 2*estimate(dim, popcnt_num, threshold,
+                                 int_u=mp.pi/mp.mpf('3'), pass_filt=False)
     else:
         est_gr = 2
         est_pf = 2
@@ -221,26 +228,26 @@ def main():
         est_ngr_pf = 2
         est_ngr_npf = 2
 
-    stats['gr'] = [int(gr), gr/float(tot), est_gr]
-    stats['ngr'] = [int(tot-gr), (tot-gr)/float(tot), 1-est_gr]
-    stats['pf'] = [int(pf), pf/float(tot), est_pf]
-    stats['npf'] = [int(tot-pf), (tot-pf)/float(tot), 1 - est_pf]
-    stats['gr_pf'] = [int(gr_pf), gr_pf/float(tot), est_gr_pf]
-    stats['gr_npf'] = [int(gr_npf), gr_npf/float(tot), est_gr_npf]
-    stats['ngr_pf'] = [int(ngr_pf), ngr_pf/float(tot), est_ngr_pf]
-    stats['ngr_npf'] = [int(ngr_npf), ngr_npf/float(tot), est_ngr_npf]
+    stats['gr'] = [int(gr), gr/tot, est_gr]
+    stats['ngr'] = [int(tot-gr), (tot-gr)/tot, mp.mpf('1') - est_gr]
+    stats['pf'] = [int(pf), pf/tot, est_pf]
+    stats['npf'] = [int(tot-pf), (tot-pf)/tot, mp.mpf('1') - est_pf]
+    stats['gr_pf'] = [int(gr_pf), gr_pf/tot, est_gr_pf]
+    stats['gr_npf'] = [int(gr_npf), gr_npf/tot, est_gr_npf]
+    stats['ngr_pf'] = [int(ngr_pf), ngr_pf/tot, est_ngr_pf]
+    stats['ngr_npf'] = [int(ngr_npf), ngr_npf/tot, est_ngr_npf]
 
     # conditional probabilities, e.g. the first is gr given that pf
-    tot_len = int(log(tot, 10))
+    tot_len = int(mp.log(tot, 10))
     space = '-'*tot_len
-    stats['gr|pf'] = [space, gr_pf/float(pf), est_gr_pf/est_pf]
-    stats['gr|npf'] = [space, gr_npf/float(tot-pf), est_gr_npf/(1-est_pf)]
-    stats['pf|gr'] = [space, gr_pf/float(gr), est_gr_pf/est_gr]
-    stats['pf|ngr'] = [space, ngr_pf/float(tot-gr), est_ngr_pf/(1-est_gr)]
-    stats['ngr|pf'] = [space, ngr_pf/float(pf), est_ngr_pf/est_pf]
-    stats['ngr|npf'] = [space, ngr_npf/float(tot-pf), est_ngr_npf/(1-est_pf)]
-    stats['npf|gr'] = [space, gr_npf/float(gr), est_gr_npf/est_gr]
-    stats['npf|ngr'] = [space, ngr_npf/float(tot-gr), est_ngr_npf/(1-est_gr)]
+    stats['gr|pf'] = [space, gr_pf/pf, est_gr_pf/est_pf]
+    stats['gr|npf'] = [space, gr_npf/(tot-pf), est_gr_npf/(mp.mpf('1')-est_pf)]
+    stats['pf|gr'] = [space, gr_pf/gr, est_gr_pf/est_gr]
+    stats['pf|ngr'] = [space, ngr_pf/(tot-gr), est_ngr_pf/(mp.mpf('1')-est_gr)]
+    stats['ngr|pf'] = [space, ngr_pf/pf, est_ngr_pf/est_pf]
+    stats['ngr|npf'] = [space, ngr_npf/(tot-pf), est_ngr_npf/(mp.mpf('1')-est_pf)] # noqa
+    stats['npf|gr'] = [space, gr_npf/gr, est_gr_npf/est_gr]
+    stats['npf|ngr'] = [space, ngr_npf/(tot-gr), est_ngr_npf/(mp.mpf('1')-est_gr)] # noqa
 
     mkeyl = 0
     for key in stats.keys():
@@ -301,7 +308,25 @@ def filter_test(dim, num, popcnt_num, threshold, popcnt_flag=False):
     return float(pf)/tot
 
 
-def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
+def split_interval(int_l, int_u, slices):
+    """
+    Splits closed interval [intl_l, int_u] into ``slices`` number of slices of
+    equal size
+
+    :param int_l: the lower bound of the interval
+    :param int_u: the upper bound of the interval
+    :param slices: the number of slices of equal size to split interval into
+    :returns: list of the values that define the slices
+    """
+    int_l = mp.mpf(int_l)
+    int_u = mp.mpf(int_u)
+    intervals = [int_l]
+    for i in range(1, slices + 1):
+        intervals += [int_l + mp.mpf(i)*(int_u - int_l)/mp.mpf(slices)]
+    return intervals
+
+
+def estimate(dim, popcnt_num, threshold, int_l=0, int_u=mp.pi, use_filt=True,
              pass_filt=True):
     """
     A function for computing the various probabilities we are interested in.
@@ -322,34 +347,37 @@ def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
     :param pass_filt: boolean whether to consider passing/failing the filter
     :returns: the chosen probability
     """
-    d = dim
-    n = popcnt_num
-    k = threshold
+    d = mp.mpf(dim)
+    n = mp.mpf(popcnt_num)
+    k = mp.mpf(threshold)
+
+    # if the integrations are not accurate, increase the intervals
+    interval = split_interval(int_l, int_u, 1)
 
     if use_filt:
         if pass_filt:
-            coeffs = [binom(n, i) for i in range(0, k)]
-            coeffs += [0] * (n - (2 * k) + 1)
-            coeffs += [binom(n, i) for i in range(n - k + 1, n + 1)]
+            coeffs = [mp.binomial(n, i) for i in range(0, k)]
+            coeffs += [mp.mpf('0')] * int(n - (2 * k) + 1)
+            coeffs += [mp.binomial(n, i) for i in range(n - k + 1, n + 1)]
         else:
-            coeffs = [0]*k
-            coeffs += [binom(n, i) for i in range(k, n - k + 1)]
-            coeffs += [0]*k
+            coeffs = [mp.mpf('0')] * int(k)
+            coeffs += [mp.binomial(n, i) for i in range(k, n - k + 1)]
+            coeffs += [mp.mpf('0')] * int(k)
 
         prob = 0
         for i in range(n + 1):
             co = coeffs[i]
+            i = mp.mpf(i)
             if co == 0:
                 continue
 
-            def f(x): return (sin(x)**(d-2))*co*((x/pi)**i)*((1-(x/pi))**(n-i))
-            prob += ty_gauss(f, int_l, int_u, tol=1.49e-18, rtol=1.49e-18,
-                             maxiter=5000)[0]
+            def f(x): return (mp.sin(x)**(d-mp.mpf('2')))*co*((x/mp.pi)**i)*((mp.mpf('1')-(x/mp.pi))**(n-i)) # noqa
+            prob += mp.quad(f, interval, maxdegree=50000, error=True)[0]
+
     else:
 
-        def f(x): return (sin(x)**(d-2))
-        prob = ty_gauss(f, int_l, int_u, tol=1.49e-16, rtol=1.49e-16,
-                        maxiter=500)[0]
+        def f(x): return (mp.sin(x)**(d-mp.mpf('2')))
+        prob = mp.quad(f, interval, maxdegree=50000, error=True)[0]
 
     def normaliser(dim):
         """
@@ -360,23 +388,23 @@ def estimate(dim, popcnt_num, threshold, int_l=0, int_u=pi, use_filt=True,
         :param dim: the dimension of real space
         :returns: the normalisation constant for the integral estimates
         """
-        d = dim - 2
-        norm = 1
+        d = mp.mpf(dim) - mp.mpf('2')
+        norm = mp.mpf('1')
         if d % 2 == 0:
             for i in range(1, d + 1):
                 if i % 2 == 0:
-                    norm *= float(i**(-1))
+                    norm *= mp.mpf(i)**mp.mpf('-1')
                 else:
-                    norm *= i
-            norm *= pi
+                    norm *= mp.mpf(i)
+            norm *= mp.pi
         else:
             for i in range(2, d + 1):
                 if i % 2 == 0:
-                    norm *= i
+                    norm *= mp.mpf(i)
                 else:
-                    norm *= float(i**(-1))
-            norm *= 2
-        return 1./norm
+                    norm *= mp.mpf(i)**mp.mpf('-1')
+            norm *= mp.mpf(2)
+        return mp.mpf(1)/norm
 
     return normaliser(d) * prob
 
@@ -424,7 +452,8 @@ def gauss_wrapper(dims, num):
         print
         print "dim %d" % dim
         gr = gauss_test(dim, num)
-        est = estimate(dim, 0, 0, int_l=pi/3, int_u=(2*pi)/3, use_filt=False)
+        est = estimate(dim, 0, 0, int_l=mp.pi/mp.mpf('3'),
+                       int_u=(2*mp.pi)/mp.mpf('3'), use_filt=False)
         print "(exp, est): (%.6f, %.6f)" % (gr, est)
         print "="*25
 
