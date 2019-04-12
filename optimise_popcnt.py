@@ -154,16 +154,22 @@ def maximise_optimising_func(dim, f=None, popcnt_num=256, verbose=False):
 
 
 def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
-    # we want pf|ngr >= c, then to maximise ngr_pf/pf
-    if ngr_pf/(mp.mpf('1') - gr) >= mp.fraction(1, 2):
-        return ngr_pf/pf
-    else:
-        return None
+    exp1 = mp.fraction(1, 2)
+    exp2 = mp.mpf('3')
+    return ((ngr_pf**exp2)/((mp.mpf('1') - gr)*pf))**exp1
 
 
 """
 def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
-    good_measure = (ngr_pf * gr_npf)/float(gr_pf * ngr_npf)
-    sanity_requirement = ngr_pf >= (1 - gr)*.5
-    return good_measure if sanity_requirement else 0
+    exp1 = mp.fraction(-3, 4)
+    exp2 = mp.mpf('-1')
+    return ((ngr_pf/(mp.mpf('1')-gr))**(exp1)*(ngr_pf/pf)**(exp2))**(exp2)
+
+
+def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
+    # we want pf|ngr >= c, then to maximise ngr_pf/pf
+    if ngr_pf/(mp.mpf('1') - gr) >= mp.fraction(1, 10):
+        return ngr_pf/pf
+    else:
+        return None
 """
