@@ -173,3 +173,26 @@ def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
     else:
         return None
 """
+
+
+def _bulk_estimates_core(args):
+    d, c = args
+    return create_estimates(d, int(round(c*d)))
+
+
+def bulk_estimates(D, C=(0.5, 1.0, 2.0, 4.0), ncores=1):
+    """
+
+    :param D:  list of dimension to consider
+    :param C:  list of `c` s.t. `n=c⋅d`
+    :param ncores: number of cores to use
+
+    """
+    from multiprocessing import Pool
+
+    jobs = []
+    for d in D:
+        for c in C:
+            jobs.append((d, c))
+
+    return list(Pool(ncores).imap_unordered(_bulk_estimates_core, jobs))
