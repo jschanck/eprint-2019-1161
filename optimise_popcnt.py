@@ -150,7 +150,7 @@ def maximise_optimising_func(dim, f=None, popcnt_num=256, verbose=False):
             if verbose:
                 print solution_value, solution_key
                 pretty_probs(estimates)
-    return solution_value, solution_key
+    return mp.mpf('1')/solution_value, solution_key
 
 
 def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
