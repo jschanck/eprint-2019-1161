@@ -153,6 +153,31 @@ def maximise_optimising_func(dim, f=None, popcnt_num=256, verbose=False):
     return mp.mpf('1')/solution_value, solution_key
 
 
+def grover_iterations(dim, popcnt_num, threshold):
+    """
+    A function for when you just want the number of Grover iterations required
+    for a certain triple (dim, popcnt_num, threshold)
+
+    :param dim: the dimension of real space
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
+    :param threshold: the acceptance/rejection threshold for popcnts
+    :returns: the calculated number of Grover iterations requiredd
+    """
+    all_estimates = load_estimates(dim, popcnt_num=popcnt_num)
+    if all_estimates is None:
+        return
+    try:
+        estimates = all_estimates[(dim, popcnt_num, threshold)]
+    except KeyError:
+        print "No such popcount parameters exist"
+        return
+    probs = Namespace(**estimates)
+    inverse_giterations = optimisation(probs.gr, probs.pf, probs.gr_pf,
+                                       probs.gr_npf, probs.ngr_pf,
+                                       probs.ngr_npf)
+    return mp.mpf('1')/inverse_giterations
+
+
 def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
     exp1 = mp.fraction(1, 2)
     exp2 = mp.mpf('3')
