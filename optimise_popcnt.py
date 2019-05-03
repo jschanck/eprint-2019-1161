@@ -161,7 +161,7 @@ def grover_iterations(dim, popcnt_num, threshold):
     :param dim: the dimension of real space
     :param popcnt_num: the number of popcnt vectors to consider for a SimHash
     :param threshold: the acceptance/rejection threshold for popcnts
-    :returns: the calculated number of Grover iterations requiredd
+    :returns: the calculated number of Grover iterations required
     """
     all_estimates = load_estimates(dim, popcnt_num=popcnt_num)
     if all_estimates is None:

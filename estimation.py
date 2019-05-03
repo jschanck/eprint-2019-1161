@@ -19,6 +19,8 @@ def T_count_giteration(d, k, n):
     # determines width of the diffusion operator
     index_wires = mp.ceil(0.2075*d)
     assert(index_wires >= 4), "diffusion operator poorly defined"
+
+    # TODO: Why is this a problem?
     assert(index_wires <= mp.mpf('3') * n), "input wider than popcnt circuit!"
 
     tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
@@ -26,6 +28,7 @@ def T_count_giteration(d, k, n):
     T_count_adder = 2 * 7 * tof_count_adder
 
     # a k-controlled NOT (i.e. diffusion operator) in (32k - 84)T
+    # TODO: I don't understand this line
     T_count_diffusion = 32 * (index_wires - 1) - 84
 
     return T_count_adder + T_count_diffusion
@@ -68,6 +71,7 @@ def T_average_width_giteration(d, k, n):
     and T_depth of the given circuit to determine how many T gates required
     on average per T depth
     """
+    # TODO: This isn't taking a floor
     return T_count_giteration(d, k, n)/float(T_depth_giteration(d, k, n))
 
 
@@ -137,6 +141,7 @@ def distance_condition_clifford(p_in, num_clifford_gates):
 
 def wrapper(d, k, n):
     # we will eventually interpolate between non power of two n, sim for k
+    # TODO: this doesn't check what it claims it checks
     assert(int(mp.log(n, 2)) % 1 == 0), "Not a power of two n!"
     assert(int(mp.log(k, 2)) % 1 == 0), "Not a power of two k!"
 
