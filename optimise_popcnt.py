@@ -169,8 +169,7 @@ def grover_iterations(dim, popcnt_num, threshold):
     try:
         estimates = all_estimates[(dim, popcnt_num, threshold)]
     except KeyError:
-        print "No such popcount parameters exist"
-        return
+        raise NotImplementedError("No such popcount parameters computed yet.")
     probs = Namespace(**estimates)
     inverse_giterations = optimisation(probs.gr, probs.pf, probs.gr_pf,
                                        probs.gr_npf, probs.ngr_pf,
@@ -179,6 +178,7 @@ def grover_iterations(dim, popcnt_num, threshold):
 
 
 def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
+    # TODO: better name? This doesn't optimise anything
     exp1 = mp.fraction(1, 2)
     exp2 = mp.mpf('3')
     return ((ngr_pf**exp2)/((mp.mpf('1') - gr)*pf))**exp1
