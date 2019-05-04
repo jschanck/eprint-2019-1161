@@ -48,6 +48,7 @@ def run(dim, num, n, k, delta, spherical_code, estimates, prec, seed):
         L, tot_sampled = biased_sphere(dim, num, n, delta)
     else:
         L = uniform_iid_sphere(dim, num)
+        tot_sampled = len(L)
 
     # create SimHashes
     for index, vec in L.items():
@@ -155,7 +156,8 @@ def run(dim, num, n, k, delta, spherical_code, estimates, prec, seed):
                                                                                        est=float(value[2]))
 
     if stats["ngr_pf"][1]:
-        print "   Eq (3) :: exp:", int(round(stats["ngr"][1] * stats["pf"][1] / stats["ngr_pf"][1]**3))
+        print "   Eq (3) :: exp:", int(round(stats["ngr"][1] * stats["pf"][1] /
+                                             (stats["ngr_pf"][1] * (tot/float(tot_sampled)) * stats["ngr_pf"][2]**2)))
 
 
 if __name__ == '__main__':
