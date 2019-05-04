@@ -7,6 +7,7 @@ except ImportError:
     exit(1)
 
 import logging
+import numpy as np
 from mpmath import mp
 from collections import OrderedDict
 
@@ -27,7 +28,8 @@ logger = logging.getLogger(__name__)
 @click.option("--spherical-code/--no-spherical-codes", help="Select popcoutnt vectors as in G6K", default=False)
 @click.option("--estimates/--no-estimates", help="Give integration based estimates.", default=True)
 @click.option("--prec", help="Floating point precision", default=212, type=int)
-def run(dim, num, n, k, delta, spherical_code, estimates, prec):
+@click.option("--seed", help="Random seed", default=None, type=int)
+def run(dim, num, n, k, delta, spherical_code, estimates, prec, seed):
     """
     Detailed stats output for all relevant probabilities given real dimension dim, number of vectors
     to trial num, number of popcnt vectors popcnt_num, popcnt threshold threshold and a switch
@@ -35,6 +37,7 @@ def run(dim, num, n, k, delta, spherical_code, estimates, prec):
     """
 
     mp.prec = prec
+    np.random.seed(seed)
     if spherical_code or not estimates:
         print("Ignore integration based estimates!")
 

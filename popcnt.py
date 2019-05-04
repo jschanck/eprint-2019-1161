@@ -54,7 +54,6 @@ def uniform_iid_sphere(dim, num, spherical_code=False):
     if not spherical_code:
         for point in range(num):
             # good randomness seems quite pertinent
-            np.random.seed()
             vec = np.random.randn(dim)
             vec /= np.linalg.norm(vec)
             sphere_points[point] = vec
@@ -84,15 +83,12 @@ def biased_sphere(d, num, n, delta):
     sphere_points = OrderedDict()
     point = 0
 
-    np.random.seed()
-
     w = []
     for i in range(n):
         w_ = np.random.randn(d)
         w_ /= np.linalg.norm(w_)
         w.append(w_)
     while point < num:
-        np.random.seed()  # TODO: really???
         v = np.random.randn(d)
         v /= np.linalg.norm(v)
         if sum([int(np.inner(w[i], v) > 0) for i in range(n)]) <= (1-delta)/2.*n:
