@@ -165,7 +165,14 @@ def distance_condition_clifford(p_in, num_clifford_gates):
 
 def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     if k is None:
-        k = mp.ceil(n/3.)
+        best = None
+        for k in range(1, n//2):
+            cur = wrapper(d, n, k, p_in=p_in, p_g=p_g, compute_probs=compute_probs)
+            if best is None or cur < best:
+                best = cur
+            elif cur[0] > 2*best[0]:
+                break
+        return best
     _preproc_params(d, n, k)
 
     # we will eventually interpolate between non power of two n, sim for k
@@ -227,4 +234,4 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     # total cost (ignoring Cliffords in error correction) is
     total_cost = total_logi_qbits * total_scc
 
-    return float(total_cost), float(mp.log(total_cost, 2))
+    return float(total_cost), float(mp.log(total_cost, 2)), k
