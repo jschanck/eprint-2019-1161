@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from mpmath import mp
-from optimise_popcnt import grover_iterations
+from optimise_popcnt import grover_iterations, load_estimate
 
 
 def _preproc_params(d, n, k):
@@ -19,13 +19,15 @@ def _preproc_params(d, n, k):
     # We round this up to the nearest power of two to be able to use Hadamard gates to set up
     # Grover's algorithm.
 
-    # determines width of the diffusion operator
-    index_wires = mp.ceil(0.2075*d)
-    if index_wires < 4:
-        raise ValueError("diffusion operator poorly defined, d = %d too small."%d)
-
     if not 0 <= k < n//2:
         raise ValueError("k (%d) not in range 0 ... n//2-1 (%d)"%(k, n))
+
+    # determines width of the diffusion operator and accounts for list growth
+    probs = load_estimate(d, n, k)
+    list_growth = (probs['ngr_pf']/(mp.mpf('1') - probs['gr']))**(-1./2.)
+    index_wires = mp.ceil(mp.log(list_growth * (2**(0.2075*d)), 2))
+    if index_wires < 4:
+        raise ValueError("diffusion operator poorly defined, d = %d too small."%d)
 
     return d, n, k, index_wires
 
