@@ -24,17 +24,8 @@ def _preproc_params(d, n, k):
     if index_wires < 4:
         raise ValueError("diffusion operator poorly defined, d = %d too small."%d)
 
-    # TODO: Why is this a problem?
-    if index_wires > mp.mpf('3') * n:
-        raise ValueError("input (%d) wider than popcnt circuit (%d)!"%(index_wires, 3*n))
-
     if not 0 <= k < n//2:
         raise ValueError("k (%d) not in range 0 ... n//2-1 (%d)"%(k, n))
-
-    # TODO I doubt we need mpf here.
-    d = mp.mpf(d)
-    k = mp.mpf(k)
-    n = mp.mpf(n)
 
     return d, n, k, index_wires
 
@@ -55,8 +46,8 @@ def T_count_giteration(d, n, k):
     # each Toffoli costs approx 7T
     T_count_adder = 7 * tof_count_adder
 
-    # a k-controlled NOT (i.e. diffusion operator) in (32k - 84)T
-    # TODO: I don't understand this line: index_wires-1 != k
+    # a l-controlled NOT takes (32l - 84)T
+    # the diffusion operator in our circuit is (index_wires - 1)-controlled NOT
     T_count_diffusion = 32 * (index_wires - 1) - 84
 
     # we have adder and its inverse
@@ -80,6 +71,7 @@ def T_depth_giteration(d, n, k):
         Each i bit adder has 2i - 1 Toffoli gates (sequentially) so using T
         depth 3 per Toffoli gives 6i - 3 T depth for an i bit adder
         """
+        # TODO: this is not true for i \in {1, 2}
         return 6 * i - 3
 
     # all i bit adders are in parallel and we use 1, ..., log_2 n bit adders
@@ -89,7 +81,7 @@ def T_depth_giteration(d, n, k):
     # I currently make an assumption (favourable to a sieving adversary) that the T gates in the
     # diffusion operator are all sequential and therefore bring down the average T gates required
     # per T depth.
-    # TODO: see ``T_count_giteration`` question
+    # TODO: is this assumption necessarily favourable always?
     T_depth_diffusion = 32 * (index_wires - 1) - 84
     return 2 * T_depth_adder + T_depth_diffusion
 
@@ -100,8 +92,7 @@ def T_average_width_giteration(d, n, k):
     and T_depth of the given circuit to determine how many T gates required
     on average T depth
     """
-    # TODO: This isn't taking a floor
-    return T_count_giteration(d, n, k)/float(T_depth_giteration(d, n, k))
+    return mp.floor(T_count_giteration(d, n, k)/float(T_depth_giteration(d, n, k)))
 
 
 def fifteen_one(p_out, p_in, p_g=None, eps=None):
@@ -173,12 +164,11 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
             elif cur[0] > 2*best[0]:
                 break
         return best
-    _preproc_params(d, n, k)
+    _, _, _, index_wires = _preproc_params(d, n, k)
 
     # we will eventually interpolate between non power of two n, sim for k
-    # TODO: this doesn't check what it claims it checks
-    assert(int(mp.log(n, 2)) % 1 == 0), "Not a power of two n!"
-    assert(int(mp.log(k, 2)) % 1 == 0), "Not a power of two k!"
+    assert(int(mp.log(n, 2)) % 2 == 0), "Not a power of two n!"
+    assert(int(mp.log(k, 2)) % 2 == 0), "Not a power of two k!"
 
     # calculating the total number of T gates for required error bound
     total_giterations = grover_iterations(d, n, k, compute_probs=compute_probs)
@@ -207,7 +197,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     if layers == 1:
         parallel_msd = 1
     else:
-        parallel_msd = max(float(phys_qbits_layer[0])/phys_qbits_layer[1], 1)
+        parallel_msd = mp.floor(max(float(phys_qbits_layer[0])/phys_qbits_layer[1], 1))
 
     # the average T gates per T depth
     T_average = T_average_width_giteration(d, n, k)
@@ -215,8 +205,8 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     # number of magic state distilleries required
     msds = mp.ceil(float(T_average)/parallel_msd)
 
-    # logical qubits for Grover iteration = width of popcnt circuit
-    logi_qbits_giteration = 3 * n + mp.log(n, 2) - k - 1
+    # logical qubits for Grover iteration = max(width of popcnt circuit, width of diffusion operator) + 1
+    logi_qbits_giteration = max(3 * n + mp.log(n, 2) - k - 1, index_wires) + 1
 
     # NOTE: not used in practice as we don't count surface codes for Cliffords
     # distance required for Clifford gates, current ignoring Hadamards in setup
@@ -225,7 +215,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
 
     # NOTE: not used in practice as we don't count surface codes for Cliffords
     # physical qubits for Grover iteration = width * f(clifford_distance)
-    # phys_qbits_giteration = (3 * n + mp.log(n, 2) - k - 1) * num_physical_qubits(clifford_distance) # noqa
+    # phys_qbits_giteration = logi_qbits_giteration * num_physical_qubits(clifford_distance) # noqa
 
     # total number of logical qubits is
     total_logi_qbits = msds * total_distil_logi_qbits + logi_qbits_giteration
