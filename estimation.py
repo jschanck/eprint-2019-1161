@@ -235,3 +235,19 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     total_cost = total_logi_qbits * total_scc
 
     return float(total_cost), float(mp.log(total_cost, 2)), k
+
+
+def _bulk_wrapper_core(args):
+    d, c = args
+    return (d,) + wrapper(d, int(round(c*d)))
+
+
+def bulk_wrapper(D, C=(1.0, 2.0, 4.0), ncores=1):
+    from multiprocessing import Pool
+
+    jobs = []
+    for c in C:
+        for d in D:
+            jobs.append((d, c))
+
+    return list(Pool(ncores).imap_unordered(_bulk_wrapper_core, jobs))
