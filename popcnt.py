@@ -1,20 +1,15 @@
-#!/usr/bin/env sage
 # -*- coding: utf-8 -*-
 
 import numpy as np
-# import random
-import sys
-
-from collections import OrderedDict
 from mpmath import mp
-# control the precision of the integrals
-mp.prec = 212
+from collections import OrderedDict
 
 
 def gauss_reduced(vec1, vec2):
     """
     Check whether two vectors sampled i.i.d. uniformly from the unit sphere are
     Gauss reduced.
+
     .. note:: This test is only true for vectors of equal norm!
 
     :param vec1: the first vector on the sphere
@@ -43,20 +38,20 @@ def sign(value):
     return 0
 
 
-def uniform_iid_sphere(dim, num, popcnt_flag=False):
+def uniform_iid_sphere(dim, num, spherical_code=False):
     """
-    Samples points uniformly on the unit sphere in R^{dim}, i.e. S^{d - 1}.
+    Samples ``num`` points uniformly on the unit sphere in ``R^{dim}``, i.e. S^{d - 1}.
     It samples from dim many zero centred Gaussians and normalises the vector.
 
     :param dim: the dimension of real space
     :param num: number of points to be sampled uniformly and i.i.d
-    :param popcnt_flag: if ``False`` popcnt vectors come from the unit sphere,
+    :param spherical_code: if ``False`` popcnt vectors come from the unit sphere,
                         else they mimic the behaviour of G6K
     :returns: an OrderedDict with keys which enumerate the points as values
     """
     sphere_points = OrderedDict()
 
-    if not popcnt_flag:
+    if not spherical_code:
         for point in range(num):
             # good randomness seems quite pertinent
             np.random.seed()
@@ -64,26 +59,45 @@ def uniform_iid_sphere(dim, num, popcnt_flag=False):
             vec /= np.linalg.norm(vec)
             sphere_points[point] = vec
     else:
-        # for point in range(num):
-        #     secure_random = random.SystemRandom()
-        #     indices = secure_random.sample(range(dim), 6)
-        #     plus = secure_random.sample(indices, 3)
-        #     minus = [index for index in indices if index not in plus]
-        #     vec = [0]*dim
-        #     for index in plus:
-        #         vec[index] = 1
-        #     for index in minus:
-        #         vec[index] = -1
-        #     sphere_points[point] = np.array(vec)
+        with open("spherical_coding/sc_{dim}_{num}.def".format(dim=dim, num=num)) as f:
+            for point, line in enumerate(f.readlines()): # noqa
+                idx = map(int, line.split(" "))
+                vec = [0]*dim
+                for i in idx[:3]:
+                    vec[i] = 1
+                for i in idx[3:]:
+                    vec[i] = -1
+                sphere_points[point] = np.array(vec)
+    return sphere_points
 
-        for point, line in enumerate(open("spherical_coding/sc_{dim}_{num}.def".format(dim=dim, num=num)).readlines()): # noqa
-            idx = map(int, line.split(" "))
-            vec = [0]*dim
-            for i in idx[:3]:
-                vec[i] = 1
-            for i in idx[3:]:
-                vec[i] = -1
-            sphere_points[point] = np.array(vec)
+
+def biased_sphere(d, num, n, delta):
+    """
+
+    :param d: the dimension of real space
+    :param num: number of points to be sampled uniformly and i.i.d
+    :param delta:
+    :param n:
+    :returns: an OrderedDict with keys which enumerate the points as values
+
+    """
+    sphere_points = OrderedDict()
+    point = 0
+
+    np.random.seed()
+
+    w = []
+    for i in range(n):
+        w_ = np.random.randn(d)
+        w_ /= np.linalg.norm(w_)
+        w.append(w_)
+    while point < num:
+        np.random.seed()  # TODO: really???
+        v = np.random.randn(d)
+        v /= np.linalg.norm(v)
+        if sum([int(np.inner(w[i], v) > 0) for i in range(n)]) <= (1-delta)/2.*n:
+            sphere_points[point] = v
+            point += 1
     return sphere_points
 
 
@@ -122,141 +136,6 @@ def hamming_compare(lossy_vec1, lossy_vec2, threshold):
     if hamming_xor < threshold or hamming_xor > popcnt_num - threshold:
         return True
     return False
-
-
-def main():
-    """
-    Detailed stats output for all relevant probabilities given real dimension
-    dim, number of vectors to trial num, number of popcnt vectors popcnt_num,
-    popcnt threshold threshold and a switch whether the popcnt vectors should
-    mimic G6K.
-    """
-    dim, num, popcnt_num, threshold, popcnt_flag, est_flag = sys.argv[1:]
-
-    dim = int(dim)
-    num = int(num)
-    popcnt_num = int(popcnt_num)
-    threshold = int(threshold)
-    popcnt_flag = eval(popcnt_flag)
-    est_flag = eval(est_flag)
-
-    if popcnt_flag or not est_flag:
-        print "Ignore integration based estimates!\n"
-
-    if num <= 2:
-        print "Please pick num > 2"
-        return
-
-    # get dictionaries of points to be tested and used to form SimHashes
-    popcnt = uniform_iid_sphere(dim, popcnt_num, popcnt_flag=popcnt_flag)
-    vector = uniform_iid_sphere(dim, num)
-
-    # create SimHashes
-    for index, vec in vector.items():
-        vector[index] = [vec, lossy_sketch(vec, popcnt)]
-
-    dim = mp.mpf(dim)
-    num = mp.mpf(num)
-    popcnt_num = mp.mpf(popcnt_num)
-    threshold = mp.mpf(threshold)
-
-    # initialise counters
-    # (n)gr = (not) Gauss reduced, (n)pf = (did not) pass filter
-    gr_pf = mp.mpf('0')
-    gr_npf = mp.mpf('0')
-    ngr_pf = mp.mpf('0')
-    ngr_npf = mp.mpf('0')
-    tot = mp.fraction(1, 2) * num * (num - mp.mpf('1'))
-
-    # compare pairwise different vectors and their SimHashes
-    for index1, vecs1 in vector.items():
-        for index2, vecs2 in vector.items():
-            if index1 >= index2:
-                continue
-            gauss_check = gauss_reduced(vecs1[0], vecs2[0])
-            lossy_check = hamming_compare(vecs1[1], vecs2[1], threshold)
-
-            # information about filter pass/fail and Gauss reduction for pair
-            if gauss_check and lossy_check:
-                gr_pf += mp.mpf('1')
-            if gauss_check and not lossy_check:
-                gr_npf += mp.mpf('1')
-            if not gauss_check and lossy_check:
-                ngr_pf += mp.mpf('1')
-            if not gauss_check and not lossy_check:
-                ngr_npf += mp.mpf('1')
-
-    gr = gr_pf + gr_npf
-    pf = gr_pf + ngr_pf
-
-    if gr == 0:
-        print "None Gauss reduced, setting gr to 1, this should not happen"
-        gr = mp.mpf('1')
-    elif gr == tot:
-        print "All Gauss reduced, setting gr to tot - 1, pick a larger num"
-        gr = tot - mp.mpf('1')
-
-    if pf == 0:
-        print "Nothing passed filter, setting pf to 1, pick larger k"
-        pf = mp.mpf('1')
-    elif pf == tot:
-        print "Everything passed filter, setting pf to tot - 1, pick smaller k"
-        pf = tot - mp.mpf('1')
-
-    # collect all stats, of form [absolute value, tot_ratio, est]
-    stats = OrderedDict()
-
-    if est_flag:
-        est_gr = estimate(dim, popcnt_num, threshold, int_l=mp.pi/mp.mpf('3'),
-                          int_u=(2*mp.pi)/mp.mpf('3'), use_filt=False)
-        est_pf = estimate(dim, popcnt_num, threshold)
-        est_gr_pf = estimate(dim, popcnt_num, threshold,
-                             int_l=mp.pi/mp.mpf('3'),
-                             int_u=(2*mp.pi)/mp.mpf('3'))
-        est_gr_npf = estimate(dim, popcnt_num, threshold,
-                              int_l=mp.pi/mp.mpf('3'),
-                              int_u=(2*mp.pi)/mp.mpf('3'), pass_filt=False)
-        est_ngr_pf = 2*estimate(dim, popcnt_num, threshold,
-                                int_u=mp.pi/mp.mpf('3'))
-        est_ngr_npf = 2*estimate(dim, popcnt_num, threshold,
-                                 int_u=mp.pi/mp.mpf('3'), pass_filt=False)
-    else:
-        est_gr = 2
-        est_pf = 2
-        est_gr_pf = 2
-        est_gr_npf = 2
-        est_ngr_pf = 2
-        est_ngr_npf = 2
-
-    stats['gr'] = [int(gr), gr/tot, est_gr]
-    stats['ngr'] = [int(tot-gr), (tot-gr)/tot, mp.mpf('1') - est_gr]
-    stats['pf'] = [int(pf), pf/tot, est_pf]
-    stats['npf'] = [int(tot-pf), (tot-pf)/tot, mp.mpf('1') - est_pf]
-    stats['gr_pf'] = [int(gr_pf), gr_pf/tot, est_gr_pf]
-    stats['gr_npf'] = [int(gr_npf), gr_npf/tot, est_gr_npf]
-    stats['ngr_pf'] = [int(ngr_pf), ngr_pf/tot, est_ngr_pf]
-    stats['ngr_npf'] = [int(ngr_npf), ngr_npf/tot, est_ngr_npf]
-
-    # conditional probabilities, e.g. the first is gr given that pf
-    tot_len = int(mp.log(tot, 10))
-    space = '-'*tot_len
-    stats['gr|pf'] = [space, gr_pf/pf, est_gr_pf/est_pf]
-    stats['gr|npf'] = [space, gr_npf/(tot-pf), est_gr_npf/(mp.mpf('1')-est_pf)]
-    stats['pf|gr'] = [space, gr_pf/gr, est_gr_pf/est_gr]
-    stats['pf|ngr'] = [space, ngr_pf/(tot-gr), est_ngr_pf/(mp.mpf('1')-est_gr)]
-    stats['ngr|pf'] = [space, ngr_pf/pf, est_ngr_pf/est_pf]
-    stats['ngr|npf'] = [space, ngr_npf/(tot-pf), est_ngr_npf/(mp.mpf('1')-est_pf)] # noqa
-    stats['npf|gr'] = [space, gr_npf/gr, est_gr_npf/est_gr]
-    stats['npf|ngr'] = [space, ngr_npf/(tot-gr), est_ngr_npf/(mp.mpf('1')-est_gr)] # noqa
-
-    mkeyl = 0
-    for key in stats.keys():
-        mkeyl = max(mkeyl, len(key))
-
-    for key, value in stats.items():
-        print key, " "*(mkeyl-len(key)), "\tabs:", value[0], "  \t\texp:", value[1], "\test:", value[2] # noqa
-    print
-    print '='*25
 
 
 def gauss_test(dim, num):
@@ -458,5 +337,3 @@ def gauss_wrapper(dims, num):
         print "="*25
 
 
-if __name__ == '__main__':
-    main()
