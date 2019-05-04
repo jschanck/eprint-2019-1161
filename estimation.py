@@ -238,16 +238,16 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
 
 
 def _bulk_wrapper_core(args):
-    d, c = args
-    return (d,) + wrapper(d, int(round(c*d)))
+    d, n = args
+    return (d,) + wrapper(d, n)
 
 
-def bulk_wrapper(D, C=(1.0, 2.0, 4.0), ncores=1):
+def bulk_wrapper(D, N=(16, 32, 64, 128, 256, 512), ncores=1):
     from multiprocessing import Pool
 
     jobs = []
-    for c in C:
+    for n in N:
         for d in D:
-            jobs.append((d, c))
+            jobs.append((d, n))
 
     return list(Pool(ncores).imap_unordered(_bulk_wrapper_core, jobs))
