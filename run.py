@@ -45,7 +45,7 @@ def run(dim, num, n, k, delta, spherical_code, estimates, prec, seed):
     popcnt = uniform_iid_sphere(dim, n, spherical_code=spherical_code)
 
     if delta > 0:
-        L = biased_sphere(dim, num, n, delta)
+        L, tot_sampled = biased_sphere(dim, num, n, delta)
     else:
         L = uniform_iid_sphere(dim, num)
 

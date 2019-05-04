@@ -84,6 +84,7 @@ def biased_sphere(d, num, n, delta):
     point = 0
 
     w = []
+    j = 0
     for i in range(n):
         w_ = np.random.randn(d)
         w_ /= np.linalg.norm(w_)
@@ -91,10 +92,11 @@ def biased_sphere(d, num, n, delta):
     while point < num:
         v = np.random.randn(d)
         v /= np.linalg.norm(v)
+        j += 1
         if sum([int(np.inner(w[i], v) > 0) for i in range(n)]) <= (1-delta)/2.*n:
             sphere_points[point] = v
             point += 1
-    return sphere_points
+    return sphere_points, j
 
 
 def lossy_sketch(vec, popcnt):
