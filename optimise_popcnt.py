@@ -211,7 +211,7 @@ def _bulk_estimates_core(args):
     try:
         return load_estimates(d, n)
     except NotImplementedError:
-        return create_estimates(d, n, restrict=True)
+        return create_estimates(d, n, efficient=True, restrict=True)
 
 
 def bulk_estimates(D, N=(128, 256, 512, 1024, 2048, 4096), ncores=1):
