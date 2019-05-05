@@ -186,7 +186,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     if not speculate:
         total_giterations = grover_iterations(d, n, k, compute_probs=compute_probs)
     else:
-        total_giterations = mp.ceil(mp.pi/4*2**(0.2095/2*d))
+        total_giterations = mp.ceil(mp.pi/4*2**(0.2075/2*d))
     T_count_total = total_giterations * T_count_giteration(d, n, k)
     p_out = mp.mpf('1')/T_count_total
 
