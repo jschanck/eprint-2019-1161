@@ -32,10 +32,10 @@ def estimate_wrapper(d, n, k, efficient=False):
     estimates['pf'] = pf
     ngr_pf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3)
     estimates['ngr_pf'] = ngr_pf
+    gr_pf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3)
+    estimates['gr_pf'] = gr_pf
 
     if not efficient:
-        gr_pf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3)
-        estimates['gr_pf'] = gr_pf
         gr_npf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3, pass_filt=False)
         estimates['gr_npf'] = gr_npf
         ngr_npf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3, pass_filt=False)
