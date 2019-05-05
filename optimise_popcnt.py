@@ -137,7 +137,7 @@ def load_estimate(d, n, k, compute=False):
         if compute is False:
             raise e
         else:
-            create_estimates(d, n, restrict=True)
+            create_estimates(d, n, restrict=True, efficient=True)
             return load_estimate(d, n, k, False)
     try:
         return Namespace(**all_estimates[(d, n, k)])
@@ -145,7 +145,7 @@ def load_estimate(d, n, k, compute=False):
         if not compute:
             raise NotImplementedError("No such popcount parameters computed yet.")
         else:
-            create_estimates(d, n, restrict=True)
+            create_estimates(d, n, restrict=True, efficient=True)
             return load_estimate(d, n, k, False)
 
 
@@ -211,7 +211,7 @@ def _bulk_estimates_core(args):
     try:
         return load_estimates(d, n)
     except NotImplementedError:
-        return create_estimates(d, n, restrict=True)
+        return create_estimates(d, n, restrict=True, efficient=True)
 
 
 def bulk_estimates(D, N=(128, 256, 512, 1024, 2048, 4096), ncores=1):
