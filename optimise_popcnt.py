@@ -135,14 +135,16 @@ def load_estimate(d, n, k, compute=False):
         if compute is False:
             raise e
         else:
-            return Namespace(**estimate_wrapper(d, n, k))
+            create_estimates(d, n, restrict=True)
+            return load_estimate(d, n, k, False)
     try:
         return Namespace(**all_estimates[(d, n, k)])
     except KeyError:
         if not compute:
             raise NotImplementedError("No such popcount parameters computed yet.")
         else:
-            return Namespace(**estimate_wrapper(d, n, k))
+            create_estimates(d, n, restrict=True)
+            return load_estimate(d, n, k, False)
 
 
 def maximise_optimising_func(d, f=None, n=256, verbose=False):
