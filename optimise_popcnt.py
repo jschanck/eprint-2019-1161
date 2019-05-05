@@ -78,7 +78,7 @@ def pretty_probs(estimates):
     print
 
 
-def create_estimates(d, n=256, save=True):
+def create_estimates(d, n=256, save=True, restrict=False):
     """
     Calculate estimates for all useful probabilities for a given dimension
     and a maximum allowed number of popcnt vectors.
@@ -87,10 +87,16 @@ def create_estimates(d, n=256, save=True):
     :param n: the number of popcnt vectors to consider for a SimHash
     :param save: if ``True`` saves output OrderedDict as a pickle, if ``False``
                  returns OrderedDict
+    :param restrict: restrict ``k`` to the interesting cases
     :returns: an OrderedDict with keys tuples: (d, n, k)
     """
     all_estimates = OrderedDict()
-    for k in range(1, int(n/2.)):
+
+    if not restrict:
+        K = range(1, int(n/2.))
+    else:
+        K = range(max(int(0.3125*n)-5, 1), min(int(0.3125*n)+5+1, int(n//2)))
+    for k in K:
         print n, k
         key = (d, n, k)
         all_estimates[key] = estimate_wrapper(d, n, k)
@@ -197,15 +203,18 @@ def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
 
 
 def _bulk_estimates_core(args):
-    d, c = args
-    return create_estimates(d, int(round(c*d)))
+    d, n = args
+    try:
+        return load_estimates(d, n)
+    except NotImplementedError:
+        return create_estimates(d, n, restrict=True)
 
 
-def bulk_estimates(D, C=(0.5, 1.0, 2.0, 4.0), ncores=1):
+def bulk_estimates(D, N=(128, 256, 512, 1024, 2048, 4096), ncores=1):
     """
 
     :param D:  list of dimension to consider
-    :param C:  list of `c` s.t. `n=c⋅d`
+    :param N:  list of pocount counts
     :param ncores: number of cores to use
 
     """
@@ -213,7 +222,7 @@ def bulk_estimates(D, C=(0.5, 1.0, 2.0, 4.0), ncores=1):
 
     jobs = []
     for d in D:
-        for c in C:
-            jobs.append((d, c))
+        for n in N:
+            jobs.append((d, n))
 
     return list(Pool(ncores).imap_unordered(_bulk_estimates_core, jobs))
