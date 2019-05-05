@@ -5,13 +5,14 @@ from mpmath import mp
 from optimise_popcnt import grover_iterations, load_estimate
 
 
-def _preproc_params(d, n, k):
+def _preproc_params(d, n, k, compute_probs=True):
     """
     Normalise inputs and check for consistency.
 
     :param d: sieving dimension
     :param n: number of entries in popcount filter
     :param k: threshold for popcount filter
+    :param compute_probs: compute probabilities if needed
 
     """
 
@@ -23,7 +24,7 @@ def _preproc_params(d, n, k):
         raise ValueError("k (%d) not in range 0 ... n//2-1 (%d)"%(k, n))
 
     # determines width of the diffusion operator and accounts for list growth
-    probs = load_estimate(d, n, k)
+    probs = load_estimate(d, n, k, compute=compute_probs)
     list_growth = (probs.ngr_pf/(mp.mpf('1') - probs.gr))**(-1./2.)
     index_wires = mp.ceil(mp.log(list_growth * (2**(0.2075*d)), 2))
     if index_wires < 4:
@@ -166,7 +167,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
             elif cur[0] > 2*best[0]:
                 break
         return best
-    _, _, _, index_wires = _preproc_params(d, n, k)
+    _, _, _, index_wires = _preproc_params(d, n, k, compute_probs=compute_probs)
 
     # we will eventually interpolate between non power of two n, sim for k
     assert(mp.log(n, 2)%1 ==0), "Not a power of two n!"
