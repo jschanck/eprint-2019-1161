@@ -24,7 +24,7 @@ def _preproc_params(d, n, k):
 
     # determines width of the diffusion operator and accounts for list growth
     probs = load_estimate(d, n, k)
-    list_growth = (probs['ngr_pf']/(mp.mpf('1') - probs['gr']))**(-1./2.)
+    list_growth = (probs.ngr_pf/(mp.mpf('1') - probs.gr))**(-1./2.)
     index_wires = mp.ceil(mp.log(list_growth * (2**(0.2075*d)), 2))
     if index_wires < 4:
         raise ValueError("diffusion operator poorly defined, d = %d too small."%d)
@@ -169,8 +169,8 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     _, _, _, index_wires = _preproc_params(d, n, k)
 
     # we will eventually interpolate between non power of two n, sim for k
-    assert(int(mp.log(n, 2)) % 2 == 0), "Not a power of two n!"
-    assert(int(mp.log(k, 2)) % 2 == 0), "Not a power of two k!"
+    assert(mp.log(n, 2)%1 ==0), "Not a power of two n!"
+    # TODO: we permit non-power-of-two ks for now
 
     # calculating the total number of T gates for required error bound
     total_giterations = grover_iterations(d, n, k, compute_probs=compute_probs)
@@ -236,7 +236,7 @@ def _bulk_wrapper_core(args):
     return r
 
 
-def bulk_wrapper(D, N=(16, 32, 64, 128, 256, 512), ncores=1):
+def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
     from multiprocessing import Pool
 
     jobs = []
