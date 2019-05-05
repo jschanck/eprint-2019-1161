@@ -3,6 +3,7 @@
 
 from mpmath import mp
 from optimise_popcnt import grover_iterations, load_estimate
+from collections import OrderedDict
 
 
 def _preproc_params(d, n, k, compute_probs=True):
@@ -244,4 +245,16 @@ def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
         for d in D:
             jobs.append((d, n))
 
-    return list(Pool(ncores).imap_unordered(_bulk_wrapper_core, jobs))
+    data = OrderedDict([(d, []) for d in D])
+    best = OrderedDict([(d, None) for d in D])
+    results = list(Pool(ncores).imap_unordered(_bulk_wrapper_core, jobs))
+    for (d, c, lc, k) in results:
+        data[d].append((c, lc, k))
+        if best[d] is None or best[d] > lc:
+            best[d] = lc
+
+    print "d,logcost"
+    for d in D:
+        print "{d:3d},{lc:.1f}".format(d=d, lc=best[d])
+
+    return data
