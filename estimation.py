@@ -184,7 +184,8 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     # distances, and physical qubits per logical for the layers of distillation
     distances = fifteen_one(p_out, p_in, p_g=p_g)
     layers = len(distances)
-    phys_qbits = [num_physical_qubits(distance) for distance in distances]
+    # NOTE: d_last is used for circuit with biggest logical footprint
+    phys_qbits = [num_physical_qubits(distance) for distance in distances[::-1]]
 
     # physical qubits per layer, starting with topmost
     phys_qbits_layer = [16*(15**(layers-i))*phys_qbits[i-1] for i in range(1, layers + 1)] # noqa
@@ -223,7 +224,8 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     # total number of logical qubits is
     total_logi_qbits = msds * total_distil_logi_qbits + logi_qbits_giteration
     # total number of surface code cycles for all the Grover iterations
-    total_scc = total_giterations * scc * msds * T_depth_giteration(d, n, k)
+    # NOTE: removed msds from total_scc because it should not affect depth
+    total_scc = total_giterations * scc * T_depth_giteration(d, n, k)
     # total cost (ignoring Cliffords in error correction) is
     total_cost = total_logi_qbits * total_scc
 
