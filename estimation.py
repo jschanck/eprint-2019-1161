@@ -46,7 +46,10 @@ def T_count_giteration(d, n, k):
 
     d, n, k, index_wires = _preproc_params(d, n, k)
 
-    tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
+    # tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
+    # NOTE: now exact, before using upper bound that tends to almost 2x too many Ts
+    ell = mp.log(n, 2) + 1
+    tof_count_adder = n * sum([(2 * i - 1)/(2**i) for i in range(1, ell)]) + ell - k - 1
     # each Toffoli costs approx 7T
     T_count_adder = 7 * tof_count_adder
 
