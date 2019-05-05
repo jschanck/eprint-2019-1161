@@ -13,7 +13,7 @@ from popcnt import estimate
 mp.prec = 212
 
 
-def estimate_wrapper(d, n, k):
+def estimate_wrapper(d, n, k, efficient=False):
     """
     For a given real dimension, number of popcnt test vectors and a k,
     determines all useful probabilities.
@@ -21,25 +21,26 @@ def estimate_wrapper(d, n, k):
     :param d: the dimension of real space
     :param n: the number of vectors with which to make the SimHash
     :param k: the acceptance/rejection k for popcnts
+    :param efficient: if ``True`` only compute probs needed for (3)
     :returns: an OrderedDict with keys the names of a given probability
     """
     estimates = OrderedDict()
 
-    gr = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3,
-                  use_filt=False)
+    gr = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3, use_filt=False)
     estimates['gr'] = gr
     pf = estimate(d, n, k)
     estimates['pf'] = pf
-    gr_pf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3)
-    estimates['gr_pf'] = gr_pf
-    gr_npf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3,
-                      pass_filt=False)
-    estimates['gr_npf'] = gr_npf
     ngr_pf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3)
     estimates['ngr_pf'] = ngr_pf
-    ngr_npf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3,
-                                   pass_filt=False)
-    estimates['ngr_npf'] = ngr_npf
+
+    if not efficient:
+        gr_pf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3)
+        estimates['gr_pf'] = gr_pf
+        gr_npf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3, pass_filt=False)
+        estimates['gr_npf'] = gr_npf
+        ngr_npf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3, pass_filt=False)
+        estimates['ngr_npf'] = ngr_npf
+
     return estimates
 
 
@@ -78,7 +79,7 @@ def pretty_probs(estimates):
     print
 
 
-def create_estimates(d, n=256, save=True, restrict=False):
+def create_estimates(d, n=256, save=True, restrict=False, efficient=False):
     """
     Calculate estimates for all useful probabilities for a given dimension
     and a maximum allowed number of popcnt vectors.
@@ -88,6 +89,7 @@ def create_estimates(d, n=256, save=True, restrict=False):
     :param save: if ``True`` saves output OrderedDict as a pickle, if ``False``
                  returns OrderedDict
     :param restrict: restrict ``k`` to the interesting cases
+    :param efficient: if ``True`` only compute probs needed for (3)
     :returns: an OrderedDict with keys tuples: (d, n, k)
     """
     all_estimates = OrderedDict()
@@ -99,7 +101,7 @@ def create_estimates(d, n=256, save=True, restrict=False):
     for k in K:
         print n, k
         key = (d, n, k)
-        all_estimates[key] = estimate_wrapper(d, n, k)
+        all_estimates[key] = estimate_wrapper(d, n, k, efficient=efficient)
 
     if save:
         filename = 'probabilities/' + str(d) + '_' + str(n)
