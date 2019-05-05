@@ -12,31 +12,31 @@ from popcnt import estimate
 mp.prec = 212
 
 
-def estimate_wrapper(d, n, k):
+def estimate_wrapper(dim, popcnt_num, threshold):
     """
-    For a given real dimension, number of popcnt test vectors and a k,
+    For a given real dimension, number of popcnt test vectors and a threshold,
     determines all useful probabilities.
 
-    :param d: the dimension of real space
-    :param n: the number of vectors with which to make the SimHash
-    :param k: the acceptance/rejection k for popcnts
+    :param dim: the dimension of real space
+    :param popcnt_num: the number of vectors with which to make the SimHash
+    :param threshold: the acceptance/rejection threshold for popcnts
     :returns: an OrderedDict with keys the names of a given probability
     """
     estimates = OrderedDict()
 
-    gr = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3,
+    gr = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
                   use_filt=False)
     estimates['gr'] = gr
-    pf = estimate(d, n, k)
+    pf = estimate(dim, popcnt_num, threshold)
     estimates['pf'] = pf
-    gr_pf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3)
+    gr_pf = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3)
     estimates['gr_pf'] = gr_pf
-    gr_npf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3,
+    gr_npf = estimate(dim, popcnt_num, threshold, int_l=pi/3, int_u=(2*pi)/3,
                       pass_filt=False)
     estimates['gr_npf'] = gr_npf
-    ngr_pf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3)
+    ngr_pf = mp.mpf('2')*estimate(dim, popcnt_num, threshold, int_u=pi/3)
     estimates['ngr_pf'] = ngr_pf
-    ngr_npf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3,
+    ngr_npf = mp.mpf('2')*estimate(dim, popcnt_num, threshold, int_u=pi/3,
                                    pass_filt=False)
     estimates['ngr_npf'] = ngr_npf
     return estimates
@@ -77,84 +77,65 @@ def pretty_probs(estimates):
     print
 
 
-def create_estimates(d, n=256, save=True):
+def create_estimates(dim, popcnt_num=256, save=True):
     """
     Calculate estimates for all useful probabilities for a given dimension
     and a maximum allowed number of popcnt vectors.
 
-    :param d: the dimension of real space
-    :param n: the number of popcnt vectors to consider for a SimHash
+    :param dim: the dimension of real space
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
     :param save: if ``True`` saves output OrderedDict as a pickle, if ``False``
                  returns OrderedDict
-    :returns: an OrderedDict with keys tuples: (d, n, k)
+    :returns: an OrderedDict with keys tuples: (dim, popcnt_num, threshold)
     """
     all_estimates = OrderedDict()
-    for k in range(1, int(n/2.)):
-        print n, k
-        key = (d, n, k)
-        all_estimates[key] = estimate_wrapper(d, n, k)
+    for threshold in range(1, int(popcnt_num/2.)):
+        print popcnt_num, threshold
+        key = (dim, popcnt_num, threshold)
+        all_estimates[key] = estimate_wrapper(dim, popcnt_num, threshold)
 
     if save:
-        filename = 'probabilities/' + str(d) + '_' + str(n)
+        filename = 'probabilities/' + str(dim) + '_' + str(popcnt_num)
         with open(filename, 'wb') as f:
             cPickle.dump(all_estimates, f, -1)
     else:
         return all_estimates
 
 
-def load_estimates(d, n=256):
+def load_estimates(dim, popcnt_num=256):
     """
     Loads, if one exists, a pickle of the OrderedDict of OrderedDicts output
-    by create_estimates(d, n=n, save=save).
+    by create_estimates(dim, popcnt_num=popcnt_num, save=save).
 
-    :param d: the dimension of real space
-    :param n: the number of popcnt vectors to consider for a SimHash
-    :returns: an OrderedDict with keys tuples: (d, n, k)
+    :param dim: the dimension of real space
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
+    :returns: an OrderedDict with keys tuples: (dim, popcnt_num, threshold)
     """
-    filename = 'probabilities/' + str(d) + '_' + str(n)
+    filename = 'probabilities/' + str(dim) + '_' + str(popcnt_num)
     try:
         with open(filename, 'rb') as f:
             all_estimates = cPickle.load(f)
         return all_estimates
     except IOError:
-        raise NotImplementedError("No popcount parameters found")
+        print 'Please run create_estimates(%d, %d)' % (dim, popcnt_num)
 
 
-def load_estimate(d, n, k, compute=False):
-    try:
-        all_estimates = load_estimates(d, n)
-    except NotImplementedError as e:
-        if compute is False:
-            raise e
-        else:
-            create_estimates(d, n)
-            return load_estimate(d, n, k, False)
-    try:
-        return Namespace(**all_estimates[(d, n, k)])
-    except KeyError:
-        if not compute:
-            raise NotImplementedError("No such popcount parameters computed yet.")
-        else:
-            create_estimates(d, n)
-            return load_estimate(d, n, k, False)
-
-
-def maximise_optimising_func(d, f=None, n=256, verbose=False):
+def maximise_optimising_func(dim, f=None, popcnt_num=256, verbose=False):
     """
     Apply a function f to all parameter choices (and their associated
     probabilities) for popcnts in a given dimension to optimise the popcnt
     parameters.
 
-    :param d: the dimension of real space
+    :param dim: the dimension of real space
     :param f: the function to maximise, if ``None`` uses default optimisation
               function ``optimisation`` defined below
-    :param n: the number of popcnt vectors to consider for a SimHash
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
     :param verbose: if ``True`` print probabilities for each improving tuple
     :returns: a tuple (maximum of f, tuple of parameters that achieve it)
     """
     if f is None:
         f = optimisation
-    all_estimates = load_estimates(d, n=n)
+    all_estimates = load_estimates(dim, popcnt_num=popcnt_num)
     if all_estimates is None:
         return
     solution_value = None
@@ -172,17 +153,25 @@ def maximise_optimising_func(d, f=None, n=256, verbose=False):
     return mp.mpf('1')/solution_value, solution_key
 
 
-def grover_iterations(d, n, k, compute_probs=False):
+def grover_iterations(dim, popcnt_num, threshold):
     """
     A function for when you just want the number of Grover iterations required
-    for a certain triple (d, n, k)
+    for a certain triple (dim, popcnt_num, threshold)
 
-    :param d: the dimension of real space
-    :param n: the number of popcnt vectors to consider for a SimHash
-    :param k: the acceptance/rejection k for popcnts
-    :returns: the calculated number of Grover iterations required
+    :param dim: the dimension of real space
+    :param popcnt_num: the number of popcnt vectors to consider for a SimHash
+    :param threshold: the acceptance/rejection threshold for popcnts
+    :returns: the calculated number of Grover iterations requiredd
     """
-    probs = load_estimate(d, n, k, compute_probs)
+    all_estimates = load_estimates(dim, popcnt_num=popcnt_num)
+    if all_estimates is None:
+        return
+    try:
+        estimates = all_estimates[(dim, popcnt_num, threshold)]
+    except KeyError:
+        print "No such popcount parameters exist"
+        return
+    probs = Namespace(**estimates)
     inverse_giterations = optimisation(probs.gr, probs.pf, probs.gr_pf,
                                        probs.gr_npf, probs.ngr_pf,
                                        probs.ngr_npf)
@@ -190,10 +179,25 @@ def grover_iterations(d, n, k, compute_probs=False):
 
 
 def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
-    # TODO: better name? This doesn't optimise anything
     exp1 = mp.fraction(1, 2)
     exp2 = mp.mpf('3')
     return ((ngr_pf**exp2)/((mp.mpf('1') - gr)*pf))**exp1
+
+
+"""
+def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
+    exp1 = mp.fraction(-3, 4)
+    exp2 = mp.mpf('-1')
+    return ((ngr_pf/(mp.mpf('1')-gr))**(exp1)*(ngr_pf/pf)**(exp2))**(exp2)
+
+
+def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
+    # we want pf|ngr >= c, then to maximise ngr_pf/pf
+    if ngr_pf/(mp.mpf('1') - gr) >= mp.fraction(1, 10):
+        return ngr_pf/pf
+    else:
+        return None
+"""
 
 
 def _bulk_estimates_core(args):
