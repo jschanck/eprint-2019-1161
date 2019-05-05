@@ -32,10 +32,10 @@ def estimate_wrapper(d, n, k, efficient=False):
     estimates['pf'] = pf
     ngr_pf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3)
     estimates['ngr_pf'] = ngr_pf
+    gr_pf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3)
+    estimates['gr_pf'] = gr_pf
 
     if not efficient:
-        gr_pf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3)
-        estimates['gr_pf'] = gr_pf
         gr_npf = estimate(d, n, k, int_l=pi/3, int_u=(2*pi)/3, pass_filt=False)
         estimates['gr_npf'] = gr_npf
         ngr_npf = mp.mpf('2')*estimate(d, n, k, int_u=pi/3, pass_filt=False)
@@ -137,7 +137,7 @@ def load_estimate(d, n, k, compute=False):
         if compute is False:
             raise e
         else:
-            create_estimates(d, n, restrict=True, efficient=True)
+            create_estimates(d, n, restrict=True, efficient=False)
             return load_estimate(d, n, k, False)
     try:
         return Namespace(**all_estimates[(d, n, k)])
@@ -145,7 +145,7 @@ def load_estimate(d, n, k, compute=False):
         if not compute:
             raise NotImplementedError("No such popcount parameters computed yet.")
         else:
-            create_estimates(d, n, efficient=True)
+            create_estimates(d, n, efficient=False)
             return load_estimate(d, n, k, False)
 
 
