@@ -145,7 +145,7 @@ def load_estimate(d, n, k, compute=False):
         if not compute:
             raise NotImplementedError("No such popcount parameters computed yet.")
         else:
-            create_estimates(d, n, restrict=True, efficient=True)
+            create_estimates(d, n, efficient=True)
             return load_estimate(d, n, k, False)
 
 
