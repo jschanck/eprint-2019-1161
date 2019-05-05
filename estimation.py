@@ -160,12 +160,11 @@ def distance_condition_clifford(p_in, num_clifford_gates):
 def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
     if k is None:
         best = None
-        for k in range(1, n//2):
+        # NOTE: 5/16*n seems to be optimal
+        for k in range(max(int(0.3125*n)-5, 1), min(int(0.3125*n)+5+1, int(n//2))):
             cur = wrapper(d, n, k, p_in=p_in, p_g=p_g, compute_probs=compute_probs)
             if best is None or cur < best:
                 best = cur
-            elif cur[0] > 2*best[0]:
-                break
         return best
     _, _, _, index_wires = _preproc_params(d, n, k, compute_probs=compute_probs)
 

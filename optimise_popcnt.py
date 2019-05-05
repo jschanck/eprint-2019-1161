@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import cPickle
+from sage.all import cached_function
 
 from argparse import Namespace
 from collections import OrderedDict
@@ -120,6 +121,7 @@ def load_estimates(d, n=256):
         raise NotImplementedError("No popcount parameters found")
 
 
+@cached_function
 def load_estimate(d, n, k, compute=False):
     try:
         all_estimates = load_estimates(d, n)
@@ -127,16 +129,14 @@ def load_estimate(d, n, k, compute=False):
         if compute is False:
             raise e
         else:
-            create_estimates(d, n)
-            return load_estimate(d, n, k, False)
+            return Namespace(**estimate_wrapper(d, n, k))
     try:
         return Namespace(**all_estimates[(d, n, k)])
     except KeyError:
         if not compute:
             raise NotImplementedError("No such popcount parameters computed yet.")
         else:
-            create_estimates(d, n)
-            return load_estimate(d, n, k, False)
+            return Namespace(**estimate_wrapper(d, n, k))
 
 
 def maximise_optimising_func(d, f=None, n=256, verbose=False):
