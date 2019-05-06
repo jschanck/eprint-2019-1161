@@ -53,11 +53,17 @@ def T_count_giteration(d, n, k):
 
     d, n, k, index_wires = _preproc_params(d, n, k)
 
-    tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
-    # TODO: this can be negative
-    # NOTE: now exact, before using upper bound that tends to almost 2x too many Ts
-    # ell = mp.log(n, 2) + 1
-    # tof_count_adder = n * sum([(2 * i - 1)/(2**i) for i in range(1, ell)]) + ell - k - 1
+    # the below is an upper bound on the number of Toffoli, it is now calculated exactly
+    # tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
+
+    # number of ORs required to test whether popcount is less than 2^t, some
+    # t in {1, 2, ..., log_2(n) - 1}, is l - t - 1 ORs, i.e. larger for smaller
+    # t. we say k in [ 2^t , 2^(t - 1) + 1 ] costs the same number of ORs
+    # same calculation is made in clifford_gates() below
+
+    ell = mp.log(n, 2) + 1
+    t = mp.ceil(mp.log(k, 2))
+    tof_count_adder = n * sum([(2 * i - 1)/(2**i) for i in range(1, ell)]) + ell - t - 1
     # each Toffoli costs approx 7T
     T_count_adder = 7 * tof_count_adder
 
@@ -146,9 +152,11 @@ def clifford_gates(d, n, k, total_giterations):
     as the popcnt parameters require
     """
     d, n, k, index_wires = _preproc_params(d, n, k)
+    ell = mp.log(n, 2) + 1
+    t = mp.ceil(mp.log(k, 2))
 
     # not currently counting NOTs in adder
-    cnot_adder = n * mp.fraction(19, 2) + mp.mpf('2') * (mp.log(n, 2) - k)
+    cnot_adder = n * mp.fraction(19, 2) + mp.mpf('2') * (ell - t + 1)
     not_diffusion = 2 * (index_wires - 1)
     hadamard_diffusion = 2 * (index_wires - 1)
     z_diffusion = 2
