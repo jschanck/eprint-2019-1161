@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
+import re
+import cPickle
 from mpmath import mp
 from optimise_popcnt import grover_iterations, load_estimate
 from collections import OrderedDict
@@ -276,3 +279,30 @@ def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
         print "{d:3d},{lc:.1f},{slc:.1f}".format(d=d, lc=best[d], slc=guss[d])
 
     return data
+
+
+def whatyougot():
+    real = dict()
+    idel = dict()
+    D = set()
+    for fn in os.listdir("probabilities"):
+        match = re.match("([0-9]+)_([0-9]+)", fn)
+        if not match:
+            continue
+        d, n = map(int, match.groups())
+        if n < 32:
+            continue
+        D.add(d)
+        if not match:
+            continue
+        if mp.log(n, 2) % 1 != 0:
+            continue
+        curr =  wrapper(d, n)
+        curi =  wrapper(d, n, speculate=True)
+        if d not in real or real[d][1] > curr[1]:
+            real[d] = curr
+        if d not in idel or idel[d][1] > curi[1]:
+            idel[d] = curi
+    print "d,logcost"
+    for d in sorted(D):
+        print "{d:3d},{lc:.1f},{slc:.1f}".format(d=d, lc=real[d][1], slc=idel[d][1])
