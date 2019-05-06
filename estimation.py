@@ -243,7 +243,21 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     # NOTE: removed msds from total_scc because it should not affect depth
     total_scc = total_giterations * scc * T_depth_giteration(d, n, k)
     # total cost (ignoring Cliffords in error correction) is
-    total_cost = total_logi_qbits * total_scc
+    total_cost_per_giteration = total_logi_qbits * total_scc
+
+    probs = load_estimate(d, n, k, compute=compute_probs)
+    list_size = mp.ceil(2**(0.2075*d))
+    # c(k, n)
+    list_expansion_factor = (probs.ngr_pf/(1 - probs.gr))**(-1./2.)
+    # number of repeats to find reduction per fixed vector as popcount not perfect
+    repeats = (probs.ngr_pf/probs.pf)**(-1)
+
+    if not speculate:
+        giterations = list_size * list_expansion_factor * repeats
+    else:
+        giterations = list_size
+
+    total_cost = giterations * total_cost_per_giteration
 
     return float(total_cost), float(mp.log(total_cost, 2)), k
 
