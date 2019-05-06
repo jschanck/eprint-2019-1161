@@ -149,43 +149,10 @@ def load_estimate(d, n, k, compute=False):
             return load_estimate(d, n, k, False)
 
 
-def maximise_optimising_func(d, f=None, n=256, verbose=False):
+def giterations_per_output_pair(d, n, k, compute_probs=False):
     """
-    Apply a function f to all parameter choices (and their associated
-    probabilities) for popcnts in a given dimension to optimise the popcnt
-    parameters.
-
-    :param d: the dimension of real space
-    :param f: the function to maximise, if ``None`` uses default optimisation
-              function ``optimisation`` defined below
-    :param n: the number of popcnt vectors to consider for a SimHash
-    :param verbose: if ``True`` print probabilities for each improving tuple
-    :returns: a tuple (maximum of f, tuple of parameters that achieve it)
-    """
-    if f is None:
-        f = optimisation
-    all_estimates = load_estimates(d, n=n)
-    if all_estimates is None:
-        return
-    solution_value = None
-    solution_key = None
-    for key, estimates in all_estimates.items():
-        probs = Namespace(**estimates)
-        new_value = f(probs.gr, probs.pf, probs.gr_pf, probs.gr_npf,
-                      probs.ngr_pf, probs.ngr_npf)
-        if new_value > solution_value or solution_value is None:
-            solution_value = new_value
-            solution_key = key
-            if verbose:
-                print solution_value, solution_key
-                pretty_probs(estimates)
-    return mp.mpf('1')/solution_value, solution_key
-
-
-def grover_iterations(d, n, k, compute_probs=False):
-    """
-    A function for when you just want the number of Grover iterations required
-    for a certain triple (d, n, k)
+    A function for when you want the number of Grover iterations required for
+    fixed input u to get an output v, whether reduced or not, given d, k, n
 
     :param d: the dimension of real space
     :param n: the number of popcnt vectors to consider for a SimHash
@@ -193,17 +160,7 @@ def grover_iterations(d, n, k, compute_probs=False):
     :returns: the calculated number of Grover iterations required
     """
     probs = load_estimate(d, n, k, compute_probs)
-    inverse_giterations = optimisation(probs.gr, probs.pf, probs.gr_pf,
-                                       probs.gr_npf, probs.ngr_pf,
-                                       probs.ngr_npf)
-    return mp.mpf('1')/inverse_giterations
-
-
-def optimisation(gr, pf, gr_pf, gr_npf, ngr_pf, ngr_npf):
-    # TODO: better name? This doesn't optimise anything
-    exp1 = mp.fraction(1, 2)
-    exp2 = mp.mpf('3')
-    return ((ngr_pf**exp2)/((mp.mpf('1') - gr)*pf))**exp1
+    return probs.pf**(-1./2.)
 
 
 def _bulk_estimates_core(args):

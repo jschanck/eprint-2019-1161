@@ -5,7 +5,7 @@ import os
 import re
 import cPickle
 from mpmath import mp
-from optimise_popcnt import grover_iterations, load_estimate
+from optimise_popcnt import giterations_per_output_pair, load_estimate
 from collections import OrderedDict
 
 
@@ -188,7 +188,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
 
     # calculating the total number of T gates for required error bound
     if not speculate:
-        total_giterations = grover_iterations(d, n, k, compute_probs=compute_probs)
+        total_giterations = giterations_per_output_pair(d, n, k, compute_probs=compute_probs)
     else:
         total_giterations = mp.ceil(mp.pi/4*2**(0.2075/2*d))
     T_count_total = total_giterations * T_count_giteration(d, n, k)
