@@ -281,7 +281,7 @@ def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
     return data
 
 
-def whatyougot():
+def whatyougot(dmod=1):
     real = dict()
     idel = dict()
     D = set()
@@ -291,6 +291,8 @@ def whatyougot():
             continue
         d, n = map(int, match.groups())
         if n < 32:
+            continue
+        if d%dmod:
             continue
         D.add(d)
         if not match:
