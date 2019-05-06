@@ -86,6 +86,7 @@ def T_depth_giteration(d, n, k):
     """
 
     d, n, k, index_wires = _preproc_params(d, n, k)
+    ell = mp.log(n, 2) + 1
 
     def T_depth_i_adder(i):
         """
@@ -99,12 +100,15 @@ def T_depth_giteration(d, n, k):
     upper = int(mp.log(n, 2) + 1)
     T_depth_adder = sum([T_depth_i_adder(bits) for bits in range(1, upper)])
 
+    # following popcount circuit design section
+    t = mp.ceil(mp.log(k, 2))
+    T_OR_depth = mp.ceil(mp.log(ell - t))
+
     # I currently make an assumption (favourable to a sieving adversary) that the T gates in the
     # diffusion operator are all sequential and therefore bring down the average T gates required
     # per T depth.
-    # TODO: is this assumption necessarily favourable always?
     T_depth_diffusion = 32 * (index_wires - 1) - 84
-    return 2 * T_depth_adder + T_depth_diffusion
+    return 2 * (T_depth_adder + T_OR_depth) + T_depth_diffusion
 
 
 def T_average_width_giteration(d, n, k):
@@ -236,6 +240,8 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     total_distil_logi_qbits = 16 * (15 ** (layers - 1))
 
     # how many magic states can we pipeline at once?
+    if layers == 0:
+        print d, k
     if layers == 1:
         parallel_msd = 1
     else:
