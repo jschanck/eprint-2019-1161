@@ -6,7 +6,7 @@ from optimise_popcnt import grover_iterations, load_estimate
 from collections import OrderedDict
 
 
-def _preproc_params(d, n, k, compute_probs=True):
+def _preproc_params(d, n, k, compute_probs=True, speculate=False):
     """
     Normalise inputs and check for consistency.
 
@@ -14,6 +14,7 @@ def _preproc_params(d, n, k, compute_probs=True):
     :param n: number of entries in popcount filter
     :param k: threshold for popcount filter
     :param compute_probs: compute probabilities if needed
+    :param speculate: pretend popcount is perfect
 
     """
 
@@ -26,7 +27,10 @@ def _preproc_params(d, n, k, compute_probs=True):
 
     # determines width of the diffusion operator and accounts for list growth
     probs = load_estimate(d, n, k, compute=compute_probs)
-    list_growth = (probs.ngr_pf/(mp.mpf('1') - probs.gr))**(-1./2.)
+    if not speculate:
+        list_growth = (probs.ngr_pf/(mp.mpf('1') - probs.gr))**(-1./2.)
+    else:
+        list_growth = 1
     index_wires = mp.ceil(mp.log(list_growth * (2**(0.2075*d)), 2))
     if index_wires < 4:
         raise ValueError("diffusion operator poorly defined, d = %d too small."%d)
@@ -46,7 +50,10 @@ def T_count_giteration(d, n, k):
 
     d, n, k, index_wires = _preproc_params(d, n, k)
 
-    tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
+    # tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
+    # NOTE: now exact, before using upper bound that tends to almost 2x too many Ts
+    ell = mp.log(n, 2) + 1
+    tof_count_adder = n * sum([(2 * i - 1)/(2**i) for i in range(1, ell)]) + ell - k - 1
     # each Toffoli costs approx 7T
     T_count_adder = 7 * tof_count_adder
 
@@ -158,23 +165,28 @@ def distance_condition_clifford(p_in, num_clifford_gates):
     return d
 
 
-def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
+def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, speculate=False):
     if k is None:
         best = None
         # NOTE: 5/16*n seems to be optimal
         for k in range(max(int(0.3125*n)-5, 1), min(int(0.3125*n)+5+1, int(n//2))):
-            cur = wrapper(d, n, k, p_in=p_in, p_g=p_g, compute_probs=compute_probs)
+            cur = wrapper(d, n, k, p_in=p_in, p_g=p_g, compute_probs=compute_probs, speculate=speculate)
             if best is None or cur < best:
                 best = cur
         return best
-    _, _, _, index_wires = _preproc_params(d, n, k, compute_probs=compute_probs)
+    _, _, _, index_wires = _preproc_params(d, n, k,
+                                           compute_probs=compute_probs,
+                                           speculate=speculate)
 
     # we will eventually interpolate between non power of two n, sim for k
     assert(mp.log(n, 2)%1 ==0), "Not a power of two n!"
     # TODO: we permit non-power-of-two ks for now
 
     # calculating the total number of T gates for required error bound
-    total_giterations = grover_iterations(d, n, k, compute_probs=compute_probs)
+    if not speculate:
+        total_giterations = grover_iterations(d, n, k, compute_probs=compute_probs)
+    else:
+        total_giterations = mp.ceil(mp.pi/4*2**(0.2075/2*d))
     T_count_total = total_giterations * T_count_giteration(d, n, k)
     p_out = mp.mpf('1')/T_count_total
 
@@ -234,7 +246,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True):
 
 def _bulk_wrapper_core(args):
     d, n = args
-    r = (d,) + wrapper(d, n)
+    r = (d,) + wrapper(d, n) + wrapper(d, n, speculate=True)
     print(r)
     return r
 
@@ -249,14 +261,17 @@ def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
 
     data = OrderedDict([(d, []) for d in D])
     best = OrderedDict([(d, None) for d in D])
+    guss = OrderedDict([(d, None) for d in D])
     results = list(Pool(ncores).imap_unordered(_bulk_wrapper_core, jobs))
-    for (d, c, lc, k) in results:
-        data[d].append((c, lc, k))
+    for (d, c, lc, k, sc, slc, sk) in results:
+        data[d].append((c, lc, k, sc, slc, sk))
         if best[d] is None or best[d] > lc:
             best[d] = lc
+        if guss[d] is None or guss[d] > slc:
+            guss[d] = slc
 
     print "d,logcost"
     for d in D:
-        print "{d:3d},{lc:.1f}".format(d=d, lc=best[d])
+        print "{d:3d},{lc:.1f},{slc:.1f}".format(d=d, lc=best[d], slc=guss[d])
 
     return data
