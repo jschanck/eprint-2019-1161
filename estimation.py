@@ -5,7 +5,7 @@ import os
 import re
 import cPickle
 from mpmath import mp
-from optimise_popcnt import grover_iterations, load_estimate
+from optimise_popcnt import giterations_per_output_pair, load_estimate
 from collections import OrderedDict
 
 
@@ -53,11 +53,17 @@ def T_count_giteration(d, n, k):
 
     d, n, k, index_wires = _preproc_params(d, n, k)
 
-    tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
-    # TODO: this can be negative
-    # NOTE: now exact, before using upper bound that tends to almost 2x too many Ts
-    # ell = mp.log(n, 2) + 1
-    # tof_count_adder = n * sum([(2 * i - 1)/(2**i) for i in range(1, ell)]) + ell - k - 1
+    # the below is an upper bound on the number of Toffoli, it is now calculated exactly
+    # tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
+
+    # number of ORs required to test whether popcount is less than 2^t, some
+    # t in {1, 2, ..., log_2(n) - 1}, is l - t - 1 ORs, i.e. larger for smaller
+    # t. we say k in [ 2^t , 2^(t - 1) + 1 ] costs the same number of ORs
+    # same calculation is made in clifford_gates() below
+
+    ell = mp.log(n, 2) + 1
+    t = mp.ceil(mp.log(k, 2))
+    tof_count_adder = n * sum([(2 * i - 1)/(2**i) for i in range(1, ell)]) + ell - t - 1
     # each Toffoli costs approx 7T
     T_count_adder = 7 * tof_count_adder
 
@@ -80,6 +86,7 @@ def T_depth_giteration(d, n, k):
     """
 
     d, n, k, index_wires = _preproc_params(d, n, k)
+    ell = mp.log(n, 2) + 1
 
     def T_depth_i_adder(i):
         """
@@ -93,12 +100,15 @@ def T_depth_giteration(d, n, k):
     upper = int(mp.log(n, 2) + 1)
     T_depth_adder = sum([T_depth_i_adder(bits) for bits in range(1, upper)])
 
+    # following popcount circuit design section
+    t = mp.ceil(mp.log(k, 2))
+    T_OR_depth = mp.ceil(mp.log(ell - t))
+
     # I currently make an assumption (favourable to a sieving adversary) that the T gates in the
     # diffusion operator are all sequential and therefore bring down the average T gates required
     # per T depth.
-    # TODO: is this assumption necessarily favourable always?
     T_depth_diffusion = 32 * (index_wires - 1) - 84
-    return 2 * T_depth_adder + T_depth_diffusion
+    return 2 * (T_depth_adder + T_OR_depth) + T_depth_diffusion
 
 
 def T_average_width_giteration(d, n, k):
@@ -146,9 +156,11 @@ def clifford_gates(d, n, k, total_giterations):
     as the popcnt parameters require
     """
     d, n, k, index_wires = _preproc_params(d, n, k)
+    ell = mp.log(n, 2) + 1
+    t = mp.ceil(mp.log(k, 2))
 
     # not currently counting NOTs in adder
-    cnot_adder = n * mp.fraction(19, 2) + mp.mpf('2') * (mp.log(n, 2) - k)
+    cnot_adder = n * mp.fraction(19, 2) + mp.mpf('2') * (ell - t + 1)
     not_diffusion = 2 * (index_wires - 1)
     hadamard_diffusion = 2 * (index_wires - 1)
     z_diffusion = 2
@@ -170,27 +182,41 @@ def distance_condition_clifford(p_in, num_clifford_gates):
 
 
 def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, speculate=False):
+    """
+    Compute complexity for one sieve iteration using Grover's search.
+
+    :param d: lattice dimension
+    :param n: popcount dimension (must be a power of two)
+    :param k: threshhold (≈5/16⋅n when ``None``)
+    :param p_in:
+    :param p_g:
+    :param compute_probs: Compute probabilities if they don't exist yet (this can be slow)
+    :param speculate: pretend that popcount is optimal.
+
+    """
     if k is None:
         best = None
         # NOTE: 5/16*n seems to be optimal
-        for k in range(max(int(0.3125*n)-5, 1), min(int(0.3125*n)+5+1, int(n//2))):
+        c = 5 if not speculate else 0
+        for k in range(max(int(0.3125*n)-c, 1), min(int(0.3125*n)+c+1, int(n//2))):
             cur = wrapper(d, n, k, p_in=p_in, p_g=p_g, compute_probs=compute_probs, speculate=speculate)
             if best is None or cur < best:
                 best = cur
         return best
+
     _, _, _, index_wires = _preproc_params(d, n, k,
                                            compute_probs=compute_probs,
                                            speculate=speculate)
 
     # we will eventually interpolate between non power of two n, sim for k
     assert(mp.log(n, 2)%1 ==0), "Not a power of two n!"
-    # TODO: we permit non-power-of-two ks for now
 
     # calculating the total number of T gates for required error bound
     if not speculate:
-        total_giterations = grover_iterations(d, n, k, compute_probs=compute_probs)
+        total_giterations = giterations_per_output_pair(d, n, k, compute_probs=compute_probs)
     else:
         total_giterations = mp.ceil(mp.pi/4*2**(0.2075/2*d))
+
     T_count_total = total_giterations * T_count_giteration(d, n, k)
     p_out = mp.mpf('1')/T_count_total
 
@@ -200,7 +226,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     # distances, and physical qubits per logical for the layers of distillation
     distances = fifteen_one(p_out, p_in, p_g=p_g)
     layers = len(distances)
-    # NOTE: d_last is used for circuit with biggest logical footprint
+    # NOTE: d_last is used for circuit with biggest logical footprint
     phys_qbits = [num_physical_qubits(distance) for distance in distances[::-1]]
 
     # physical qubits per layer, starting with topmost
@@ -214,6 +240,8 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     total_distil_logi_qbits = 16 * (15 ** (layers - 1))
 
     # how many magic states can we pipeline at once?
+    if layers == 0:
+        print d, k
     if layers == 1:
         parallel_msd = 1
     else:
@@ -243,7 +271,21 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     # NOTE: removed msds from total_scc because it should not affect depth
     total_scc = total_giterations * scc * T_depth_giteration(d, n, k)
     # total cost (ignoring Cliffords in error correction) is
-    total_cost = total_logi_qbits * total_scc
+    total_cost_per_giteration = total_logi_qbits * total_scc
+
+    probs = load_estimate(d, n, k, compute=compute_probs)
+    list_size = mp.ceil(2**(0.2075*d))
+    # c(k, n)
+    list_expansion_factor = (probs.ngr_pf/(1 - probs.gr))**(-1./2.)
+    # number of repeats to find reduction per fixed vector as popcount not perfect
+    repeats = (probs.ngr_pf/probs.pf)**(-1)
+
+    if not speculate:
+        giterations = list_size * list_expansion_factor * repeats
+    else:
+        giterations = list_size
+
+    total_cost = giterations * total_cost_per_giteration
 
     return float(total_cost), float(mp.log(total_cost, 2)), k
 
@@ -256,6 +298,14 @@ def _bulk_wrapper_core(args):
 
 
 def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
+    """
+    Compute probabilities and establish costs for all pairs ``(d,n) ∈ D × N``.
+
+    :param D: lattice dimensions
+    :param N: popcount dimensions
+    :param ncores: number of cores to utilise
+
+    """
     from multiprocessing import Pool
 
     jobs = []
@@ -263,46 +313,39 @@ def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
         for d in D:
             jobs.append((d, n))
 
-    data = OrderedDict([(d, []) for d in D])
-    best = OrderedDict([(d, None) for d in D])
-    guss = OrderedDict([(d, None) for d in D])
     results = list(Pool(ncores).imap_unordered(_bulk_wrapper_core, jobs))
-    for (d, c, lc, k, sc, slc, sk) in results:
-        data[d].append((c, lc, k, sc, slc, sk))
-        if best[d] is None or best[d] > lc:
-            best[d] = lc
-        if guss[d] is None or guss[d] > slc:
-            guss[d] = slc
-
-    print "d,logcost"
-    for d in D:
-        print "{d:3d},{lc:.1f},{slc:.1f}".format(d=d, lc=best[d], slc=guss[d])
-
-    return data
+    return results
 
 
-def whatyougot():
-    real = dict()
-    idel = dict()
+def overall_estimate(dmod=32, nmin=65):
+    """
+    Find the best costs for all known probabilities.
+
+    :param dmod: Only consider dimensions ``d`` that are zero mod ``dmod``
+    :param nmin: Only consider ``n >= nmin``
+
+    """
+    real  = dict()
+    ideal = dict()
     D = set()
     for fn in os.listdir("probabilities"):
         match = re.match("([0-9]+)_([0-9]+)", fn)
         if not match:
             continue
         d, n = map(int, match.groups())
-        if n < 32:
+
+        # TODO: For small d,n phys_qbits_layer can be empty!
+        if n < nmin or mp.log(n, 2) % 1 != 0:
             continue
+        if d%dmod:
+            continue
+        cur_real  = wrapper(d, n)
+        cur_ideal = wrapper(d, n, speculate=True)
         D.add(d)
-        if not match:
-            continue
-        if mp.log(n, 2) % 1 != 0:
-            continue
-        curr =  wrapper(d, n)
-        curi =  wrapper(d, n, speculate=True)
-        if d not in real or real[d][1] > curr[1]:
-            real[d] = curr
-        if d not in idel or idel[d][1] > curi[1]:
-            idel[d] = curi
-    print "d,logcost"
+        if d not in real or real[d][1] > cur_real[1]:
+            real[d] = cur_real
+        if d not in ideal or ideal[d][1] > cur_ideal[1]:
+            ideal[d] = cur_ideal
+    print "d,logcost,logcostopt"
     for d in sorted(D):
-        print "{d:3d},{lc:.1f},{slc:.1f}".format(d=d, lc=real[d][1], slc=idel[d][1])
+        print "{d:3d},{lc:.1f},{slc:.1f}".format(d=d, lc=real[d][1], slc=ideal[d][1])
