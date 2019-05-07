@@ -3,10 +3,8 @@
 
 import os
 import re
-import cPickle
 from mpmath import mp
 from optimise_popcnt import giterations_per_output_pair, load_estimate
-from collections import OrderedDict
 
 
 def _preproc_params(d, n, k, compute_probs=True, speculate=False):
@@ -237,12 +235,13 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
 
     # total number of physical/logical qubits for msd
     # total_distil_phys_qbits = max(phys_qbits_layer)
-    total_distil_logi_qbits = 16 * (15 ** (layers - 1))
+    if layers >= 1:
+        total_distil_logi_qbits = 16 * (15 ** (layers - 1))
+    else:
+        total_distil_logi_qbits = 1
 
     # how many magic states can we pipeline at once?
-    if layers == 0:
-        print d, k
-    if layers == 1:
+    if layers == 0 or layers == 1:
         parallel_msd = 1
     else:
         parallel_msd = mp.floor(max(float(phys_qbits_layer[0])/phys_qbits_layer[1], 1))
@@ -340,7 +339,7 @@ def overall_estimate(dmod=32):
         if d%dmod:
             continue
         try:
-            cur_real  = wrapper(d, n)
+            cur_real = wrapper(d, n)
         except IndexError as e:
             print(d, n, e)
             continue
