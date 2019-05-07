@@ -317,7 +317,7 @@ def bulk_wrapper(D, N=(32, 64, 128, 256, 512), ncores=1):
     return results
 
 
-def overall_estimate(dmod=32, nmin=65):
+def overall_estimate(dmod=32):
     """
     Find the best costs for all known probabilities.
 
@@ -335,11 +335,15 @@ def overall_estimate(dmod=32, nmin=65):
         d, n = map(int, match.groups())
 
         # TODO: For small d,n phys_qbits_layer can be empty!
-        if n < nmin or mp.log(n, 2) % 1 != 0:
+        if mp.log(n, 2) % 1 != 0:
             continue
         if d%dmod:
             continue
-        cur_real  = wrapper(d, n)
+        try:
+            cur_real  = wrapper(d, n)
+        except IndexError as e:
+            print(d, n, e)
+            continue
         cur_ideal = wrapper(d, n, speculate=True)
         D.add(d)
         if d not in real or real[d][1] > cur_real[1]:
