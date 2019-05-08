@@ -148,7 +148,7 @@ def num_physical_qubits(distance):
     return 1.25 * 2.5 * ((2 * distance) ** 2)
 
 
-def clifford_gates(d, n, k, total_giterations):
+def clifford_gates(d, n, k, giterations):
     """
     Calculate all the Clifford gates required in as many Grover iterations
     as the popcnt parameters require
@@ -211,11 +211,11 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
 
     # calculating the total number of T gates for required error bound
     if not speculate:
-        total_giterations = giterations_per_output_pair(d, n, k, compute_probs=compute_probs)
+        giterations = giterations_per_output_pair(d, n, k, compute_probs=compute_probs)
     else:
-        total_giterations = mp.ceil(mp.pi/4*2**(0.2075/2*d))
+        giterations = mp.ceil(mp.pi/4*2**(0.2075/2*d))
 
-    T_count_total = total_giterations * T_count_giteration(d, n, k)
+    T_count_total = giterations * T_count_giteration(d, n, k)
     p_out = mp.mpf('1')/T_count_total
 
     p_in = mp.mpf(p_in)
@@ -231,7 +231,10 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     phys_qbits_layer = [16*(15**(layers-i))*phys_qbits[i-1] for i in range(1, layers + 1)] # noqa
 
     # total surface code cycles per magic state distillation (not pipelined)
-    scc = 10 * sum(distances)
+    if len(distance) >= 1:
+        scc = 10 * sum(distances)
+    else:
+        scc = 10
 
     # total number of physical/logical qubits for msd
     # total_distil_phys_qbits = max(phys_qbits_layer)
@@ -257,7 +260,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
 
     # NOTE: not used in practice as we don't count surface codes for Cliffords
     # distance required for Clifford gates, current ignoring Hadamards in setup
-    # giteration_clifford_gates = clifford_gates(d, n, k, total_giterations)
+    # giteration_clifford_gates = clifford_gates(d, n, k, giterations)
     # clifford_distance = distance_condition_clifford(p_in, giteration_clifford_gates) # noqa
 
     # NOTE: not used in practice as we don't count surface codes for Cliffords
@@ -268,7 +271,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     total_logi_qbits = msds * total_distil_logi_qbits + logi_qbits_giteration
     # total number of surface code cycles for all the Grover iterations
     # NOTE: removed msds from total_scc because it should not affect depth
-    total_scc = total_giterations * scc * T_depth_giteration(d, n, k)
+    total_scc = giterations * scc * T_depth_giteration(d, n, k)
     # total cost (ignoring Cliffords in error correction) is
     total_cost_per_giteration = total_logi_qbits * total_scc
 
@@ -280,11 +283,11 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     repeats = (probs.ngr_pf/probs.pf)**(-1)
 
     if not speculate:
-        giterations = list_size * list_expansion_factor * repeats
+        total_giterations = list_size * list_expansion_factor * repeats
     else:
-        giterations = list_size
+        total_giterations = list_size
 
-    total_cost = giterations * total_cost_per_giteration
+    total_cost = total_giterations * total_cost_per_giteration
 
     return float(total_cost), float(mp.log(total_cost, 2)), k
 
