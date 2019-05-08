@@ -231,7 +231,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     phys_qbits_layer = [16*(15**(layers-i))*phys_qbits[i-1] for i in range(1, layers + 1)] # noqa
 
     # total surface code cycles per magic state distillation (not pipelined)
-    if len(distance) >= 1:
+    if len(distances) >= 1:
         scc = 10 * sum(distances)
     else:
         scc = 10
