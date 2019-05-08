@@ -289,7 +289,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
 
     total_cost = total_giterations * total_cost_per_giteration
 
-    return float(total_cost), float(mp.log(total_cost, 2)), k
+    return float(mp.log(total_cost, 2)), float(mp.log(total_cost/(total_giterations * giterations), 2)),  k
 
 
 def _bulk_wrapper_core(args):
@@ -348,10 +348,11 @@ def overall_estimate(dmod=32):
             continue
         cur_ideal = wrapper(d, n, speculate=True)
         D.add(d)
-        if d not in real or real[d][1] > cur_real[1]:
+        if d not in real or real[d][0] > cur_real[0]:
             real[d] = cur_real
-        if d not in ideal or ideal[d][1] > cur_ideal[1]:
+        if d not in ideal or ideal[d][0] > cur_ideal[0]:
             ideal[d] = cur_ideal
-    print "d,logcost,logcostopt"
+    print "d,log cost,log cost per call,log cost opt,log cost per call opt"
     for d in sorted(D):
-        print "{d:3d},{lc:.1f},{slc:.1f}".format(d=d, lc=real[d][1], slc=ideal[d][1])
+        print "{d:3d},{lc:.1f},{lcpc:.1f},{slc:.1f},{slcpc:.1f}".format(d=d, lc=real[d][0], slc=ideal[d][0],
+                                                                        lcpc=real[d][1], slcpc=ideal[d][1])
