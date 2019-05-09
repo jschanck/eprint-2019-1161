@@ -4,7 +4,7 @@
 import os
 import re
 from mpmath import mp
-from optimise_popcnt import giterations_per_output_pair, load_estimate
+from optimise_popcnt import giterations_per_grover, load_estimate
 
 
 def _preproc_params(d, n, k, compute_probs=True, speculate=False):
@@ -19,7 +19,7 @@ def _preproc_params(d, n, k, compute_probs=True, speculate=False):
 
     """
 
-    # For a dimension d lattice using an NV like sieve we expect Oe(2^{0.2075*d}) lattice vectors.
+    # For a dimension d lattice using an NV like sieve we expect O(2^{0.2075*d}) lattice vectors.
     # We round this up to the nearest power of two to be able to use Hadamard gates to set up
     # Grover's algorithm.
 
@@ -36,10 +36,67 @@ def _preproc_params(d, n, k, compute_probs=True, speculate=False):
     if index_wires < 4:
         raise ValueError("diffusion operator poorly defined, d = %d too small."%d)
 
-    return d, n, k, index_wires
+    # a useful value for computation that follows the writeup
+    ell = mp.log(n, 2) + 1
+
+    return d, n, k, index_wires, ell
 
 
-def T_count_giteration(d, n, k):
+def popcount_gates(d, k, n):
+    d, n, k, _, ell = _preproc_params(d, n, k)
+    OR_CNOTs = 2
+    OR_Tofs = 1
+
+    # number of ORs required to test whether popcount is less than 2^t, some
+    # t in {0, 1, 2, ..., l - 1}, is l - t - 1, i.e. more for smaller
+    # t. we say k in [ 2^t + 1 , 2^(t + 1) ] costs the same number of ORs
+
+    t = mp.ceil(mp.log(k, 2))
+    ORs = ell - t - 1
+
+    def i_bit_adder_CNOTs(i):
+        # to achieve the Toffoli counts for i_bits_adder_Tofs() below we
+        # diverge from the expected number of CNOTs for 1 bit adders
+        if i == 1:
+            return 6
+        else:
+            return 5*i - 3
+
+    def i_bit_adder_Tofs(i):
+        # these Toffoli counts for 1 and 2 bit adders can be achieved using
+        # (some of) the optimisations in Cuccarro et al.
+        return 2*i - 1
+
+    adder_CNOTs = n*sum([i_bit_adder_CNOTs(i)/float(2**i) for i in range(1, ell)]) # noqa
+    popcount_CNOTs = n + OR_CNOTs*ORs + adder_CNOTs
+
+    adder_Tofs = n*sum([i_bit_adder_Tofs(i)/float(2**i) for i in range(1, ell)]) # noqa
+    popcount_Tofs = OR_Tofs*ORs + adder_Tofs
+
+    return popcount_CNOTs, popcount_Tofs
+
+
+def popcount_T_depth(d, k, n):
+    d, n, k, index_wires, ell = _preproc_params(d, n, k)
+
+    def i_bit_adder_T_depth(i):
+        """
+        Each i bit adder has 2i - 1 Toffoli gates (sequentially) so using T
+        depth 3 per Toffoli gives 6i - 3 T depth for an i bit adder
+        """
+        return 6 * i - 3
+
+    # all i bit adders are in parallel and we use 1, ..., log_2(n) bit adders
+    adder_T_depth = sum([i_bit_adder_T_depth(i) for i in range(1, ell)])
+
+    # we have ceil(ell - t) OR depth, 1 Tof therefore 3 T-depth each
+    t = mp.ceil(mp.log(k, 2))
+    OR_T_depth = 3 * mp.ceil(mp.log(ell - t, 2))
+
+    return adder_T_depth,  OR_T_depth
+
+
+def giteration_T_count(d, n, k):
     """
     T-count for one Grover iteration.
 
@@ -49,31 +106,21 @@ def T_count_giteration(d, n, k):
 
     """
 
-    d, n, k, index_wires = _preproc_params(d, n, k)
+    _, _, _, index_wires, _ = _preproc_params(d, n, k)
+    _, popcount_Tofs = popcount_gates(d, k, n)
 
-    # the below is an upper bound on the number of Toffoli, it is now calculated exactly
-    # tof_count_adder = n * mp.fraction(7, 2) + mp.log(n, 2) - k
-
-    # number of ORs required to test whether popcount is less than 2^t, some
-    # t in {1, 2, ..., log_2(n) - 1}, is l - t - 1 ORs, i.e. larger for smaller
-    # t. we say k in [ 2^t , 2^(t - 1) + 1 ] costs the same number of ORs
-    # same calculation is made in clifford_gates() below
-
-    ell = mp.log(n, 2) + 1
-    t = mp.ceil(mp.log(k, 2))
-    tof_count_adder = n * sum([(2 * i - 1)/(2**i) for i in range(1, ell)]) + ell - t - 1
     # each Toffoli costs approx 7T
-    T_count_adder = 7 * tof_count_adder
+    popcount_T_count = 7 * popcount_Tofs
 
     # a l-controlled NOT takes (32l - 84)T
     # the diffusion operator in our circuit is (index_wires - 1)-controlled NOT
-    T_count_diffusion = 32 * (index_wires - 1) - 84
+    diffusion_T_count = 32 * (index_wires - 1) - 84
 
     # we have adder and its inverse
-    return 2 * T_count_adder + T_count_diffusion
+    return 2 * popcount_T_count + diffusion_T_count
 
 
-def T_depth_giteration(d, n, k):
+def giteration_T_depth(d, n, k):
     """
     T-depth of one Grover iteration.
 
@@ -83,39 +130,25 @@ def T_depth_giteration(d, n, k):
 
     """
 
-    d, n, k, index_wires = _preproc_params(d, n, k)
-    ell = mp.log(n, 2) + 1
+    d, n, k, index_wires, ell = _preproc_params(d, n, k)
 
-    def T_depth_i_adder(i):
-        """
-        Each i bit adder has 2i - 1 Toffoli gates (sequentially) so using T
-        depth 3 per Toffoli gives 6i - 3 T depth for an i bit adder
-        """
-        # TODO: this is not true for i \in {1, 2}
-        return 6 * i - 3
-
-    # all i bit adders are in parallel and we use 1, ..., log_2 n bit adders
-    upper = int(mp.log(n, 2) + 1)
-    T_depth_adder = sum([T_depth_i_adder(bits) for bits in range(1, upper)])
-
-    # following popcount circuit design section
-    t = mp.ceil(mp.log(k, 2))
-    T_OR_depth = mp.ceil(mp.log(ell - t))
+    adder_T_depth, OR_T_depth = popcount_T_depth(d, k, n)
 
     # I currently make an assumption (favourable to a sieving adversary) that the T gates in the
     # diffusion operator are all sequential and therefore bring down the average T gates required
     # per T depth.
-    T_depth_diffusion = 32 * (index_wires - 1) - 84
-    return 2 * (T_depth_adder + T_OR_depth) + T_depth_diffusion
+    diffusion_T_depth = 32 * (index_wires - 1) - 84
+
+    return 2 * (adder_T_depth + OR_T_depth) + diffusion_T_depth
 
 
-def T_average_width_giteration(d, n, k):
+def giteration_T_width(d, n, k):
     """
     Take the floor (generous to sieving adversary) of the division of T_count
     and T_depth of the given circuit to determine how many T gates required
     on average T depth
     """
-    return mp.floor(T_count_giteration(d, n, k)/float(T_depth_giteration(d, n, k)))
+    return mp.floor(giteration_T_count(d, n, k)/float(giteration_T_depth(d, n, k)))
 
 
 def fifteen_one(p_out, p_in, p_g=None, eps=None):
@@ -148,32 +181,29 @@ def num_physical_qubits(distance):
     return 1.25 * 2.5 * ((2 * distance) ** 2)
 
 
-def clifford_gates(d, n, k, giterations):
+def clifford_gates(d, n, k, giterations_per_galg):
     """
     Calculate all the Clifford gates required in as many Grover iterations
     as the popcnt parameters require
     """
-    d, n, k, index_wires = _preproc_params(d, n, k)
-    ell = mp.log(n, 2) + 1
-    t = mp.ceil(mp.log(k, 2))
+    d, n, k, index_wires, ell = _preproc_params(d, n, k)
 
-    # not currently counting NOTs in adder
-    cnot_adder = n * mp.fraction(19, 2) + mp.mpf('2') * (ell - t + 1)
-    not_diffusion = 2 * (index_wires - 1)
-    hadamard_diffusion = 2 * (index_wires - 1)
-    z_diffusion = 2
+    popcount_CNOTs, _ = popcount_gates(d, k, n)
+    diffusion_NOT = 2 * (index_wires - 1)
+    diffusion_Hadamard = 2 * (index_wires - 1)
+    diffusion_Z = 2
 
-    return 2 * cnot_adder + not_diffusion + hadamard_diffusion + z_diffusion
+    return (2 * popcount_CNOTs + 1 + diffusion_NOT + diffusion_Hadamard + diffusion_Z) * giterations_per_galg
 
 
-def distance_condition_clifford(p_in, num_clifford_gates):
+def distance_condition_clifford(p_in, clifford_gates):
     """
     For the Clifford gates in a Grover iteration, we need a distance as
     calculated below.
     """
     d = 1
     while True:
-        if (80 * p_in)**((d + 1)/2.) < 1./num_clifford_gates:
+        if (80 * p_in)**((d + 1)/2.) < 1./clifford_gates:
             break
         d += 1
     return d
@@ -189,7 +219,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     :param p_in:
     :param p_g:
     :param compute_probs: Compute probabilities if they don't exist yet (this can be slow)
-    :param speculate: pretend that popcount is optimal.
+    :param speculate: pretend that popcount is optimal
 
     """
     if k is None:
@@ -202,21 +232,21 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
                 best = cur
         return best
 
-    _, _, _, index_wires = _preproc_params(d, n, k,
-                                           compute_probs=compute_probs,
-                                           speculate=speculate)
+    _, _, _, index_wires, ell = _preproc_params(d, n, k,
+                                                compute_probs=compute_probs,
+                                                speculate=speculate)
 
-    # we will eventually interpolate between non power of two n, sim for k
+    # we interpolate between non powers of two n
     assert(mp.log(n, 2)%1 ==0), "Not a power of two n!"
 
-    # calculating the total number of T gates for required error bound
+    # calculating the total number of T gates in one full Grover's algorithm, for the required error bound
     if not speculate:
-        giterations = giterations_per_output_pair(d, n, k, compute_probs=compute_probs)
+        giterations_per_galg = giterations_per_grover(d, n, k, compute_probs=compute_probs)
     else:
-        giterations = mp.ceil(mp.pi/4*2**(0.2075/2*d))
+        giterations_per_galg = mp.ceil(mp.pi/4*2**(0.2075/2*d))
 
-    T_count_total = giterations * T_count_giteration(d, n, k)
-    p_out = mp.mpf('1')/T_count_total
+    galg_T_count = giterations_per_galg * giteration_T_count(d, n, k)
+    p_out = mp.mpf('1')/galg_T_count
 
     p_in = mp.mpf(p_in)
     p_g = mp.mpf(p_g)
@@ -244,52 +274,52 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
         total_distil_logi_qbits = 1
 
     # how many magic states can we pipeline at once?
-    if layers == 0 or layers == 1:
+    if layers <= 1:
         parallel_msd = 1
     else:
         parallel_msd = mp.floor(max(float(phys_qbits_layer[0])/phys_qbits_layer[1], 1))
 
     # the average T gates per T depth
-    T_average = T_average_width_giteration(d, n, k)
+    T_average = giteration_T_width(d, n, k)
 
     # number of magic state distilleries required
     msds = mp.ceil(float(T_average)/parallel_msd)
 
-    # logical qubits for Grover iteration = max(width of popcnt circuit, width of diffusion operator) + 1
-    logi_qbits_giteration = max(3 * n + mp.log(n, 2) - k - 1, index_wires) + 1
+    # logical qubits for Grover's alg = max(width of popcnt circuit, width of diffusion operator) + 1
+    t = mp.ceil(mp.log(k, 2))
+    logi_qbits_galg = max(3 * n + ell - t - 2, index_wires) + 1
 
     # NOTE: not used in practice as we don't count surface codes for Cliffords
     # distance required for Clifford gates, current ignoring Hadamards in setup
-    # giteration_clifford_gates = clifford_gates(d, n, k, giterations)
-    # clifford_distance = distance_condition_clifford(p_in, giteration_clifford_gates) # noqa
+    # galg_clifford_gates = clifford_gates(d, n, k, giterations_per_galg)
+    # clifford_distance = distance_condition_clifford(p_in, galg_clifford_gates) # noqa
 
     # NOTE: not used in practice as we don't count surface codes for Cliffords
     # physical qubits for Grover iteration = width * f(clifford_distance)
-    # phys_qbits_giteration = logi_qbits_giteration * num_physical_qubits(clifford_distance) # noqa
+    # phys_qbits_galg = logi_qbits_galg * num_physical_qubits(clifford_distance) # noqa
 
     # total number of logical qubits is
-    total_logi_qbits = msds * total_distil_logi_qbits + logi_qbits_giteration
-    # total number of surface code cycles for all the Grover iterations
-    # NOTE: removed msds from total_scc because it should not affect depth
-    total_scc = giterations * scc * T_depth_giteration(d, n, k)
+    total_logi_qbits = msds * total_distil_logi_qbits + logi_qbits_galg
+    # total number of surface code cycles for a grover's algorithm
+    scc_galg = giterations_per_galg * scc * giteration_T_depth(d, n, k)
     # total cost (ignoring Cliffords in error correction) is
-    total_cost_per_giteration = total_logi_qbits * total_scc
+    total_cost_per_galg = total_logi_qbits * scc_galg
 
     probs = load_estimate(d, n, k, compute=compute_probs)
     list_size = mp.ceil(2**(0.2075*d))
     # c(k, n)
     list_expansion_factor = (probs.ngr_pf/(1 - probs.gr))**(-1./2.)
-    # number of repeats to find reduction per fixed vector as popcount not perfect
+    # number of galgs to find reduction per vector as popcount not perfect
     repeats = (probs.ngr_pf/probs.pf)**(-1)
 
     if not speculate:
-        total_giterations = list_size * list_expansion_factor * repeats
+        total_galgs = list_size * list_expansion_factor * repeats
     else:
-        total_giterations = list_size
+        total_galgs = list_size
 
-    total_cost = total_giterations * total_cost_per_giteration
+    total_cost = total_galgs * total_cost_per_galg
 
-    return float(mp.log(total_cost, 2)), float(mp.log(total_cost/(total_giterations * giterations), 2)),  k
+    return float(mp.log(total_cost, 2)), float(mp.log(total_cost/(total_galgs * giterations_per_galg), 2)),  k
 
 
 def _bulk_wrapper_core(args):
@@ -336,7 +366,6 @@ def overall_estimate(dmod=32):
             continue
         d, n = map(int, match.groups())
 
-        # TODO: For small d,n phys_qbits_layer can be empty!
         if mp.log(n, 2) % 1 != 0:
             continue
         if d%dmod:

@@ -149,7 +149,7 @@ def load_estimate(d, n, k, compute=False):
             return load_estimate(d, n, k, False)
 
 
-def giterations_per_output_pair(d, n, k, compute_probs=False):
+def giterations_per_grover(d, n, k, compute_probs=False):
     """
     A function for when you want the number of Grover iterations required for
     fixed input u to get an output v, whether reduced or not, given d, k, n
