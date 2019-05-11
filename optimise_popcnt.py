@@ -160,7 +160,7 @@ def giterations_per_grover(d, n, k, compute_probs=False):
     :returns: the calculated number of Grover iterations required
     """
     probs = load_estimate(d, n, k, compute_probs)
-    return probs.pf**(-1./2.)
+    return mp.floor((mp.pi/4)*probs.pf**(-1./2.))
 
 
 def _bulk_estimates_core(args):

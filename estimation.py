@@ -243,7 +243,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     if not speculate:
         giterations_per_galg = giterations_per_grover(d, n, k, compute_probs=compute_probs)
     else:
-        giterations_per_galg = mp.ceil(mp.pi/4*2**(0.2075/2*d))
+        giterations_per_galg = mp.floor(mp.pi/4*2**(0.2075/2*d))
 
     galg_T_count = giterations_per_galg * giteration_T_count(d, n, k)
     p_out = mp.mpf('1')/galg_T_count
