@@ -1,10 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import csv
 import os
 import re
 from mpmath import mp
 from optimise_popcnt import giterations_per_grover, load_estimate
+
+
+def _parse_csv_list_size():
+    dim = []
+    log_2_list = []
+
+    with open('../scripts/2075.csv') as csvDataFile:
+        csvReader = csv.reader(csvDataFile)
+        for row in csvReader:
+            dim.append(int(row[0]))
+            log_2_list.append(float(row[1]))
+
+    return dim, log_2_list
+
+
+_, log_2_list = _parse_csv_list_size()
 
 
 def _preproc_params(d, n, k, compute_probs=True, speculate=False):
@@ -32,7 +49,11 @@ def _preproc_params(d, n, k, compute_probs=True, speculate=False):
         list_growth = (probs.ngr_pf/(mp.mpf('1') - probs.gr))**(-1./2.)
     else:
         list_growth = 1
-    index_wires = mp.ceil(mp.log(list_growth * (2**(0.2075*d)), 2))
+
+    if d >= 50:
+        index_wires = mp.ceil(mp.log(list_growth, 2) + log_2_list[d - 50])
+    else:
+        index_wires = mp.ceil(mp.log(list_growth * (2**(0.2075*d)), 2))
     if index_wires < 4:
         raise ValueError("diffusion operator poorly defined, d = %d too small."%d)
 
@@ -243,7 +264,10 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     if not speculate:
         giterations_per_galg = giterations_per_grover(d, n, k, compute_probs=compute_probs)
     else:
-        giterations_per_galg = mp.floor(mp.pi/4*2**(0.2075/2*d))
+        if d >= 50:
+            giterations_per_galg = mp.floor(mp.pi/4*(2**(log_2_list[d - 50]/2.)))
+        else:
+            giterations_per_galg = mp.floor(mp.pi/4*(2**(0.2075/2*d)))
 
     galg_T_count = giterations_per_galg * giteration_T_count(d, n, k)
     p_out = mp.mpf('1')/galg_T_count
@@ -306,7 +330,10 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     total_cost_per_galg = total_logi_qbits * scc_galg
 
     probs = load_estimate(d, n, k, compute=compute_probs)
-    list_size = mp.ceil(2**(0.2075*d))
+    if d >= 50:
+        list_size = mp.ceil(2**(log_2_list[d - 50]))
+    else:
+        list_size = mp.ceil(2**(0.2075*d))
     # c(k, n)
     list_expansion_factor = (probs.ngr_pf/(1 - probs.gr))**(-1./2.)
     # number of galgs to find reduction per vector as popcount not perfect
