@@ -6,6 +6,7 @@ import os
 import re
 from mpmath import mp
 from optimise_popcnt import giterations_per_grover, load_estimate
+from collections import namedtuple
 
 
 def _parse_csv_list_size():
@@ -228,6 +229,72 @@ def distance_condition_clifford(p_in, clifford_gates):
     return d
 
 
+def wrapper_logical(d, n, k=None, compute_probs=True, speculate=False):
+    """
+    Compute complexity for one sieve iteration using Grover's search.
+
+    :param d: lattice dimension
+    :param n: popcount dimension (must be a power of two)
+    :param k: threshhold (≈5/16⋅n when ``None``)
+    :param compute_probs: Compute probabilities if they don't exist yet (this can be slow)
+    :param speculate: pretend that popcount is optimal
+
+    """
+    if k is None:
+        best = None
+        # NOTE: 5/16*n seems to be optimal
+        c = 5 if not speculate else 0
+        for k in range(max(int(0.3125*n)-c, 1), min(int(0.3125*n)+c+1, int(n//2))):
+            cur = wrapper_logical(d, n, k, compute_probs=compute_probs, speculate=speculate)
+            if best is None or cur < best:
+                best = cur
+        return best
+
+    _, _, _, index_wires, ell = _preproc_params(d, n, k,
+                                                compute_probs=compute_probs,
+                                                speculate=speculate)
+
+    assert(mp.log(n, 2)%1 ==0), "Not a power of two n!"
+
+    # calculating the total number of T gates in one full Grover's algorithm, for the required error bound
+    if not speculate:
+        giterations_per_galg = giterations_per_grover(d, n, k, compute_probs=compute_probs)
+    else:
+        giterations_per_galg = mp.floor(mp.pi/4*(g6k_magic_const * 2**(0.2075/2*d)))
+
+    T_count = giterations_per_galg * giteration_T_count(d, n, k)
+    T_depth = giterations_per_galg * giteration_T_depth(d, n, k)
+    T_width = giteration_T_width(d, n, k)
+
+    list_size = mp.ceil(g6k_magic_const * 2**(0.2075*d))
+
+    if not speculate:
+        probs = load_estimate(d, n, k, compute=compute_probs)
+        list_size *= (probs.ngr_pf/(1 - probs.gr))**(-1./2.)  # c(k, n)
+        repeats = (probs.ngr_pf/probs.pf)**(-1)
+        total_galgs = list_size * repeats
+    else:
+        repeats = 1
+        total_galgs = list_size
+
+    LogicalCost = namedtuple("LogicalCost",
+                             ("d", "k", "n",
+                              "T_count", "T_depth", "T_width",
+                              "list_size", "repeats",
+                              "total_galgs", "total_giters"))
+
+    lc = LogicalCost(d=d, k=k, n=n,
+                     T_count=int(T_count),
+                     T_depth=int(T_depth),
+                     T_width=int(T_width),
+                     list_size=int(list_size),
+                     repeats=int(repeats),
+                     total_galgs=int(total_galgs),
+                     total_giters=int(giterations_per_galg*total_galgs))
+
+    return lc
+
+
 def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, speculate=False):
     """
     Compute complexity for one sieve iteration using Grover's search.
@@ -241,6 +308,7 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     :param speculate: pretend that popcount is optimal
 
     """
+
     if k is None:
         best = None
         # NOTE: 5/16*n seems to be optimal
@@ -255,41 +323,22 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
                                                 compute_probs=compute_probs,
                                                 speculate=speculate)
 
-    # we interpolate between non powers of two n
-    assert(mp.log(n, 2)%1 ==0), "Not a power of two n!"
-
-    # calculating the total number of T gates in one full Grover's algorithm, for the required error bound
-    if not speculate:
-        giterations_per_galg = giterations_per_grover(d, n, k, compute_probs=compute_probs)
-    else:
-        giterations_per_galg = mp.floor(mp.pi/4*(g6k_magic_const * 2**(0.2075/2*d)))
-
-    galg_T_count = giterations_per_galg * giteration_T_count(d, n, k)
-    p_out = mp.mpf('1')/galg_T_count
-
-    p_in = mp.mpf(p_in)
-    p_g = mp.mpf(p_g)
+    lc = wrapper_logical(d, n, k, compute_probs=compute_probs, speculate=speculate)
 
     # distances, and physical qubits per logical for the layers of distillation
-    distances = fifteen_one(p_out, p_in, p_g=p_g)
+    distances = fifteen_one(p_out=1/mp.mpf(lc.T_count), p_in=mp.mpf(p_in), p_g=mp.mpf(p_g))
     layers = len(distances)
     # NOTE: d_last is used for circuit with biggest logical footprint
     phys_qbits = [num_physical_qubits(distance) for distance in distances[::-1]]
-
     # physical qubits per layer, starting with topmost
     phys_qbits_layer = [16*(15**(layers-i))*phys_qbits[i-1] for i in range(1, layers + 1)] # noqa
 
     # total surface code cycles per magic state distillation (not pipelined)
-    if len(distances) >= 1:
-        scc = 10 * sum(distances)
-    else:
-        scc = 10
-
-    # total number of physical/logical qubits for msd
-    # total_distil_phys_qbits = max(phys_qbits_layer)
     if layers >= 1:
+        scc = 10 * sum(distances)
         total_distil_logi_qbits = 16 * (15 ** (layers - 1))
     else:
+        scc = 10
         total_distil_logi_qbits = 1
 
     # how many magic states can we pipeline at once?
@@ -298,11 +347,8 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     else:
         parallel_msd = mp.floor(max(float(phys_qbits_layer[0])/phys_qbits_layer[1], 1))
 
-    # the average T gates per T depth
-    T_average = giteration_T_width(d, n, k)
-
     # number of magic state distilleries required
-    msds = mp.ceil(float(T_average)/parallel_msd)
+    msds = mp.ceil(float(lc.T_width)/parallel_msd)
 
     # logical qubits for Grover's alg = max(width of popcnt circuit, width of diffusion operator) + 1
     t = mp.ceil(mp.log(k, 2))
@@ -320,25 +366,13 @@ def wrapper(d, n, k=None, p_in=10.**(-4), p_g=10.**(-5), compute_probs=True, spe
     # total number of logical qubits is
     total_logi_qbits = msds * total_distil_logi_qbits + logi_qbits_galg
     # total number of surface code cycles for a grover's algorithm
-    scc_galg = giterations_per_galg * scc * giteration_T_depth(d, n, k)
+    scc_galg = scc * lc.T_depth
     # total cost (ignoring Cliffords in error correction) is
     total_cost_per_galg = total_logi_qbits * scc_galg
 
-    probs = load_estimate(d, n, k, compute=compute_probs)
-    list_size = mp.ceil(g6k_magic_const * 2**(0.2075*d))
-    # c(k, n)
-    list_expansion_factor = (probs.ngr_pf/(1 - probs.gr))**(-1./2.)
-    # number of galgs to find reduction per vector as popcount not perfect
-    repeats = (probs.ngr_pf/probs.pf)**(-1)
+    total_cost = lc.total_galgs * total_cost_per_galg
 
-    if not speculate:
-        total_galgs = list_size * list_expansion_factor * repeats
-    else:
-        total_galgs = list_size
-
-    total_cost = total_galgs * total_cost_per_galg
-
-    return float(mp.log(total_cost, 2)), float(mp.log(total_cost/(total_galgs * giterations_per_galg), 2)),  k
+    return float(mp.log(total_cost, 2)), float(mp.log(total_cost/mp.mpf(lc.total_giters), 2)),  k
 
 
 def _bulk_wrapper_core(args):
