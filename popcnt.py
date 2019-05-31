@@ -38,12 +38,12 @@ def sgn(value):
     return 0
 
 
-def uniform_iid_sphere(d, num, spherical_code=False):
+def uniform_iid_sphere(dp1, num, spherical_code=False):
     """
-    Samples ``num`` points uniformly on the unit sphere in ``R^{d}``, i.e. ``S^{d - 1}``.
-    It samples from d many zero centred Gaussians and normalises the vector.
+    Samples ``num`` points uniformly on the unit sphere in `R^{d+1}`, i.e. `S^{d}`.
+    It samples from `(d+1)` many zero centred Gaussians and normalises the vector.
 
-    :param d: the dimension of real space
+    :param dp1: the dimension of real space, `d+1`
     :param num: number of points to be sampled uniformly and i.i.d
     :param spherical_code: if ``False`` popcnt vectors come from the unit sphere,
                         else they mimic the behaviour of G6K
@@ -54,14 +54,14 @@ def uniform_iid_sphere(d, num, spherical_code=False):
     if not spherical_code:
         for point in range(num):
             # good randomness seems quite pertinent
-            vec = np.random.randn(d)
+            vec = np.random.randn(dp1)
             vec /= np.linalg.norm(vec)
             sphere_points[point] = vec
     else:
-        with open("spherical_coding/sc_{d}_{num}.def".format(d=d, num=num)) as f:
+        with open("spherical_coding/sc_{dp1}_{num}.def".format(dp1=dp1, num=num)) as f:
             for point, line in enumerate(f.readlines()): # noqa
                 idx = map(int, line.split(" "))
-                vec = [0]*d
+                vec = [0]*dp1
                 for i in idx[:3]:
                     vec[i] = 1
                 for i in idx[3:]:
@@ -70,10 +70,10 @@ def uniform_iid_sphere(d, num, spherical_code=False):
     return sphere_points
 
 
-def biased_sphere(d, num, num_filters, delta):
+def biased_sphere(dp1, num, num_filters, delta):
     """
 
-    :param d: the dimension of real space
+    :param dp1: the dimension of real space, `d+1`
     :param num: number of points to be sampled uniformly and i.i.d
     :param delta:
     :param num_filters: number of filters to use
@@ -86,11 +86,11 @@ def biased_sphere(d, num, num_filters, delta):
     w = []
     j = 0
     for i in range(num_filters):
-        w_ = np.random.randn(d)
+        w_ = np.random.randn(dp1)
         w_ /= np.linalg.norm(w_)
         w.append(w_)
     while point < num:
-        v = np.random.randn(d)
+        v = np.random.randn(dp1)
         v /= np.linalg.norm(v)
         j += 1
         if sum([int(np.inner(w[i], v) > 0) for i in range(num_filters)]) <= (1-delta)/2.*num_filters:
@@ -136,19 +136,19 @@ def hamming_compare(lossy_vec1, lossy_vec2, k):
     return False
 
 
-def gauss_test(d, num):
+def gauss_test(dp1, num):
     """
     Quick function to generate experimental results for the proportion of
-    i.i.d. vectors on the unit sphere ``S^{d - 1} ⊂ R^{d}`` which are
+    i.i.d. vectors on the unit sphere ``S^{d} ⊂ R^{d+1}`` which are
     and are not Gauss reduced.
 
-    :param d: the dimension of real space
+    :param dp1: the dimension of real space, i.e. `d+1`
     :param num: the number of vectors to sample and test
     :returns: the proportion of vector pairs which are Gauss reduced
     """
     gr = 0
     tot = 1./2. * num * (num - 1)
-    vector = uniform_iid_sphere(d, num)
+    vector = uniform_iid_sphere(dp1, num)
     for i, u in vector.items():
         for j, v in vector.items():
             if i <= j:
@@ -157,13 +157,13 @@ def gauss_test(d, num):
     return float(gr)/tot
 
 
-def filter_test(d, num, n, k, popcnt_flag=False):
+def filter_test(dp1, num, n, k, popcnt_flag=False):
     """
     Quick function to generate experimental results for the proportion of
-    i.i.d. vectors on the unit sphere S^{d - 1} \subset R^{d} which do and
+    i.i.d. vectors on the unit sphere S^{d} \subset R^{d+1} which do and
     do not pass the filter with n tests and threshold k.
 
-    :param d: the dimension of real space
+    :param dp1: the dimension of real space
     :param num: the number of vectors to sample and test
     :param n: the number of vectors with which to make the SimHash
     :param k: the acceptance/rejection threshold for popcnts
@@ -175,8 +175,8 @@ def filter_test(d, num, n, k, popcnt_flag=False):
     """
     pf = 0
     tot = 1./2. * num * (num - 1)
-    popcnt = uniform_iid_sphere(d, n, popcnt_flag=popcnt_flag)
-    vector = uniform_iid_sphere(d, num)
+    popcnt = uniform_iid_sphere(dp1, n, popcnt_flag=popcnt_flag)
+    vector = uniform_iid_sphere(dp1, num)
     for index, vec in vector.items():
         vector[index] = [vec, lossy_sketch(vec, popcnt)]
     for index1, vecs1 in vector.items():
@@ -207,7 +207,7 @@ def split_interval(int_l, int_u, slices):
     return intervals
 
 
-def estimate(d, n, k, int_l=0, int_u=mp.pi, use_filt=True,
+def estimate(dp1, n, k, int_l=0, int_u=mp.pi, use_filt=True,
              pass_filt=True):
     """
     A function for computing the various probabilities we are interested in.
@@ -218,7 +218,7 @@ def estimate(d, n, k, int_l=0, int_u=mp.pi, use_filt=True,
     If we want to calculate probabilities when pairs do not pass the filter, set ``pass_filt`` to
     ``False``.
 
-    :param d: the dimension of real space
+    :param dp1: the dimension of real space, i.e. `d+1`
     :param n: the number of vectors with which to make the SimHash
     :param k: the acceptance/rejection threshold for popcnts
     :param int_l: the lower bound of the integration in [0, π]
@@ -229,7 +229,8 @@ def estimate(d, n, k, int_l=0, int_u=mp.pi, use_filt=True,
     :returns: the chosen probability
 
     """
-    d = mp.mpf(d)
+    dp1 = mp.mpf(dp1)
+    d = dp1 - 1
     n = mp.mpf(n)
     k = mp.mpf(k)
 
@@ -254,36 +255,36 @@ def estimate(d, n, k, int_l=0, int_u=mp.pi, use_filt=True,
                 continue
 
             def f(x):
-                return co * mp.sin(x)**(d-2) * ((x/mp.pi)**i) * ((1-(x/mp.pi))**(n-i)) # noqa
+                return co * mp.sin(x)**(d-1) * ((x/mp.pi)**i) * ((1-(x/mp.pi))**(n-i)) # noqa
             prob += mp.quad(f, interval, maxdegree=50000, error=True)[0]
 
     else:
 
         def f(x):
-            return mp.sin(x)**(d-2)
+            return mp.sin(x)**(d-1)
         prob = mp.quad(f, interval, maxdegree=50000, error=True)[0]
 
-    def normaliser(d):
+    def normaliser(dp1):
         """
-        The normalisation constant (dependent on d) has a closed form!
+        The normalisation constant (dependent on dp1) has a closed form!
 
         .. note:: we are interested in the relative surface area of
-        (hyper)spheres on the surface of S^{d - 1}, hence d - 2.
+        (hyper)spheres on the surface of `S^{d}`, hence `d - 1`.
 
-        :param d: the dimension of real space
+        :param dp1: the dimension of real space
         :returns: the normalisation constant for the integral estimates
         """
-        d = mp.mpf(d) - mp.mpf('2')
+        dp1 = mp.mpf(dp1) - mp.mpf('2')
         norm = mp.mpf('1')
-        if d % 2 == 0:
-            for i in range(1, d + 1):
+        if dp1 % 2 == 0:
+            for i in range(1, dp1 + 1):
                 if i % 2 == 0:
                     norm *= mp.mpf(i)**mp.mpf('-1')
                 else:
                     norm *= mp.mpf(i)
             norm *= mp.pi
         else:
-            for i in range(2, d + 1):
+            for i in range(2, dp1 + 1):
                 if i % 2 == 0:
                     norm *= mp.mpf(i)
                 else:
@@ -291,7 +292,7 @@ def estimate(d, n, k, int_l=0, int_u=mp.pi, use_filt=True,
             norm *= mp.mpf(2)
         return mp.mpf(1)/norm
 
-    return normaliser(d) * prob
+    return normaliser(dp1) * prob
 
 
 def filter_wrapper(dims, num, popcnt_nums, thresholds):
@@ -299,7 +300,7 @@ def filter_wrapper(dims, num, popcnt_nums, thresholds):
     Quick check of accuracy of filter proportion estimates for lists of dims,
     popcnt_nums and thresholds to try. Prints basic stats.
 
-    :param dims: a list of d to be tried
+    :param dims: a list of dp1 to be tried
     :param num: the number of vectors to sample and test
     :param popcnt_nums: a list of n to be tried
     :param thresholds: a list of thresholds to be tried
@@ -310,13 +311,13 @@ def filter_wrapper(dims, num, popcnt_nums, thresholds):
         popcnt_nums = [popcnt_nums]
     if type(thresholds) is not list:
         thresholds = [thresholds]
-    for d in dims:
+    for dp1 in dims:
         for n in popcnt_nums:
             for k in thresholds:
                 print
-                print "d %d, n %d, k %d" % (d, n, k)
-                pf = filter_test(d, num, n, k)
-                est = estimate(d, n, k)
+                print "dp1 %dp1, n %dp1, k %dp1" % (dp1, n, k)
+                pf = filter_test(dp1, num, n, k)
+                est = estimate(dp1, n, k)
                 print "(exp, est): (%.6f, %.6f)" % (pf, est)
                 print "="*25
 
@@ -326,16 +327,16 @@ def gauss_wrapper(dims, num):
     Quick check of accuracy of reduced proportion estimates for lists of dims.
     Prints basic stats.
 
-    :param dims: a list of d to be tried
+    :param dims: a list of dp1 to be tried
     :param num: the number of vectors to sample and test
     """
     if type(dims) is not list:
         dims = [dims]
-    for d in dims:
+    for dp1 in dims:
         print
-        print "d %d" % d
-        gr = gauss_test(d, num)
-        est = estimate(d, 0, 0, int_l=mp.pi/mp.mpf('3'),
+        print "dp1 %dp1" % dp1
+        gr = gauss_test(dp1, num)
+        est = estimate(dp1, 0, 0, int_l=mp.pi/mp.mpf('3'),
                        int_u=(2*mp.pi)/mp.mpf('3'), use_filt=False)
         print "(exp, est): (%.6f, %.6f)" % (gr, est)
         print "="*25
