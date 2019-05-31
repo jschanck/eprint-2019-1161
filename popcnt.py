@@ -254,13 +254,13 @@ def estimate(d, n, k, int_l=0, int_u=mp.pi, use_filt=True,
                 continue
 
             def f(x):
-                return (mp.sin(x)**(d-mp.mpf('2'))) * co * ((x/mp.pi)**i) * ((mp.mpf('1')-(x/mp.pi))**(n-i)) # noqa
+                return co * mp.sin(x)**(d-2) * ((x/mp.pi)**i) * ((1-(x/mp.pi))**(n-i)) # noqa
             prob += mp.quad(f, interval, maxdegree=50000, error=True)[0]
 
     else:
 
         def f(x):
-            return (mp.sin(x)**(d-mp.mpf('2')))
+            return mp.sin(x)**(d-2)
         prob = mp.quad(f, interval, maxdegree=50000, error=True)[0]
 
     def normaliser(d):
