@@ -93,6 +93,13 @@ def sphere(d):
 
 
 def W(d, alpha, beta, theta, integrate=True, prec=None):
+    assert alpha <= mp.pi/2
+    assert beta  <= mp.pi/2
+    assert 0 >= (mp.cos(beta) - mp.cos(alpha)*mp.cos(theta))*(mp.cos(beta)*mp.cos(theta) - mp.cos(alpha))
+
+    if theta >= alpha+beta:
+      return mp.mpf(0.0)
+
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
         alpha = mp.mpf(alpha)
@@ -104,12 +111,12 @@ def W(d, alpha, beta, theta, integrate=True, prec=None):
 
             def f_alpha(x):
                 return mp.sin(x)**(d-2) * mp.betainc((d-2)/2, 1/2.,
-                                                     x2=mp.sin(mp.acos(mp.tan(theta-c)/mp.tan(x)))**2,
+                                                     x2=mp.sin(mp.re(mp.acos(mp.tan(theta-c)/mp.tan(x))))**2,
                                                      regularized=True)
 
             def f_beta(x):
                 return mp.sin(x)**(d-2) * mp.betainc((d-2)/2, 1/2.,
-                                                     x2=mp.sin(mp.acos(mp.tan(c)/mp.tan(x)))**2,
+                                                     x2=mp.sin(mp.re(mp.acos(mp.tan(c)/mp.tan(x))))**2,
                                                      regularized=True)
 
             S_alpha = mp.quad(f_alpha, (theta-c, alpha), error=True)[0]/2
@@ -272,8 +279,10 @@ pf_gr  = partial(pf, lb=mp.pi/3)
 def ngr(d, beta=None, prec=None):
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
-        if beta is None:
+        if beta is None or beta >= mp.pi/2:
             return C(d, mp.pi/3)
+        elif beta < mp.pi/6:
+            return mp.mpf(1.0)
         else:
             # Pr[¬G ∧ E]
             num = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (0, mp.pi/3), error=True)[0]
