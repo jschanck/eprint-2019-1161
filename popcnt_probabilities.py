@@ -48,17 +48,24 @@ def C(d, theta, integrate=False, prec=None):
 
 def A(d, theta, prec=53):
     """
-    The probability that some v from the sphere has angle θ with some fixed u.
+    The density of the event that some v from the sphere has angle θ with some fixed u.
 
     :param d: We consider spheres of dimension `d-1`
     :param theta: angle in radians
+
     :param: compute via explicit integration
     :param: precision to use
 
-    EXAMPLE::
+    EXAMPLES::
 
         sage: A(80, pi/3)
         mpf('4.7395659506025816e-5')
+
+        sage: A(80, pi/3) * 2*pi/100000
+        mpf('2.9779571143234787e-9')
+
+        sage: C(80, pi/3+pi/100000) - C(80, pi/3-pi/100000)
+        mpf('2.9779580567976835e-9')
 
     """
     prec = prec if prec else mp.prec
