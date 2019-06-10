@@ -5,8 +5,8 @@ import csv
 import os
 import re
 from mpmath import mp
-from optimise_popcnt import giterations_per_grover, load_estimate
 from collections import namedtuple
+from utils import load_probabilities
 
 
 def _parse_csv_list_size():
@@ -46,7 +46,7 @@ def _preproc_params(d, n, k, compute_probs=True, speculate=False):
         raise ValueError("k (%d) not in range 0 ... n//2-1 (%d)"%(k, n))
 
     # determines width of the diffusion operator and accounts for list growth
-    probs = load_estimate(d, n, k, compute=compute_probs)
+    probs = load_probabilities(d, n, k)
     if not speculate:
         list_growth = (probs.ngr_pf/(mp.mpf('1') - probs.gr))**(-1./2.)
     else:
@@ -114,6 +114,20 @@ def popcount_T_depth(d, k, n):
     OR_T_depth = 3 * mp.ceil(mp.log(ell - t, 2))
 
     return adder_T_depth,  OR_T_depth
+
+
+def giterations_per_grover(d, n, k, compute_probs=False):
+    """
+    A function for when you want the number of Grover iterations required for
+    fixed input u to get an output v, whether reduced or not, given d, k, n
+
+    :param d: the dimension of real space
+    :param n: the number of popcnt vectors to consider for a SimHash
+    :param k: the acceptance/rejection k for popcnts
+    :returns: the calculated number of Grover iterations required
+    """
+    probs = load_probabilities(d, n, k)
+    return max(mp.floor((mp.pi/4)*(probs.pf**(-1./2.))), 1)
 
 
 def giteration_T_count(d, n, k):
@@ -269,7 +283,7 @@ def wrapper_logical(d, n, k=None, compute_probs=True, speculate=False):
     list_size = mp.ceil(g6k_magic_const * 2**(0.2075*d))
 
     if not speculate:
-        probs = load_estimate(d, n, k, compute=compute_probs)
+        probs = load_probabilities(d, n, k)
         list_size *= (probs.ngr_pf/(1 - probs.gr))**(-1./2.)  # c(k, n)
         repeats = (probs.ngr_pf/probs.pf)**(-1)
         total_galgs = list_size * repeats

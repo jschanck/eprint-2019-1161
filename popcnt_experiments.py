@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import print_function
 import numpy as np
-from mpmath import mp
 from collections import OrderedDict
+from popcnt_estimates import pf as pff
+from popcnt_estimates import ngr as ngrf
 
 
 def gauss_reduced(u, v):
@@ -30,7 +31,7 @@ def sgn(value):
     :returns: ``True`` if value is >= 0, else ``False``
     """
     if abs(value) == 0:
-        print 'it happened! it is a lucky day!'
+        print('it happened! it is a lucky day!')
         if value == -0.0:
             value = 0
     if value >= 0:
@@ -157,7 +158,7 @@ def gauss_test(dp1, num):
     return float(gr)/tot
 
 
-def filter_test(dp1, num, n, k, popcnt_flag=False):
+def filter_test(dp1, num, n, k, spherical_code=False):
     """
     Quick function to generate experimental results for the proportion of
     i.i.d. vectors on the unit sphere S^{d} \subset R^{d+1} which do and
@@ -167,7 +168,7 @@ def filter_test(dp1, num, n, k, popcnt_flag=False):
     :param num: the number of vectors to sample and test
     :param n: the number of vectors with which to make the SimHash
     :param k: the acceptance/rejection threshold for popcnts
-    :param popcnt_flag: if ``False`` popcnt vectors come from the unit sphere,
+    :param spherical_code: if ``False`` popcnt vectors come from the unit sphere,
                         else they mimic the behaviour of G6K
 
     :returns: the proportion of vector pairs passing the filter
@@ -175,7 +176,7 @@ def filter_test(dp1, num, n, k, popcnt_flag=False):
     """
     pf = 0
     tot = 1./2. * num * (num - 1)
-    popcnt = uniform_iid_sphere(dp1, n, popcnt_flag=popcnt_flag)
+    popcnt = uniform_iid_sphere(dp1, n, spherical_code=spherical_code)
     vector = uniform_iid_sphere(dp1, num)
     for index, vec in vector.items():
         vector[index] = [vec, lossy_sketch(vec, popcnt)]
@@ -185,114 +186,6 @@ def filter_test(dp1, num, n, k, popcnt_flag=False):
                 continue
             pf += hamming_compare(vecs1[1], vecs2[1], k)
     return float(pf)/tot
-
-
-def split_interval(int_l, int_u, slices):
-    """
-    Splits closed interval [intl_l, int_u] into ``slices`` number of slices of
-    equal size
-
-    :param int_l: the lower bound of the interval
-    :param int_u: the upper bound of the interval
-    :param slices: the number of slices of equal size to split interval into
-
-    :returns: list of the values that define the slices
-
-    """
-    int_l = mp.mpf(int_l)
-    int_u = mp.mpf(int_u)
-    intervals = [int_l]
-    for i in range(1, slices + 1):
-        intervals += [int_l + mp.mpf(i)*(int_u - int_l)/mp.mpf(slices)]
-    return intervals
-
-
-def estimate(dp1, n, k, int_l=0, int_u=mp.pi, use_filt=True,
-             pass_filt=True):
-    """
-    A function for computing the various probabilities we are interested in.
-
-    If we are not considering the filter at all (e.g. when calculating Gauss reduced probabilities)
-    set ``use_filt`` to ``False``, in which case ``pass_filt``, ``n`` and ``k`` are ignored.
-
-    If we want to calculate probabilities when pairs do not pass the filter, set ``pass_filt`` to
-    ``False``.
-
-    :param dp1: the dimension of real space, i.e. `d+1`
-    :param n: the number of vectors with which to make the SimHash
-    :param k: the acceptance/rejection threshold for popcnts
-    :param int_l: the lower bound of the integration in [0, π]
-    :param int_u: the upper bound of the integration in [0, π]
-    :param use_filt: boolean whether to consider the filter
-    :param pass_filt: boolean whether to consider passing/failing the filter
-
-    :returns: the chosen probability
-
-    """
-    dp1 = mp.mpf(dp1)
-    d = dp1 - 1
-    n = mp.mpf(n)
-    k = mp.mpf(k)
-
-    # if the integrations are not accurate, increase the intervals
-    interval = split_interval(int_l, int_u, 1)
-
-    if use_filt:
-        if pass_filt:
-            coeffs  = [mp.binomial(n, i) for i in range(0, k)]
-            coeffs += [mp.mpf('0')] * int(n - (2 * k) + 1)
-            coeffs += [mp.binomial(n, i) for i in range(n - k + 1, n + 1)]
-        else:
-            coeffs  = [mp.mpf('0')] * int(k)
-            coeffs += [mp.binomial(n, i) for i in range(k, n - k + 1)]
-            coeffs += [mp.mpf('0')] * int(k)
-
-        prob = 0
-        for i in range(n + 1):
-            co = coeffs[i]
-            i = mp.mpf(i)
-            if co == 0:
-                continue
-
-            def f(x):
-                return co * mp.sin(x)**(d-1) * ((x/mp.pi)**i) * ((1-(x/mp.pi))**(n-i)) # noqa
-            prob += mp.quad(f, interval, maxdegree=50000, error=True)[0]
-
-    else:
-
-        def f(x):
-            return mp.sin(x)**(d-1)
-        prob = mp.quad(f, interval, maxdegree=50000, error=True)[0]
-
-    def normaliser(dp1):
-        """
-        The normalisation constant (dependent on dp1) has a closed form!
-
-        .. note:: we are interested in the relative surface area of
-        (hyper)spheres on the surface of `S^{d}`, hence `d - 1`.
-
-        :param dp1: the dimension of real space
-        :returns: the normalisation constant for the integral estimates
-        """
-        dp1 = mp.mpf(dp1) - mp.mpf('2')
-        norm = mp.mpf('1')
-        if dp1 % 2 == 0:
-            for i in range(1, dp1 + 1):
-                if i % 2 == 0:
-                    norm *= mp.mpf(i)**mp.mpf('-1')
-                else:
-                    norm *= mp.mpf(i)
-            norm *= mp.pi
-        else:
-            for i in range(2, dp1 + 1):
-                if i % 2 == 0:
-                    norm *= mp.mpf(i)
-                else:
-                    norm *= mp.mpf(i)**mp.mpf('-1')
-            norm *= mp.mpf(2)
-        return mp.mpf(1)/norm
-
-    return normaliser(dp1) * prob
 
 
 def filter_wrapper(dims, num, popcnt_nums, thresholds):
@@ -305,21 +198,27 @@ def filter_wrapper(dims, num, popcnt_nums, thresholds):
     :param popcnt_nums: a list of n to be tried
     :param thresholds: a list of thresholds to be tried
     """
-    if type(dims) is not list:
+    try:
+        iter(dims)
+    except TypeError:
         dims = [dims]
-    if type(popcnt_nums) is not list:
+    try:
+        iter(popcnt_nums)
+    except TypeError:
         popcnt_nums = [popcnt_nums]
-    if type(thresholds) is not list:
+    try:
+        iter(thresholds)
+    except TypeError:
         thresholds = [thresholds]
     for dp1 in dims:
         for n in popcnt_nums:
             for k in thresholds:
                 print
-                print "dp1 %dp1, n %dp1, k %dp1" % (dp1, n, k)
+                print("dp1 %d, n %d, k %d"%(dp1, n, k))
                 pf = filter_test(dp1, num, n, k)
-                est = estimate(dp1, n, k)
-                print "(exp, est): (%.6f, %.6f)" % (pf, est)
-                print "="*25
+                est = 2*pff(dp1, n, k)
+                print("(exp, est): (%.6f, %.6f)"%(pf, est))
+                print("="*25)
 
 
 def gauss_wrapper(dims, num):
@@ -330,13 +229,14 @@ def gauss_wrapper(dims, num):
     :param dims: a list of dp1 to be tried
     :param num: the number of vectors to sample and test
     """
-    if type(dims) is not list:
+    try:
+        iter(dims)
+    except TypeError:
         dims = [dims]
     for dp1 in dims:
         print
-        print "dp1 %dp1" % dp1
+        print("dp1: %d"%dp1)
         gr = gauss_test(dp1, num)
-        est = estimate(dp1, 0, 0, int_l=mp.pi/mp.mpf('3'),
-                       int_u=(2*mp.pi)/mp.mpf('3'), use_filt=False)
-        print "(exp, est): (%.6f, %.6f)" % (gr, est)
-        print "="*25
+        est = 1-2*ngrf(dp1)
+        print("(exp, est): (%.6f, %.6f)"%(gr, est))
+        print("="*25)

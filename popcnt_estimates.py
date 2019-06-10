@@ -2,6 +2,13 @@
 
 from mpmath import mp
 from functools import wraps, partial
+from collections import namedtuple
+
+
+Probabilities = namedtuple("Probabilities",
+                           ("d", "n", "k",
+                            "gr", "pf", "ngr_pf", "gr_pf",
+                            "beta", "prec"))
 
 
 def memoize(function):
@@ -92,13 +99,14 @@ def sphere(d):
         return 2**(d/2*mp.log(mp.pi, 2) + 1) / mp.gamma(d/2)
 
 
+@memoize
 def W(d, alpha, beta, theta, integrate=True, prec=None):
     assert alpha <= mp.pi/2
     assert beta  <= mp.pi/2
     assert 0 >= (mp.cos(beta) - mp.cos(alpha)*mp.cos(theta))*(mp.cos(beta)*mp.cos(theta) - mp.cos(alpha))
 
     if theta >= alpha+beta:
-      return mp.mpf(0.0)
+        return mp.mpf(0.0)
 
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
@@ -210,39 +218,39 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
 
     Pr[P_{k,n} | C(w,β)]::
 
-        sage: pf(80, 128, 40, beta=mp.pi/3)  ## TODO: mpc!
-        mpc(real='0.019786655048072255', imag='0.0')
+        sage: pf(80, 128, 40, beta=mp.pi/3)
+        mpf('0.019786655048072255')
 
     Pr[P_{k,n}  ∧ ¬G | C(w,β)]::
 
-        sage: pf(80, 128, 40, beta=mp.pi/3, ub=mp.pi/3) ## TODO: mpc!
-        mpc(real='0.00077177364924089728', imag='0.0')
+        sage: pf(80, 128, 40, beta=mp.pi/3, ub=mp.pi/3)
+        mpf('0.00077177364924089728')
 
     Pr[¬G | C(w,β)]::
 
-        sage: pf(80, 128, 128, beta=mp.pi/3, ub=mp.pi/3) ## TODO: mpc!
-        mpc(real='0.0021964683579090943', imag='0.0')
-        sage: pf_ngr(80, 128, 128, beta=mp.pi/3)  ## TODO: mpc!
-        mpc(real='0.0021964683579090943', imag='0.0')
-        sage: ngr(80, beta=mp.pi/3)  ## TODO: mpc!
-        mpc(real='0.0021964683579090904', imag='0.0')
+        sage: pf(80, 128, 128, beta=mp.pi/3, ub=mp.pi/3)
+        mpf('0.0021964683579090943')
+        sage: pf_ngr(80, 128, 128, beta=mp.pi/3)
+        mpf('0.0021964683579090943')
+        sage: ngr(80, beta=mp.pi/3)
+        mpf('0.0021964683579090904')
 
     Pr[Pr_{k,n} ∧ G | C(w,β)]::
 
         sage: pf(80, 128, 40, beta=mp.pi/3, lb=mp.pi/3)
-        mpc(real='0.019014953591444523', imag='0.0')
+        mpf('0.019014953591444523')
 
         sage: pf_gr(80, 128, 40, beta=mp.pi/3)
-        mpc(real='0.019014953591444523', imag='0.0')
+        mpf('0.019014953591444523')
 
     Pr[G | C(w,β)]::
 
-        sage: pf(80, 128, 128, beta=mp.pi/3, lb=mp.pi/3) ## TODO: mpc!
-        mpc(real='0.99780353164285163', imag='0.0')
-        sage: pf_gr(80, 128, 128, beta=mp.pi/3) ## TODO: mpc!
-        mpc(real='0.99780353164285163', imag='0.0')
-        sage: gr(80, beta=mp.pi/3) ## TODO: mpc!
-        mpc(real='0.9978035316420909', imag='0.0')
+        sage: pf(80, 128, 128, beta=mp.pi/3, lb=mp.pi/3)
+        mpf('0.99780353164285163')
+        sage: pf_gr(80, 128, 128, beta=mp.pi/3)
+        mpf('0.99780353164285163')
+        sage: gr(80, beta=mp.pi/3)
+        mpf('0.9978035316420909')
 
     :param d: We consider the sphere `S^{d-1}`
     :param n: Number of popcount vectors
@@ -252,7 +260,6 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
     :param ub: upper bound of integration (see above)
     :param beta_and: return Pr[P_{k,n} ∧ C(w,β)] instead of Pr[P_{k,n} | C(w,β)]
     :param prec: compute with this precision
-
 
     """
     prec = prec if prec else mp.prec
@@ -277,6 +284,14 @@ pf_gr  = partial(pf, lb=mp.pi/3)
 
 
 def ngr(d, beta=None, prec=None):
+    """
+    Probability that two random vectors (in a cap parameterised by β) are not Gauss reduced.
+
+    :param d: We consider the sphere `S^{d-1}`
+    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
+    :param prec: compute with this precision
+
+    """
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
         if beta is None or beta >= mp.pi/2:
@@ -293,4 +308,38 @@ def ngr(d, beta=None, prec=None):
 
 
 def gr(d, beta=None, prec=None):
+    """
+    Probability that two random vectors (in a cap parameterised by β) are not Gauss reduced.
+
+    :param d: We consider the sphere `S^{d-1}`
+    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
+    :param prec: compute with this precision
+
+    """
     return 1-ngr(d, beta, prec)
+
+
+def probabilities(d, n, k, beta=None, prec=None):
+    """
+    Useful probabilities.
+
+    :param d: We consider the sphere `S^{d-1}`
+    :param n: Number of popcount vectors
+    :param k: popcount threshold
+    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
+    :param prec: compute with this precision
+
+    """
+    prec = prec if prec else mp.prec
+
+    pf_ = pf(d, n, k, beta=beta, prec=prec)
+    gr_pf_ = pf(d, n, k, beta=beta, ub=mp.pi/3, prec=prec)
+
+    probs = Probabilities(d=d, n=n, k=k,
+                          gr=gr(d, beta=beta, prec=prec),
+                          pf=pf_,
+                          gr_pf=gr_pf_,
+                          # Pr[P_n,k ^ G]/Pr[P_n,k] = Pr[G | P_n,k] == 1-Pr[¬G | P_n,k] = 1-Pr[P_n,k ^ ¬G]/Pr[P_n,k]
+                          ngr_pf=pf_ - gr_pf_,
+                          beta=beta, prec=prec)
+    return probs
