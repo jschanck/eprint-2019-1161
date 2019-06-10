@@ -116,15 +116,16 @@ def load_probabilities(d, n, k, beta=None, compute=False):
     return load_bundle(d, n)[(d, n, k, beta)]
 
 
-def __bulk_create_and_save_bundles(args):
-    d, n, prec = args
-    return create_bundle(d, n, prec=prec)
+def __bulk_create_and_store_bundles(args):
+    d, n, BETA, prec = args
+    bundle = create_bundle(d, n, BETA=BETA, prec=prec)
+    store_bundle(bundle)
 
 
-def bulk_create_and_save_bundles(D,
-                                 N=(128, 256, 512, 1024, 2048, 4096, 8192),
-                                 BETA=(None, mp.pi/3-mp.pi/10, mp.pi/3, mp.pi/3+mp.pi/10),
-                                 prec=2*53, ncores=1):
+def bulk_create_and_store_bundles(D,
+                                  N=(128, 256, 512, 1024, 2048, 4096, 8192),
+                                  BETA=(None, mp.pi/3-mp.pi/10, mp.pi/3, mp.pi/3+mp.pi/10),
+                                  prec=2*53, ncores=1):
     """
     Precompute a bunch of probabilities.
     """
@@ -132,7 +133,6 @@ def bulk_create_and_save_bundles(D,
     jobs = []
     for d in D:
         for n in N:
-            for beta in BETA:
-                jobs.append((d, n, prec))
+            jobs.append((d, n, BETA, prec))
 
-    return list(Pool(ncores).imap_unordered(__bulk_create_and_save_bundles, jobs))
+    return list(Pool(ncores).imap_unordered(__bulk_create_and_store_bundles, jobs))
