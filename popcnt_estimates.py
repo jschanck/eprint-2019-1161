@@ -7,7 +7,7 @@ from collections import namedtuple
 
 Probabilities = namedtuple("Probabilities",
                            ("d", "n", "k",
-                            "gr", "pf", "ngr_pf", "gr_pf",
+                            "gr", "pf", "ngr_pf", "gr_pf", "rho", "eta",
                             "beta", "prec"))
 
 
@@ -163,11 +163,13 @@ def P(n, k, theta, nmk=False, prec=53):
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
         theta = mp.mpf(theta)
-        r = 0
-        for i in range(k):
-            r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
+        # binomial cdf for 0 <= successes < k
+        #r = 0
+        #for i in range(k):
+        #    r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
+        r = mp.betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi), regularized=True)
         if nmk:
-            r *= 2
+            r = min(2*r, mp.mpf(1.0))
         return r
 
 
@@ -309,7 +311,7 @@ def ngr(d, beta=None, prec=None):
 
 def gr(d, beta=None, prec=None):
     """
-    Probability that two random vectors (in a cap parameterised by β) are not Gauss reduced.
+    Probability that two random vectors (in a cap parameterised by β) are Gauss reduced.
 
     :param d: We consider the sphere `S^{d-1}`
     :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
@@ -333,13 +335,36 @@ def probabilities(d, n, k, beta=None, prec=None):
     prec = prec if prec else mp.prec
 
     pf_ = pf(d, n, k, beta=beta, prec=prec)
-    gr_pf_ = pf(d, n, k, beta=beta, ub=mp.pi/3, prec=prec)
+    ngr_ = ngr(d, beta=beta, prec=prec)
+    pf_ngr_ = pf_ngr(d, n, k, beta=beta, prec=prec)
+    rho = 1 - pf_ngr_/pf_
+    eta = 1 - pf_ngr_/ngr_
 
     probs = Probabilities(d=d, n=n, k=k,
-                          gr=gr(d, beta=beta, prec=prec),
+                          gr=1-ngr_,
                           pf=pf_,
-                          gr_pf=gr_pf_,
-                          # Pr[P_n,k ^ G]/Pr[P_n,k] = Pr[G | P_n,k] == 1-Pr[¬G | P_n,k] = 1-Pr[P_n,k ^ ¬G]/Pr[P_n,k]
-                          ngr_pf=pf_ - gr_pf_,
+                          gr_pf=1-pf_ngr_,
+                          ngr_pf=pf_ngr_,
+                          rho=rho,
+                          eta=eta,
                           beta=beta, prec=prec)
     return probs
+
+
+def stats(d, n, k, beta=None, prec=None):
+    """
+    Useful quantites.
+
+    :param d: We consider the sphere `S^{d-1}`
+    :param n: Number of popcount vectors
+    :param k: popcount threshold
+    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
+    :param prec: compute with this precision
+
+    """
+
+    probs = probabilities(d, n, k, beta=beta, prec=prec)
+    N = 1/C(d, mp.pi/3)
+    P = 1/(1-probs.rho)
+    ckn = 1/(1-probs.eta)
+    return (N, P, ckn)
