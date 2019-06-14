@@ -149,8 +149,7 @@ def binomial(n, i):
         return mp.binomial(n, i)
 
 
-# NOTE: hardcoding 53 here
-def P(n, k, theta, nmk=False, prec=53):
+def P(n, k, theta, nmk=False, prec=None):
     """
     Probability that two vectors with angle θ pass a popcount filter
 
