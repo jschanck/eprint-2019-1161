@@ -128,14 +128,19 @@ def probabilities(d, n, k, prec=None):
     with mp.workprec(prec):
         gr = probability_gadget(d, n, k, int_l=mp.pi/3, int_u=(2*mp.pi)/3, use_filt=False)
         pf = probability_gadget(d, n, k)
-        ngr_pf = mp.mpf('2')*probability_gadget(d, n, k, int_u=mp.pi/3)
-        gr_pf = probability_gadget(d, n, k, int_l=mp.pi/3, int_u=(2*mp.pi)/3)
+        pf_ngr = mp.mpf('2')*probability_gadget(d, n, k, int_u=mp.pi/3)
+        pf_gr = probability_gadget(d, n, k, int_l=mp.pi/3, int_u=(2*mp.pi)/3)
+
+        rho = 1 - pf_ngr/pf
+        eta = 1 - pf_ngr/(1-gr)
 
         probs = Probabilities(d=d, n=n, k=k,
                               gr=gr,
                               pf=pf,
-                              gr_pf=gr_pf,
-                              ngr_pf=ngr_pf,
+                              gr_pf=pf_gr,
+                              ngr_pf=pf_ngr,
+                              rho=rho,
+                              eta=eta,
                               beta=None, prec=prec)
 
         return probs
