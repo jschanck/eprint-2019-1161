@@ -365,6 +365,6 @@ def stats(d, n, k, beta=None, prec=None):
 
     probs = probabilities(d, n, k, beta=beta, prec=prec)
     N = 1/C(d, mp.pi/3)
-    P = 1/(1-probs.rho)
+    P = probs.pf*N
     ckn = 1/(1-probs.eta)
     return (N, P, ckn)
