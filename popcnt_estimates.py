@@ -337,13 +337,14 @@ def probabilities(d, n, k, beta=None, prec=None):
     pf_ = pf(d, n, k, beta=beta, prec=prec)
     ngr_ = ngr(d, beta=beta, prec=prec)
     pf_ngr_ = pf_ngr(d, n, k, beta=beta, prec=prec)
+    pf_gr_ = pf_gr(d, n, k, beta=beta, prec=prec)
     rho = 1 - pf_ngr_/pf_
     eta = 1 - pf_ngr_/ngr_
 
     probs = Probabilities(d=d, n=n, k=k,
                           gr=1-ngr_,
                           pf=pf_,
-                          gr_pf=1-pf_ngr_,
+                          gr_pf=pf_gr_,
                           ngr_pf=pf_ngr_,
                           rho=rho,
                           eta=eta,
