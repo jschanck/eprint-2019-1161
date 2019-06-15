@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from mpmath import mp
-from popcnt_estimates import Probabilities
+from probabilties_estimates import Probabilities
 
 
 def split_interval(int_l, int_u, slices):

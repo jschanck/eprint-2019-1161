@@ -1,28 +1,15 @@
 # -*- coding: utf-8 -*-
 
 from mpmath import mp
-from functools import wraps, partial
-from collections import namedtuple
 
+from collections import namedtuple
+from functools import partial
+from memoize import memoize
 
 Probabilities = namedtuple("Probabilities",
                            ("d", "n", "k",
                             "gr", "pf", "ngr_pf", "gr_pf", "rho", "eta",
                             "beta", "prec"))
-
-
-def memoize(function):
-    memo = {}
-
-    @wraps(function)
-    def wrapper(*args):
-        try:
-            return memo[args]
-        except KeyError:
-            rv = function(*args)
-            memo[args] = rv
-            return rv
-    return wrapper
 
 
 def C(d, theta, integrate=False, prec=None):
@@ -163,9 +150,9 @@ def P(n, k, theta, nmk=False, prec=None):
     with mp.workprec(prec):
         theta = mp.mpf(theta)
         # binomial cdf for 0 <= successes < k
-        #r = 0
-        #for i in range(k):
-        #    r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
+        # r = 0
+        # for i in range(k):
+        #     r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
         r = mp.betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi), regularized=True)
         if nmk:
             r = min(2*r, mp.mpf(1.0))
@@ -281,8 +268,8 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
             return num/den
 
 
-pf_ngr = partial(pf, lb=0, ub=mp.pi/3)
-pf_gr  = partial(pf, lb=mp.pi/3)
+ngr_pf = partial(pf, lb=0, ub=mp.pi/3)
+gr_pf  = partial(pf, lb=mp.pi/3)
 
 
 def ngr(d, beta=None, prec=None):
@@ -318,7 +305,9 @@ def gr(d, beta=None, prec=None):
     :param prec: compute with this precision
 
     """
-    return 1-ngr(d, beta, prec)
+    prec = prec if prec else mp.prec
+    with mp.workprec(prec):
+        return 1-ngr(d, beta, prec)
 
 
 def probabilities(d, n, k, beta=None, prec=None):
@@ -334,38 +323,20 @@ def probabilities(d, n, k, beta=None, prec=None):
     """
     prec = prec if prec else mp.prec
 
-    pf_ = pf(d, n, k, beta=beta, prec=prec)
-    ngr_ = ngr(d, beta=beta, prec=prec)
-    pf_ngr_ = pf_ngr(d, n, k, beta=beta, prec=prec)
-    pf_gr_ = pf_gr(d, n, k, beta=beta, prec=prec)
-    rho = 1 - pf_ngr_/pf_
-    eta = 1 - pf_ngr_/ngr_
+    with mp.workprec(prec):
+        pf_ = pf(d, n, k, beta=beta, prec=prec)
+        ngr_ = ngr(d, beta=beta, prec=prec)
+        ngr_pf_ = ngr_pf(d, n, k, beta=beta, prec=prec)
+        gr_pf_ = gr_pf(d, n, k, beta=beta, prec=prec)
+        rho = 1 - ngr_pf_/pf_
+        eta = 1 - ngr_pf_/ngr_
 
-    probs = Probabilities(d=d, n=n, k=k,
-                          gr=1-ngr_,
-                          pf=pf_,
-                          gr_pf=pf_gr_,
-                          ngr_pf=pf_ngr_,
-                          rho=rho,
-                          eta=eta,
-                          beta=beta, prec=prec)
-    return probs
-
-
-def stats(d, n, k, beta=None, prec=None):
-    """
-    Useful quantites.
-
-    :param d: We consider the sphere `S^{d-1}`
-    :param n: Number of popcount vectors
-    :param k: popcount threshold
-    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
-    :param prec: compute with this precision
-
-    """
-
-    probs = probabilities(d, n, k, beta=beta, prec=prec)
-    N = 1/C(d, mp.pi/3)
-    P = probs.pf*N
-    ckn = 1/(1-probs.eta)
-    return (N, P, ckn)
+        probs = Probabilities(d=d, n=n, k=k,
+                              gr=1-ngr_,
+                              pf=pf_,
+                              gr_pf=gr_pf_,
+                              ngr_pf=ngr_pf_,
+                              rho=rho,
+                              eta=eta,
+                              beta=beta, prec=prec)
+        return probs
