@@ -156,7 +156,8 @@ def simple_nns_costf(d, n, k=None):
     probs = load_probabilities(d, n, k, compute=True, sanity_check=True)
 
     oracle_cost = oracle_costf(d, n, k)
-    oracle_calls_per_grover = cnkf(probs) * list_sizef(d) * mp.floor(mp.pi/4 * mp.sqrt(1/probs.ngr_pf))
+    #TODO: use the average list size
+    oracle_calls_per_grover = mp.sqrt(cnkf(probs) * list_sizef(d))
 
     # We run Grover on every element of the list.
     oracle_calls_total = mp.ceil(cnkf(probs) * list_sizef(d) * oracle_calls_per_grover)
