@@ -12,14 +12,13 @@ LogicalCosts = namedtuple("LogicalCosts",
                            "t_count", "t_depth", "t_width"))
 
 
-def _preproc_params(d, n, k, beta=None):
+def _preproc_params(L, n, k):
     """
     Normalise inputs and check for consistency.
 
-    :param d: sieving dimension
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
-    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
 
     """
     if not 0 <= k <= n:
@@ -28,29 +27,29 @@ def _preproc_params(d, n, k, beta=None):
     if mp.log(n, 2)%1 != 0:
         raise ValueError("n=%d is not a power of two"%n)
 
-    probs = load_probabilities(d, n, k, beta=beta, sanity_check=True)
-
-    index_wires = mp.ceil(mp.log(cnkf(probs) * list_sizef(d), 2))
+    index_wires = mp.ceil(mp.log(L, 2))
     if index_wires < 4:
-        raise ValueError("diffusion operator poorly defined, d=%d too small."%d)
+        raise ValueError("diffusion operator poorly defined, log|L|=%d too small."%index_wires)
 
     # a useful value for computation that follows the writeup
-    ell = mp.log(n, 2) + 1
-    return d, n, k, index_wires, ell
+    return L, n, k, index_wires
 
 
-def popcount_costf(d, n, k, beta=None):
+def ellf(n):
+    return mp.log(n, 2) + 1
+
+
+def popcount_costf(L, n, k):
     """
     Logical cost of running popcount filter once.
 
-    :param d: sieving dimension
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
-    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
 
     """
 
-    d, n, k, index_wires, ell = _preproc_params(d, n, k, beta=beta)
+    L, n, k, index_wires = _preproc_params(L, n, k)
 
     # TODO: magic constants
     OR_CNOTs = 2
@@ -61,7 +60,7 @@ def popcount_costf(d, n, k, beta=None):
     # number of ORs
 
     t = mp.ceil(mp.log(k, 2))
-    ORs = ell - t - 1
+    ORs = ellf(n) - t - 1
 
     def i_bit_adder_CNOTs(i):
         # to achieve the Toffoli counts for i_bits_adder_Tofs() below we diverge from the expected
@@ -88,15 +87,15 @@ def popcount_costf(d, n, k, beta=None):
     popcount_tofs   = OR_Tofs*ORs + adder_tofs
 
     # all i bit adders are in parallel and we use 1, ..., log_2(n) bit adders
-    adder_t_depth   = sum([i_bit_adder_T_depth(i) for i in range(1, ell)])
+    adder_t_depth   = sum([i_bit_adder_T_depth(i) for i in range(1, ellf(n))])
     # we have ceil(ell - t) OR depth, 1 Tof therefore 3 T-depth each
-    OR_t_depth = 3 * mp.ceil(mp.log(ell - t, 2))
+    OR_t_depth = 3 * mp.ceil(mp.log(ellf(n) - t, 2))
     popcount_t_depth = adder_t_depth + OR_t_depth
 
     popcount_t_count = MagicConstants.t_div_toffoli * (popcount_tofs)
 
     qc = LogicalCosts(label="popcount",
-                      params=(d, n, k),
+                      params=(L, n, k),
                       cnots_count=popcount_cnots,
                       toffoli_count=popcount_tofs,
                       t_count=popcount_t_count,
@@ -105,18 +104,17 @@ def popcount_costf(d, n, k, beta=None):
     return qc
 
 
-def oracle_costf(d, n, k, beta=None):
+def oracle_costf(L, n, k):
     """
-    Logical cost of running Grover oracle once.
+    Logical cost of calling Grover oracle once.
 
-    :param d: sieving dimension
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
-    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
 
     """
-    d, n, k, index_wires, ell = _preproc_params(d, n, k, beta=beta)
-    popcount_cost = popcount_costf(d, n, k, beta=beta)
+    L, n, k, index_wires = _preproc_params(L, n, k)
+    popcount_cost = popcount_costf(L, n, k)
 
     # a l-controlled NOT takes (32l - 84)T
     # the diffusion operator in our circuit is (index_wires - 1)-controlled NOT
@@ -134,40 +132,49 @@ def oracle_costf(d, n, k, beta=None):
     t_width = t_count/t_depth
 
     return LogicalCosts(label="oracle",
-                        params=(d, n, k),
+                        params=(L, n, k),
                         cnots_count=None,
                         toffoli_count=None,
                         t_count=t_count, t_depth=t_depth, t_width=t_width)
 
 
-def simple_nns_costf(d, n, k=None):
+def searchf(L, n, k):
     """
     Logical cost of running quantum quadratic Nearest Neighbor Search.
 
-    :param d: sieving dimension
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
     """
+    # TODO: magic constants for amplitude amplification?
+    L, n, k, index_wires = _preproc_params(L, n, k)
 
-    # TODO: magic constants for amplitude amplification
-    k = k if k else int(MagicConstants.k_div_n * n)
-    d, n, k, index_wires, ell = _preproc_params(d, n, k)
-    probs = load_probabilities(d, n, k, compute=True, sanity_check=True)
+    oracle_cost = oracle_costf(L, n, k)
+    oracle_calls = mp.sqrt(mp.pi/4 * L)
 
-    oracle_cost = oracle_costf(d, n, k)
-    #TODO: use the average list size
-    oracle_calls_per_grover = mp.sqrt(cnkf(probs) * list_sizef(d))
-
-    # We run Grover on every element of the list.
-    oracle_calls_total = mp.ceil(cnkf(probs) * list_sizef(d) * oracle_calls_per_grover)
-
-    t_count = oracle_calls_total * oracle_cost.t_count
-    t_depth = oracle_calls_per_grover * oracle_cost.t_depth
+    t_count = oracle_calls * oracle_cost.t_count
+    t_depth = oracle_calls * oracle_cost.t_depth
     t_width = oracle_cost.t_width
 
-    return LogicalCosts(label="SimpleNNS",
-                        params=(d, n, k),
+    return LogicalCosts(label="search",
+                        params=(L, n, k),
                         cnots_count=None,
                         toffoli_count=None,
                         t_count=t_count, t_depth=t_depth, t_width=t_width)
+
+
+def all_pairs(d, n, k=None, epsilon=0.01):
+    k = k if k else int(MagicConstants.k_div_n * n)
+    pr = load_probabilities(d, n, k)
+    epsilon = mp.mpf(epsilon)
+
+    L = (1+epsilon) * 2/((1-pr.eta)*pr.ngr)
+    L, n, k, index_wires = _preproc_params(L, n, k)
+
+    calls = 2*(1+epsilon)/(1-pr.eta) * L
+    size = ((1-pr.eta)/(1+epsilon))**2 * L/2
+    search_cost = searchf(size, n, k)
+
+    # TODO: What do we want to return here?
+    return calls, search_cost

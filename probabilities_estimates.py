@@ -290,11 +290,8 @@ def ngr(d, beta=None, prec=None):
         else:
             # Pr[¬G ∧ E]
             num = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (0, mp.pi/3), error=True)[0]
-            if beta_and:
-              den = 1
-            else:
-              # Pr[E]
-              den = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (0, 2*beta), error=True)[0]
+            # Pr[E]
+            den = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (0, 2*beta), error=True)[0]
             # Pr[¬G | E] = Pr[¬G ∧ E]/Pr[E]
             return num/den
 
