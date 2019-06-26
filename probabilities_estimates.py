@@ -8,7 +8,7 @@ from memoize import memoize
 
 Probabilities = namedtuple("Probabilities",
                            ("d", "n", "k",
-                            "gr", "pf", "ngr_pf", "gr_pf", "rho", "eta",
+                            "gr", "ngr", "pf", "ngr_pf", "gr_pf", "rho", "eta",
                             "beta", "prec"))
 
 
@@ -332,6 +332,7 @@ def probabilities(d, n, k, beta=None, prec=None):
         eta = 1 - ngr_pf_/ngr_
 
         probs = Probabilities(d=d, n=n, k=k,
+                              ngr=ngr_,
                               gr=1-ngr_,
                               pf=pf_,
                               gr_pf=gr_pf_,
