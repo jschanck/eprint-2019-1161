@@ -3,7 +3,6 @@
 from mpmath import mp
 from collections import namedtuple
 from utils import load_probabilities
-from sieves import list_sizef, cnkf
 from config import MagicConstants
 
 LogicalCosts = namedtuple("LogicalCosts",
@@ -80,10 +79,10 @@ def popcount_costf(L, n, k):
         # gives 6i - 3 T depth for an i bit adder
         return 6 * i - 3
 
-    adder_cnots    = n*sum([i_bit_adder_CNOTs(i)/float(2**i) for i in range(1, ell)]) # noqa
+    adder_cnots    = n*sum([i_bit_adder_CNOTs(i)/float(2**i) for i in range(1, ellf(n))]) # noqa
     popcount_cnots = n + OR_CNOTs*ORs + adder_cnots
 
-    adder_tofs      = n*sum([i_bit_adder_Tofs(i)/float(2**i) for i in range(1, ell)]) # noqa
+    adder_tofs      = n*sum([i_bit_adder_Tofs(i)/float(2**i) for i in range(1, ellf(n))]) # noqa
     popcount_tofs   = OR_Tofs*ORs + adder_tofs
 
     # all i bit adders are in parallel and we use 1, ..., log_2(n) bit adders
@@ -151,7 +150,7 @@ def searchf(L, n, k):
     L, n, k, index_wires = _preproc_params(L, n, k)
 
     oracle_cost = oracle_costf(L, n, k)
-    oracle_calls = mp.sqrt(mp.pi/4 * L)
+    oracle_calls = mp.sqrt(L)
 
     t_count = oracle_calls * oracle_cost.t_count
     t_depth = oracle_calls * oracle_cost.t_depth
@@ -172,9 +171,9 @@ def all_pairs(d, n, k=None, epsilon=0.01):
     L = (1+epsilon) * 2/((1-pr.eta)*pr.ngr)
     L, n, k, index_wires = _preproc_params(L, n, k)
 
-    calls = 2*(1+epsilon)/(1-pr.eta) * L
+    calls = int(mp.ceil(2*(1+epsilon)/(1-pr.eta) * L))
     size = ((1-pr.eta)/(1+epsilon))**2 * L/2
     search_cost = searchf(size, n, k)
 
     # TODO: What do we want to return here?
-    return calls, search_cost
+    return calls, search_cost, calls * search_cost.t_count
