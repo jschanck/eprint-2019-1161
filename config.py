@@ -12,6 +12,9 @@ class MagicConstants:
     """
 
     t_div_toffoli = 7
+    cnot_div_toffoli = 6
+    h_div_toffoli = 2
+    gates_div_toffoli = t_div_toffoli + cnot_div_toffoli + h_div_toffoli
 
     """
     We will accept a list size growth by this factor.
@@ -32,8 +35,12 @@ class MagicConstants:
     an unknown success probability'. We numerically optimise the trade-off
     between the amount of amplification (number of queries) and success
     probability (expected number of repetitions).
+    q(x) = 3*asin(sqrt(x))/(Pi + asin(sqrt(x))
+    search_amplification_factor = 1/sqrt(x)
+    search_repetition_factor = 1/(1-q(x))
     """
-    #search_amplification_factor = 1.7013  # 1/sqrt(0.3454915028)
-    #search_repetition_factor    = 8.0000  # 4/(1-(3*asin(sqrt(0.3454915028)) / (Pi + asin(sqrt(0.3454915028)))))
-    search_amplification_factor = 1.6719 # 1/sqrt(0.3577070585)
-    search_repetition_factor    = 8.1376 # 4/(1-(3*asin(sqrt(0.3577070585)) / (Pi + asin(sqrt(0.3577070585)))))
+    #filter_amplification_factor = 1.70130 # x = 0.3454915028
+    #filter_repetition_factor    = 2.00000 # x = 0.3454915028
+    filter_amplification_factor = 1.67199 # x = 0.3577070585
+    filter_repetition_factor    = 2.03439 # x = 0.3577070585
+

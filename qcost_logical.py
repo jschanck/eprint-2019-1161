@@ -6,6 +6,7 @@ from utils import load_probabilities
 from config import MagicConstants
 from probabilities_estimates import W, C, pf
 
+
 LogicalCosts = namedtuple("LogicalCosts",
                           ("label", "params",
                            "qubits", "gates", "dw", "toffoli_count",
@@ -19,8 +20,10 @@ ClassicalMetrics = {"classical", "naive_classical"}
 QuantumMetrics = {"G", "DW", "t_count", "naive_quantum"}
 Metrics = ClassicalMetrics | QuantumMetrics
 
+
 def log2(x):
   return mp.log(x)/mp.log(2)
+
 
 def local_min(f,x,D1=2,D2=5):
   y = f(x)
@@ -36,14 +39,6 @@ def local_min(f,x,D1=2,D2=5):
       y2 = f(x+d)
   return x
 
-def popcounts_dominate_cost(positive_rate, metric):
-  if metric in ClassicalMetrics:
-    return 1.0/positive_rate > MagicConstants.ip_div_pc
-  else:
-    # XXX: Double check that this is what we want.
-    # quantum search does sqrt(test_ratio) popcounts
-    # per inner product.
-    return 1.0/positive_rate > MagicConstants.ip_div_pc**2
 
 def _preproc_params(L, n, k):
     """
@@ -68,33 +63,53 @@ def _preproc_params(L, n, k):
     return L, n, k, index_wires
 
 
+def cost_iterate(cost, times, label="_"):
+    return LogicalCosts(label=label,
+                      params=cost.params,
+                      qubits=cost.qubits,
+                      gates=cost.gates*times,
+                      dw=cost.dw*times,
+                      toffoli_count=cost.toffoli_count*times,
+                      t_count=cost.t_count*times,
+                      t_depth=cost.t_depth*times,
+                      t_width=cost.t_width)
+
+
+def cost_compose_sequential(cost1, cost2, label="_"):
+    return LogicalCosts(label=label,
+                      params=cost1.params,
+                      qubits=max(cost1.qubits, cost2.qubits),
+                      gates=cost1.gates + cost2.gates,
+                      dw=cost1.dw + cost2.dw,
+                      toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
+                      t_count=cost1.t_count + cost2.t_count,
+                      t_depth=cost1.t_depth + cost2.t_depth,
+                      t_width=(cost1.t_count + cost2.t_count)/(cost1.t_depth + cost2.t_depth))
+
+
+def cost_compose_parallel(cost1, cost2, label="_"):
+    return LogicalCosts(label=label,
+                      params=cost1.params,
+                      qubits=cost1.qubits + cost2.qubits,
+                      gates=cost1.gates + cost2.gates,
+                      dw=cost1.dw + cost2.dw,
+                      toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
+                      t_count=cost1.t_count + cost2.t_count,
+                      t_depth=max(cost1.t_depth, cost2.t_depth),
+                      t_width=(cost1.t_count + cost2.t_count)/max(cost1.t_depth, cost2.t_depth))
+
+
 def ellf(n):
     return mp.log(n, 2) + 1
 
 
-def popcount_costf(L, n, k):
+def hamming_wt_costf(n):
     """
-    Logical cost of running popcount filter once.
+    Logical cost of mapping |v>|0> to |v>|H(v)>
 
-    :param L: length of the list, i.e. |L|
-    :param n: number of entries in popcount filter
-    :param k: we accept if two vectors agree on ≤ k
+    :param n: number of bits in v
 
     """
-
-    L, n, k, index_wires = _preproc_params(L, n, k)
-
-    # TODO: magic constants
-    OR_CNOTs = 2
-    OR_Tofs = 1
-
-    # number of ORs required to test whether popcount is less than 2^t, some t in {0, 1, 2, ..., l -
-    # 1}, is l - t - 1, i.e. more for smaller t. we say k in [ 2^t + 1 , 2^(t + 1) ] costs the same
-    # number of ORs
-
-    t = mp.ceil(mp.log(k, 2))
-    ORs = ellf(n) - t - 1
-
     def i_bit_adder_CNOTs(i):
         # to achieve the Toffoli counts for i_bits_adder_Tofs() below we diverge from the expected
         # number of CNOTs for 1 bit adders
@@ -114,31 +129,80 @@ def popcount_costf(L, n, k):
         return 6 * i - 3
 
     adder_cnots    = n*sum([i_bit_adder_CNOTs(i)/float(2**i) for i in range(1, ellf(n))]) # noqa
-    popcount_cnots = n + OR_CNOTs*ORs + adder_cnots
-
-    adder_tofs      = n*sum([i_bit_adder_Tofs(i)/float(2**i) for i in range(1, ellf(n))]) # noqa
-    popcount_tofs   = OR_Tofs*ORs + adder_tofs
-
+    adder_tofs     = n*sum([i_bit_adder_Tofs(i)/float(2**i) for i in range(1, ellf(n))]) # noqa
     # all i bit adders are in parallel and we use 1, ..., log_2(n) bit adders
     adder_t_depth   = sum([i_bit_adder_T_depth(i) for i in range(1, ellf(n))])
     # we have ceil(ell - t) OR depth, 1 Tof therefore 3 T-depth each
-    OR_t_depth = 3 * mp.ceil(mp.log(ellf(n) - t, 2))
-    popcount_t_depth = adder_t_depth + OR_t_depth
+    adder_t_count = MagicConstants.t_div_toffoli * adder_tofs
+    adder_qubits = n + mp.ceil(log2(n)) + 1
+    adder_gates = adder_t_count + adder_cnots # XXX: other gates?
 
-    popcount_t_count = MagicConstants.t_div_toffoli * (popcount_tofs)
+    qc = LogicalCosts(label="hamming wt",
+                      params=None,
+                      qubits=adder_qubits,
+                      gates=adder_gates,
+                      dw=adder_qubits * adder_t_depth, # XXX
+                      toffoli_count=adder_tofs,
+                      t_count=adder_t_count,
+                      t_depth=adder_t_depth,
+                      t_width=adder_t_count/adder_t_depth)
+    return qc
 
-    popcount_qubits = index_wires # XXX: Include other qubits
-    popcount_gates = popcount_cnots + popcount_tofs # XXX: Include other gates
 
-    qc = LogicalCosts(label="popcount",
-                      params=(L, n, k),
-                      qubits=popcount_qubits,
-                      gates=popcount_gates,
-                      dw=popcount_qubits * popcount_t_depth, # XXX
-                      toffoli_count=popcount_tofs,
-                      t_count=popcount_t_count,
-                      t_depth=popcount_t_depth,
-                      t_width=popcount_t_count/popcount_t_depth)
+def carry_costf(m, c=None):
+    """
+    Logical cost of mapping |x>|0> to |x>|(x+c)_m> where
+    (x+c)_m is the m-th bit (zero indexed) of x+c for an
+    arbitrary m bit constant c.
+
+    Numbers here are for CARRY circuit from Häner--Roetteler--Svore arXiv:1611.07995
+    """
+    carry_qubits = m+1 # XXX: assumes that there are m "dirty" ancilla available
+    carry_toffoli_count = 4*(m-2) + 2
+    carry_t_count = MagicConstants.t_div_toffoli * carry_toffoli_count
+    carry_gates = MagicConstants.gates_div_toffoli * carry_toffoli_count # cnots
+    carry_gates += 2 + 4*bin(int(2**m-c)).count('1')
+    carry_depth = 3*carry_t_count # XXX
+    carry_dw = carry_depth * (m+1) # XXX
+
+    return LogicalCosts(label="carry",
+                      params=None,
+                      qubits=carry_qubits,
+                      gates=carry_gates,
+                      dw=carry_dw,
+                      toffoli_count=carry_toffoli_count,
+                      t_count=carry_t_count,
+                      t_depth=carry_t_count,
+                      t_width=1) # XXX
+
+
+def popcount_costf(L, n, k):
+    """
+    Logical cost of mapping |v> to (-1)^{popcount(u,v)}|v> for fixed u.
+
+    :param L: length of the list, i.e. |L|
+    :param n: number of entries in popcount filter
+    :param k: we accept if two vectors agree on ≤ k
+
+    """
+
+    # XXX: We're skipping ~ n NOT gates for mapping |v> to |u^v>
+
+    # Use tree of adders compute hamming weight
+    #     |u^v>|0>     ->    |u^v>|wt(u^v)>
+    hamming_wt_cost = hamming_wt_costf(n)
+
+    # Compute the high bit of (2^ceil(log(n)) - k) + hamming_wt
+    #     |v>|wt(u^v)>|->   ->     (-1)^popcnt(u,v) |u^v>|wt(u^v)>|->
+    carry_cost = carry_costf(mp.ceil(log2(n)), k)
+    qc = cost_compose_sequential(hamming_wt_cost, carry_cost)
+
+    # Uncompute hamming weight.
+    #    (-1)^popcnt(u,v) |u^v>|wt> -> (-1)^popcnt(u,v) |u^v>|0>
+    qc = cost_compose_sequential(qc, hamming_wt_cost)
+
+    # XXX: We're skipping ~ n NOT gates for mapping |v> to |u^v>
+
     return qc
 
 
@@ -155,9 +219,12 @@ def classical_popcount_costf(n, k):
   return cc
 
 
-def oracle_costf(L, n, k):
+def diffusion_costf(L, n, k):
     """
-    Logical cost of calling Grover oracle once.
+    Logical cost of the diffusion operator D S_0 D^-1
+    where
+      D samples the uniform distribution on a set of size L
+      S_0 is the unitary I - 2|0><0|
 
     :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
@@ -165,61 +232,107 @@ def oracle_costf(L, n, k):
 
     """
     L, n, k, index_wires = _preproc_params(L, n, k)
-    popcount_cost = popcount_costf(L, n, k)
+
+    # index_wires for address, n for |v>, 1 in |-> for phase kickback
+    diffusion_qubits = index_wires + n + 1
 
     # a l-controlled NOT takes (32l - 84)T
     # the diffusion operator in our circuit is (index_wires - 1)-controlled NOT
     # TODO: magic constants
+    # XXX: Shouldn't this be an n-controlled not?
     diffusion_t_count = 32 * (index_wires - 1) - 84
+
+    # Include hadamards on index wires to prepare uniform superposition
+    # Ignore the cost of qRAM.
+    diffusion_gates = diffusion_t_count + 2*index_wires
 
     # We currently make an assumption (favourable to a sieving adversary) that the T gates in the
     # diffusion operator are all sequential and therefore bring down the average T gates required
     # per T depth.
+    # XXX: Not clear that this is optimal.
     diffusion_t_depth = diffusion_t_count
 
-    # TODO: could also handle CNOTs and Toffoli
-    t_count = 2*popcount_cost.t_count + diffusion_t_count
-    t_depth = 2*popcount_cost.t_depth + diffusion_t_depth
-    t_width = t_count/t_depth
+    diffusion_dw = diffusion_qubits * (diffusion_t_depth + 2)
 
-    return LogicalCosts(label="oracle",
-                        params=(L, n, k),
-                        qubits=None,
-                        gates=None,
-                        dw=None,
-                        toffoli_count=None,
-                        t_count=t_count, t_depth=t_depth, t_width=t_width)
+    return LogicalCosts(label="diffusion",
+                       params=(L, n, k),
+                       qubits=diffusion_qubits,
+                       gates=diffusion_gates,
+                       dw=diffusion_dw,
+                       toffoli_count=0,
+                       t_count=diffusion_t_count,
+                       t_depth=diffusion_t_depth,
+                       t_width=diffusion_t_count/diffusion_t_depth)
 
 
-def searchf(L, n, k):
+def oracle_costf(L, n, k):
     """
-    Logical cost of finding a marked element in a list
+    Logical cost of G(popcount) = (D S_0 D^-1) S_popcount
+    where
+      D samples the uniform distribution on a set of size L
+      S_0 is the unitary I - 2|0><0|
+      S_popcount maps |v> to (-1)^{popcount(u,v)}|v> for some fixed u
 
     :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
     """
-    L, n, k, index_wires = _preproc_params(L, n, k)
+    popcount_cost = popcount_costf(L, n, k)
+    diffusion_cost = diffusion_costf(L, n, k)
 
+    return cost_compose_sequential(diffusion_cost, popcount_cost, label="oracle")
+
+
+def searchf(L, n, k):
+    """
+    Logical cost of popcount filtered search that succeeds w.h.p.
+      G(G(pc)^i D, ip)^j =
+        ((G(pc)^i D) S_0 (G(pc)^i D)^-1 S_ip)^j G(pc)^i D
+    where i and j are chosen so that ij ~ sqrt(L) * search_amplification_factor
+    We only cost G(pc)^ij and G(pc)^-ij.
+    This is within a factor of 2 as long as the cost of S_ip < G(pc)^i
+
+    :param L: length of the list, i.e. |L|
+    :param n: number of entries in popcount filter
+    :param k: we accept if two vectors agree on ≤ k
+
+    """
     oracle_cost = oracle_costf(L, n, k)
-    oracle_calls = mp.sqrt(L)
-    oracle_calls *= MagicConstants.search_amplification_factor
-    oracle_calls *= MagicConstants.search_repetition_factor
 
-    t_count = oracle_calls * oracle_cost.t_count
-    t_depth = oracle_calls * oracle_cost.t_depth
-    t_width = oracle_cost.t_width
+    # The search routine takes two integer parameters m1 and m2.
+    # We pick a random number in {0, ..., m1-1} and another in {0, ..., m2-1}.
+    # We use an expected m1/2 iterations of the popcount oracle for the sampling
+    # routine in amplitude amplification. Hence an expected m1 popcount oracles per
+    # AA iteration. Assuming m1 > pi/4 * sqrt(L/P), where P is the number of popcount
+    # positives. Since we don't know P exactly, we're going to leave some probability mass
+    # on popcount negatives. We have to account for that in the AA step. We do an expected
+    #     m2 * filter_amplification_factor / 2 AA iterations.
+    # If we assume m2 = pi/4 * sqrt(P)
+    # then the whole thing succeeds with probability 1/2 * 1/filter_repetition factor.
+    # So in we'll repeat 2*filter_repetition factor times.
+    # We do m1*m2 total oracle calls.
+    # Assume best case for adversary, m1=pi/4 * sqrt(L/P) and m2=pi/4*sqrt(P) then
+    # this is (pi/4)^2 * filter_amplification_factor * filter_repetition_factor * sqrt(L)
+    # popcount oracle calls. This is about 2 * sqrt(L) popcount oracle calls.
 
-    qc = LogicalCosts(label="search",
-                        params=(L, n, k),
-                        qubits=None,
-                        gates=None,
-                        dw=None,
-                        toffoli_count=None,
-                        t_count=t_count, t_depth=t_depth, t_width=t_width)
+    oracle_calls  = mp.sqrt(L)
+    oracle_calls *= mp.pi*mp.pi/16
+    oracle_calls *= MagicConstants.filter_amplification_factor
+    oracle_calls *= MagicConstants.filter_repetition_factor
 
-    return qc
+    return cost_iterate(oracle_cost, oracle_calls, label="search")
+
+
+def popcounts_dominate_cost(positive_rate, metric):
+  if metric in ClassicalMetrics:
+    return 1.0/positive_rate > MagicConstants.ip_div_pc
+  else:
+    # XXX: Double check that this is what we want.
+    # quantum search does sqrt(1/positive_rate) popcounts
+    # per inner product.
+    return 1.0/positive_rate > MagicConstants.ip_div_pc**2
+
 
 def all_pairs(d, n=None, k=None, epsilon=0.01, optimise=True, metric="t_count"):
     if n is None:
@@ -258,6 +371,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimise=True, metric="t_count"):
       positive_rate = pf(pr.d, pr.n, pr.k)
 
     return pr.d, pr.n, pr.k, log2(cost(pr)), 1/positive_rate, metric
+
 
 def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classical"):
     if n is None:
@@ -318,8 +432,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, me
 
     def cost(pr, T1):
       T2 = T1 # TODO: Handle theta1 != theta2
-      #L = 2/((1-pr.eta)*C(d,mp.pi/3))
-      L = 1/C(d,mp.pi/3)
+      L = 2/((1-pr.eta)*C(d,mp.pi/3))
       search_calls = int(mp.ceil(L))
       filters = 1/W(d, T1, T2, mp.pi/3)
       populate_table_cost = L * filters * C(d,T2)
@@ -353,5 +466,5 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, me
     else:
       positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    return pr.d, pr.n, pr.k, theta, log2(cost(pr, theta)), 1/positive_rate, metric
+    return pr.d, pr.n, pr.k, theta, theta, log2(cost(pr, theta)), 1/positive_rate, metric
 
