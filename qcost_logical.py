@@ -22,22 +22,22 @@ Metrics = ClassicalMetrics | QuantumMetrics
 
 
 def log2(x):
-  return mp.log(x)/mp.log(2)
+    return mp.log(x)/mp.log(2)
 
 
 def local_min(f,x,D1=2,D2=5):
-  y = f(x)
-  for k in range(D1, D2+1):
-    d = 0.1**k
-    y2 = f(x+d)
-    if y2 > y:
-      d = -d
-      y2 = f(x+d)
-    while y2 < y:
-      y = y2
-      x = x+d
-      y2 = f(x+d)
-  return x
+    y = f(x)
+    for k in range(D1, D2+1):
+        d = 0.1**k
+        y2 = f(x+d)
+        if y2 > y:
+            d = -d
+            y2 = f(x+d)
+        while y2 < y:
+            y = y2
+            x = x+d
+            y2 = f(x+d)
+    return x
 
 
 def _preproc_params(L, n, k):
@@ -63,7 +63,7 @@ def _preproc_params(L, n, k):
     return L, n, k, index_wires
 
 
-def cost_iterate(cost, times, label="_"):
+def compose_k_sequential(cost, times, label="_"):
     return LogicalCosts(label=label,
                       params=cost.params,
                       qubits=cost.qubits,
@@ -74,8 +74,18 @@ def cost_iterate(cost, times, label="_"):
                       t_depth=cost.t_depth*times,
                       t_width=cost.t_width)
 
+def compose_k_parallel(cost, times, label="_"):
+    return LogicalCosts(label=label,
+                      params=cost.params,
+                      qubits=times * cost.qubits,
+                      gates=times * cost.gates,
+                      dw=times * cost.dw,
+                      toffoli_count=times * cost.toffoli_count,
+                      t_count=times * cost.t_count,
+                      t_depth=cost.t_depth,
+                      t_width=times * cost.t_width)
 
-def cost_compose_sequential(cost1, cost2, label="_"):
+def compose_sequential(cost1, cost2, label="_"):
     return LogicalCosts(label=label,
                       params=cost1.params,
                       qubits=max(cost1.qubits, cost2.qubits),
@@ -87,7 +97,7 @@ def cost_compose_sequential(cost1, cost2, label="_"):
                       t_width=(cost1.t_count + cost2.t_count)/(cost1.t_depth + cost2.t_depth))
 
 
-def cost_compose_parallel(cost1, cost2, label="_"):
+def compose_parallel(cost1, cost2, label="_"):
     return LogicalCosts(label=label,
                       params=cost1.params,
                       qubits=cost1.qubits + cost2.qubits,
@@ -103,6 +113,43 @@ def ellf(n):
     return mp.log(n, 2) + 1
 
 
+def null_costf():
+    return LogicalCosts(label="null", params=None,
+                        qubits=0, gates=0, dw=0, toffoli_count=0,
+                        t_count=0, t_depth=0, t_width=0)
+
+
+def classical_popcount_costf(n, k):
+  ell = mp.ceil(mp.log(n,2)+1)
+  t = mp.ceil(mp.log(k,2))
+  gates = 10*n - 9*ell - t - 2
+  depth = 1 + 2*ell + 2 + mp.ceil(mp.log(ell - t - 1, 2))
+
+  cc = ClassicalCosts(label="popcount",
+                      gates=gates,
+                      depth=depth)
+
+  return cc
+
+
+def adder_costf(i):
+    adder_cnots = 6 if i==1 else 5*i-3
+    adder_tofs = 2*i - 1
+    adder_t_depth = 6*i - 3
+    adder_t_count = MagicConstants.t_div_toffoli * adder_tofs
+    adder_gates = adder_t_count + adder_cnots # XXX: other gates?
+    adder_qubits = 2*i + 1
+    return LogicalCosts(label=str(i)+"-bit adder",
+                        params=None,
+                        qubits=adder_qubits,
+                        gates=adder_gates,
+                        dw=adder_qubits * adder_t_depth, # XXX
+                        toffoli_count=adder_tofs,
+                        t_count=adder_t_count,
+                        t_depth=adder_t_depth,
+                        t_width=adder_t_count/adder_t_depth)
+
+
 def hamming_wt_costf(n):
     """
     Logical cost of mapping |v>|0> to |v>|H(v)>
@@ -110,42 +157,21 @@ def hamming_wt_costf(n):
     :param n: number of bits in v
 
     """
-    def i_bit_adder_CNOTs(i):
-        # to achieve the Toffoli counts for i_bits_adder_Tofs() below we diverge from the expected
-        # number of CNOTs for 1 bit adders
-        if i == 1:
-            return 6
-        else:
-            return 5*i - 3
-
-    def i_bit_adder_Tofs(i):
-        # these Toffoli counts for 1 and 2 bit adders can be achieved using (some of) the
-        # optimisations in Cuccarro et al.
-        return 2*i - 1
-
-    def i_bit_adder_T_depth(i):
-        # Each i bit adder has 2i - 1 Toffoli gates (sequentially) so using T depth 3 per Toffoli
-        # gives 6i - 3 T depth for an i bit adder
-        return 6 * i - 3
-
-    adder_cnots    = n*sum([i_bit_adder_CNOTs(i)/float(2**i) for i in range(1, ellf(n))]) # noqa
-    adder_tofs     = n*sum([i_bit_adder_Tofs(i)/float(2**i) for i in range(1, ellf(n))]) # noqa
-    # all i bit adders are in parallel and we use 1, ..., log_2(n) bit adders
-    adder_t_depth   = sum([i_bit_adder_T_depth(i) for i in range(1, ellf(n))])
-    # we have ceil(ell - t) OR depth, 1 Tof therefore 3 T-depth each
-    adder_t_count = MagicConstants.t_div_toffoli * adder_tofs
-    adder_qubits = n + mp.ceil(log2(n)) + 1
-    adder_gates = adder_t_count + adder_cnots # XXX: other gates?
-
-    qc = LogicalCosts(label="hamming wt",
-                      params=None,
-                      qubits=adder_qubits,
-                      gates=adder_gates,
-                      dw=adder_qubits * adder_t_depth, # XXX
-                      toffoli_count=adder_tofs,
-                      t_count=adder_t_count,
-                      t_depth=adder_t_depth,
-                      t_width=adder_t_count/adder_t_depth)
+    qc = null_costf()
+    # Follow right-most path of binary tree with n leaves.
+    m = n
+    while m > 1:
+        b = int(mp.floor(log2(m)))
+        # Left branch is a (2**b)-bit hamming weight
+        b_bit_wt = null_costf()
+        for i in range(1, b + 1):
+            b_bit_wt = compose_sequential(b_bit_wt, compose_k_parallel(adder_costf(i), 2**(b-i)))
+        qc = compose_parallel(qc, b_bit_wt)
+        m = m-2**b
+        if bin(m).count('1') >= 1:
+            # The current node is internal. Join left and right branches with adder.
+            qc = compose_sequential(qc, adder_costf(b+1))
+    qc = compose_sequential(qc, null_costf(), label=str(n)+"-bit hamming weight")
     return qc
 
 
@@ -195,28 +221,15 @@ def popcount_costf(L, n, k):
     # Compute the high bit of (2^ceil(log(n)) - k) + hamming_wt
     #     |v>|wt(u^v)>|->   ->     (-1)^popcnt(u,v) |u^v>|wt(u^v)>|->
     carry_cost = carry_costf(mp.ceil(log2(n)), k)
-    qc = cost_compose_sequential(hamming_wt_cost, carry_cost)
+    qc = compose_sequential(hamming_wt_cost, carry_cost)
 
     # Uncompute hamming weight.
     #    (-1)^popcnt(u,v) |u^v>|wt> -> (-1)^popcnt(u,v) |u^v>|0>
-    qc = cost_compose_sequential(qc, hamming_wt_cost)
+    qc = compose_sequential(qc, hamming_wt_cost)
 
     # XXX: We're skipping ~ n NOT gates for mapping |v> to |u^v>
 
     return qc
-
-
-def classical_popcount_costf(n, k):
-  ell = mp.ceil(mp.log(n,2)+1)
-  t = mp.ceil(mp.log(k,2))
-  gates = 10*n - 9*ell - t - 2
-  depth = 1 + 2*ell + 2 + mp.ceil(mp.log(ell - t - 1, 2))
-
-  cc = ClassicalCosts(label="popcount",
-                      gates=gates,
-                      depth=depth)
-
-  return cc
 
 
 def diffusion_costf(L, n, k):
@@ -281,7 +294,7 @@ def oracle_costf(L, n, k):
     popcount_cost = popcount_costf(L, n, k)
     diffusion_cost = diffusion_costf(L, n, k)
 
-    return cost_compose_sequential(diffusion_cost, popcount_cost, label="oracle")
+    return compose_sequential(diffusion_cost, popcount_cost, label="oracle")
 
 
 def searchf(L, n, k):
@@ -321,7 +334,7 @@ def searchf(L, n, k):
     oracle_calls *= MagicConstants.filter_amplification_factor
     oracle_calls *= MagicConstants.filter_repetition_factor
 
-    return cost_iterate(oracle_cost, oracle_calls, label="search")
+    return compose_k_sequential(oracle_cost, oracle_calls, label="search")
 
 
 def popcounts_dominate_cost(positive_rate, metric):
