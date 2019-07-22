@@ -12,9 +12,8 @@ class MagicConstants:
     """
 
     t_div_toffoli = 7
-    cnot_div_toffoli = 6
-    h_div_toffoli = 2
-    gates_div_toffoli = t_div_toffoli + cnot_div_toffoli + h_div_toffoli
+    t_depth_div_toffoli = 3
+    gates_div_toffoli = 17 # 7 T, 7 CNOT, 2 H, 1 S
 
     """
     We will accept a list size growth by this factor.

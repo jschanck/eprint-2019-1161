@@ -63,7 +63,13 @@ def _preproc_params(L, n, k):
     return L, n, k, index_wires
 
 
+def null_costf():
+    return LogicalCosts(label="null", params=None,
+                        qubits=0, gates=0, dw=0, toffoli_count=0,
+                        t_count=0, t_depth=0, t_width=0)
+
 def compose_k_sequential(cost, times, label="_"):
+    if times == 0: return null_costf()
     return LogicalCosts(label=label,
                       params=cost.params,
                       qubits=cost.qubits,
@@ -75,6 +81,7 @@ def compose_k_sequential(cost, times, label="_"):
                       t_width=cost.t_width)
 
 def compose_k_parallel(cost, times, label="_"):
+    if times == 0: return null_costf()
     return LogicalCosts(label=label,
                       params=cost.params,
                       qubits=times * cost.qubits,
@@ -113,11 +120,6 @@ def ellf(n):
     return mp.log(n, 2) + 1
 
 
-def null_costf():
-    return LogicalCosts(label="null", params=None,
-                        qubits=0, gates=0, dw=0, toffoli_count=0,
-                        t_count=0, t_depth=0, t_width=0)
-
 
 def classical_popcount_costf(n, k):
   ell = mp.ceil(mp.log(n,2)+1)
@@ -132,18 +134,24 @@ def classical_popcount_costf(n, k):
   return cc
 
 
-def adder_costf(i):
-    adder_cnots = 6 if i==1 else 5*i-3
-    adder_tofs = 2*i - 1
-    adder_t_depth = 6*i - 3
-    adder_t_count = MagicConstants.t_div_toffoli * adder_tofs
-    adder_gates = adder_t_count + adder_cnots # XXX: other gates?
-    adder_qubits = 2*i + 1
+def adder_costf(i, CI=False):
+    """
+    Logical cost of i bit adder (Cuccaro et al). With Carry Input if CI=True
+
+    """
+    adder_cnots = 6 if i == 1 else (5*i+1 if CI else 5*i-3)
+    adder_depth = 7 if i == 1 else (2*i+6 if CI else 2*i+4)
+    adder_nots = 2*i-2 if CI else 2*i-4
+    adder_tofs = 2*i-1
+    adder_qubits = 2*i+2
+    adder_t_depth = adder_tofs * MagicConstants.t_depth_div_toffoli
+    adder_t_count = adder_tofs * MagicConstants.t_div_toffoli
+    adder_gates = adder_cnots + adder_nots + adder_tofs * MagicConstants.gates_div_toffoli
     return LogicalCosts(label=str(i)+"-bit adder",
                         params=None,
                         qubits=adder_qubits,
                         gates=adder_gates,
-                        dw=adder_qubits * adder_t_depth, # XXX
+                        dw=adder_qubits * adder_depth,
                         toffoli_count=adder_tofs,
                         t_count=adder_t_count,
                         t_depth=adder_t_depth,
@@ -158,19 +166,17 @@ def hamming_wt_costf(n):
 
     """
     qc = null_costf()
-    # Follow right-most path of binary tree with n leaves.
-    m = n
-    while m > 1:
-        b = int(mp.floor(log2(m)))
-        # Left branch is a (2**b)-bit hamming weight
-        b_bit_wt = null_costf()
-        for i in range(1, b + 1):
-            b_bit_wt = compose_sequential(b_bit_wt, compose_k_parallel(adder_costf(i), 2**(b-i)))
-        qc = compose_parallel(qc, b_bit_wt)
-        m = m-2**b
-        if bin(m).count('1') >= 1:
-            # The current node is internal. Join left and right branches with adder.
-            qc = compose_sequential(qc, adder_costf(b+1))
+    b = int(mp.floor(log2(n)))
+    n = n - 2**b
+    for i in range(1, b + 1):
+        if n > 0: # Feed some bits to carry inputs
+          L = compose_parallel(
+                compose_k_parallel(adder_costf(i, CI=True),            min(n, 2**(b-i))),
+                compose_k_parallel(adder_costf(i),          2**(b-i) - min(n, 2**(b-i))))
+          n = n - min(n, 2**(b-i))
+        else:
+          L = compose_k_parallel(adder_costf(i), 2**(b-i))
+        qc = compose_sequential(qc, L)
     qc = compose_sequential(qc, null_costf(), label=str(n)+"-bit hamming weight")
     return qc
 
