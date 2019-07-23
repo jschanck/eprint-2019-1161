@@ -10,7 +10,7 @@ from probabilities_estimates import W, C, pf
 LogicalCosts = namedtuple("LogicalCosts",
                           ("label", "params",
                            "qubits", "gates", "dw", "toffoli_count",
-                           "t_count", "t_depth", "t_width"))
+                           "t_count", "t_depth"))
 
 PhysicalCosts = namedtuple("PhysicalCosts", ("label", "physical_qubits", "surface_code_cycles")) # What else?
 
@@ -66,7 +66,7 @@ def _preproc_params(L, n, k):
 def null_costf():
     return LogicalCosts(label="null", params=None,
                         qubits=0, gates=0, dw=0, toffoli_count=0,
-                        t_count=0, t_depth=0, t_width=0)
+                        t_count=0, t_depth=0)
 
 def compose_k_sequential(cost, times, label="_"):
     if times == 0: return null_costf()
@@ -77,8 +77,7 @@ def compose_k_sequential(cost, times, label="_"):
                       dw=cost.dw*times,
                       toffoli_count=cost.toffoli_count*times,
                       t_count=cost.t_count*times,
-                      t_depth=cost.t_depth*times,
-                      t_width=cost.t_width)
+                      t_depth=cost.t_depth*times)
 
 def compose_k_parallel(cost, times, label="_"):
     if times == 0: return null_costf()
@@ -89,8 +88,7 @@ def compose_k_parallel(cost, times, label="_"):
                       dw=times * cost.dw,
                       toffoli_count=times * cost.toffoli_count,
                       t_count=times * cost.t_count,
-                      t_depth=cost.t_depth,
-                      t_width=times * cost.t_width)
+                      t_depth=cost.t_depth)
 
 def compose_sequential(cost1, cost2, label="_"):
     return LogicalCosts(label=label,
@@ -100,8 +98,7 @@ def compose_sequential(cost1, cost2, label="_"):
                       dw=cost1.dw + cost2.dw,
                       toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
                       t_count=cost1.t_count + cost2.t_count,
-                      t_depth=cost1.t_depth + cost2.t_depth,
-                      t_width=(cost1.t_count + cost2.t_count)/(cost1.t_depth + cost2.t_depth))
+                      t_depth=cost1.t_depth + cost2.t_depth)
 
 
 def compose_parallel(cost1, cost2, label="_"):
@@ -112,12 +109,7 @@ def compose_parallel(cost1, cost2, label="_"):
                       dw=cost1.dw + cost2.dw,
                       toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
                       t_count=cost1.t_count + cost2.t_count,
-                      t_depth=max(cost1.t_depth, cost2.t_depth),
-                      t_width=(cost1.t_count + cost2.t_count)/max(cost1.t_depth, cost2.t_depth))
-
-
-def ellf(n):
-    return mp.log(n, 2) + 1
+                      t_depth=max(cost1.t_depth, cost2.t_depth))
 
 
 
@@ -154,8 +146,7 @@ def adder_costf(i, CI=False):
                         dw=adder_qubits * adder_depth,
                         toffoli_count=adder_tofs,
                         t_count=adder_t_count,
-                        t_depth=adder_t_depth,
-                        t_width=adder_t_count/adder_t_depth)
+                        t_depth=adder_t_depth)
 
 
 def hamming_wt_costf(n):
@@ -204,8 +195,7 @@ def carry_costf(m, c=None):
                       dw=carry_dw,
                       toffoli_count=carry_toffoli_count,
                       t_count=carry_t_count,
-                      t_depth=carry_t_count,
-                      t_width=1) # XXX
+                      t_depth=carry_t_count)
 
 
 def popcount_costf(L, n, k):
