@@ -11,7 +11,7 @@ from probabilities_estimates import W, C, pf
 #       "qubits_out" is the number of output qubits.
 #       "gates" does not include identity gates
 #       "depth" is longest path from input to output (including identity gates)
-#       "dw" is not necessarity depth*qubits
+#       "dw" is not necessarily depth*qubits
 # XXX:  "toffoli_count" is not very useful. Remove it?
 LogicalCosts = namedtuple("LogicalCosts",
                           ("label",
@@ -57,66 +57,66 @@ def null_costf(qubits_in=0, qubits_out=0):
 
 def delay(cost, depth, label="_"):
     return LogicalCosts(label=label,
-                      qubits_in=cost.qubits_in,
-                      qubits_out=cost.qubits_out,
-                      gates=cost.gates,
-                      depth=cost.depth+depth,
-                      dw=cost.dw + cost.qubits_out*depth,
-                      toffoli_count=cost.toffoli_count,
-                      t_count=cost.t_count,
-                      t_depth=cost.t_depth)
+                        qubits_in=cost.qubits_in,
+                        qubits_out=cost.qubits_out,
+                        gates=cost.gates,
+                        depth=cost.depth+depth,
+                        dw=cost.dw + cost.qubits_out*depth,
+                        toffoli_count=cost.toffoli_count,
+                        t_count=cost.t_count,
+                        t_depth=cost.t_depth)
 
 def reverse(cost):
     return LogicalCosts(label=cost.label,
-                      qubits_in=cost.qubits_out,
-                      qubits_out=cost.qubits_in,
-                      gates=cost.gates,
-                      depth=cost.depth,
-                      dw=cost.dw,
-                      toffoli_count=cost.toffoli_count,
-                      t_count=cost.t_count,
-                      t_depth=cost.t_depth)
+                        qubits_in=cost.qubits_out,
+                        qubits_out=cost.qubits_in,
+                        gates=cost.gates,
+                        depth=cost.depth,
+                        dw=cost.dw,
+                        toffoli_count=cost.toffoli_count,
+                        t_count=cost.t_count,
+                        t_depth=cost.t_depth)
 
 def compose_k_sequential(cost, times, label="_"):
     if times == 0: return null_costf()
     assert cost.qubits_in == cost.qubits_out
     return LogicalCosts(label=label,
-                      qubits_in=cost.qubits_in,
-                      qubits_out=cost.qubits_out,
-                      gates=cost.gates*times,
-                      depth=cost.depth*times,
-                      dw=cost.dw*times,
-                      toffoli_count=cost.toffoli_count*times,
-                      t_count=cost.t_count*times,
-                      t_depth=cost.t_depth*times)
+                        qubits_in=cost.qubits_in,
+                        qubits_out=cost.qubits_out,
+                        gates=cost.gates*times,
+                        depth=cost.depth*times,
+                        dw=cost.dw*times,
+                        toffoli_count=cost.toffoli_count*times,
+                        t_count=cost.t_count*times,
+                        t_depth=cost.t_depth*times)
 
 def compose_k_parallel(cost, times, label="_"):
     if times == 0: return null_costf()
     return LogicalCosts(label=label,
-                      qubits_in=times * cost.qubits_in,
-                      qubits_out=times * cost.qubits_out,
-                      gates=times * cost.gates,
-                      depth=cost.depth,
-                      dw=times * cost.dw,
-                      toffoli_count=times * cost.toffoli_count,
-                      t_count=times * cost.t_count,
-                      t_depth=cost.t_depth)
+                        qubits_in=times * cost.qubits_in,
+                        qubits_out=times * cost.qubits_out,
+                        gates=times * cost.gates,
+                        depth=cost.depth,
+                        dw=times * cost.dw,
+                        toffoli_count=times * cost.toffoli_count,
+                        t_count=times * cost.t_count,
+                        t_depth=cost.t_depth)
 
 def compose_sequential(cost1, cost2, label="_"):
     assert cost1.qubits_out >= cost2.qubits_in
     # Pad unused wires with identity gates
     dw = cost1.dw + cost2.dw
     if cost1.qubits_out > cost2.qubits_in:
-      dw += (cost1.qubits_out - cost2.qubits_in) * cost2.depth
+        dw += (cost1.qubits_out - cost2.qubits_in) * cost2.depth
     return LogicalCosts(label=label,
-                      qubits_in=cost1.qubits_in,
-                      qubits_out=cost1.qubits_out - cost2.qubits_in + cost2.qubits_out,
-                      gates=cost1.gates + cost2.gates,
-                      depth=cost1.depth + cost2.depth,
-                      dw=dw,
-                      toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
-                      t_count=cost1.t_count + cost2.t_count,
-                      t_depth=cost1.t_depth + cost2.t_depth)
+                        qubits_in=cost1.qubits_in,
+                        qubits_out=cost1.qubits_out - cost2.qubits_in + cost2.qubits_out,
+                        gates=cost1.gates + cost2.gates,
+                        depth=cost1.depth + cost2.depth,
+                        dw=dw,
+                        toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
+                        t_count=cost1.t_count + cost2.t_count,
+                        t_depth=cost1.t_depth + cost2.t_depth)
 
 
 def compose_parallel(cost1, cost2, label="_"):
@@ -139,16 +139,16 @@ def compose_parallel(cost1, cost2, label="_"):
 
 
 def classical_popcount_costf(n, k):
-  ell = mp.ceil(mp.log(n,2)+1)
-  t = mp.ceil(mp.log(k,2))
-  gates = 10*n - 9*ell - t - 2
-  depth = 1 + 2*ell + 2 + mp.ceil(mp.log(ell - t - 1, 2))
+    ell = mp.ceil(mp.log(n,2)+1)
+    t = mp.ceil(mp.log(k,2))
+    gates = 10*n - 9*ell - t - 2
+    depth = 1 + 2*ell + 2 + mp.ceil(mp.log(ell - t - 1, 2))
 
-  cc = ClassicalCosts(label="popcount",
-                      gates=gates,
-                      depth=depth)
+    cc = ClassicalCosts(label="popcount",
+                        gates=gates,
+                        depth=depth)
 
-  return cc
+    return cc
 
 
 def adder_costf(i, CI=False):
@@ -255,7 +255,7 @@ def popcount_costf(L, n, k):
 
     """
     assert 0 <= k and k <= n
- 
+
     index_wires = int(mp.ceil(log2(L)))
 
     # Initialize space for |v_i>
@@ -331,14 +331,14 @@ def diffusion_costf(L):
     diffusion_dw = index_wires * diffusion_depth + 3
 
     return LogicalCosts(label="diffusion",
-                       qubits_in=index_wires,
-                       qubits_out=index_wires,
-                       gates=diffusion_gates,
-                       depth=diffusion_depth,
-                       dw=diffusion_dw,
-                       toffoli_count=0, # XXX
-                       t_count=diffusion_t_count,
-                       t_depth=diffusion_t_depth)
+                        qubits_in=index_wires,
+                        qubits_out=index_wires,
+                        gates=diffusion_gates,
+                        depth=diffusion_depth,
+                        dw=diffusion_dw,
+                        toffoli_count=0, # XXX
+                        t_count=diffusion_t_count,
+                        t_depth=diffusion_t_depth)
 
 
 def popcount_grover_iteration_costf(L, n, k):
@@ -414,19 +414,19 @@ def searchf(L, n, k):
 
 def popcounts_dominate_cost(positive_rate, metric):
   if metric in ClassicalMetrics:
-    return 1.0/positive_rate > MagicConstants.ip_div_pc
+      return 1.0/positive_rate > MagicConstants.ip_div_pc
   else:
-    # XXX: Double check that this is what we want.
-    # quantum search does sqrt(1/positive_rate) popcounts
-    # per inner product.
-    return 1.0/positive_rate > MagicConstants.ip_div_pc**2
+      # XXX: Double check that this is what we want.
+      # quantum search does sqrt(1/positive_rate) popcounts
+      # per inner product.
+      return 1.0/positive_rate > MagicConstants.ip_div_pc**2
 
 
 def all_pairs(d, n=None, k=None, epsilon=0.01, optimise=True, metric="t_count"):
     if n is None:
-      n = 1
-      while n < d:
-        n = 2*n
+        n = 1
+        while n < d:
+            n = 2*n
 
     k = k if k else int(MagicConstants.k_div_n * n)
     pr = load_probabilities(d, n, k)
@@ -434,38 +434,38 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimise=True, metric="t_count"):
     epsilon = mp.mpf(epsilon)
 
     def cost(pr):
-      L = (1+epsilon) * 2/((1-pr.eta)*C(pr.d,mp.pi/3))
-      search_calls = int(mp.ceil(2*(1+epsilon)/(1-pr.eta) * L))
-      expected_bucket_size = ((1-pr.eta)/(1+epsilon))**2 * L/2
-      if metric == "G":
-        search_cost = searchf(expected_bucket_size, pr.n, pr.k).gates
-      elif metric == "DW":
-        search_cost = searchf(expected_bucket_size, pr.n, pr.k).dw
-      elif metric == "t_count":
-        search_cost = searchf(expected_bucket_size, pr.n, pr.k).t_count
-      elif metric == "naive_quantum":
-        search_cost = mp.sqrt(expected_bucket_size)
-      elif metric == "classical":
-        search_cost = expected_bucket_size * classical_popcount_costf(pr.n, pr.k).gates
-      elif metric == "naive_classical":
-        search_cost = average_search_size
-      else:
-        raise ValueError("Unknown metric")
-      return search_calls * search_cost
+        L = (1+epsilon) * 2/((1-pr.eta)*C(pr.d,mp.pi/3))
+        search_calls = int(mp.ceil(2*(1+epsilon)/(1-pr.eta) * L))
+        expected_bucket_size = ((1-pr.eta)/(1+epsilon))**2 * L/2
+        if metric == "G":
+            search_cost = searchf(expected_bucket_size, pr.n, pr.k).gates
+        elif metric == "DW":
+            search_cost = searchf(expected_bucket_size, pr.n, pr.k).dw
+        elif metric == "t_count":
+            search_cost = searchf(expected_bucket_size, pr.n, pr.k).t_count
+        elif metric == "naive_quantum":
+            search_cost = mp.sqrt(expected_bucket_size)
+        elif metric == "classical":
+            search_cost = expected_bucket_size * classical_popcount_costf(pr.n, pr.k).gates
+        elif metric == "naive_classical":
+            search_cost = average_search_size
+        else:
+            raise ValueError("Unknown metric")
+        return search_calls * search_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
     while optimise and not popcounts_dominate_cost(positive_rate, metric):
-      pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
-      positive_rate = pf(pr.d, pr.n, pr.k)
+        pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+        positive_rate = pf(pr.d, pr.n, pr.k)
 
     return pr.d, pr.n, pr.k, log2(cost(pr)), 1/positive_rate, metric
 
 
 def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classical"):
     if n is None:
-      n = 1
-      while n < d:
-        n = 2*n
+        n = 1
+        while n < d:
+            n = 2*n
 
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else 1.2860
@@ -474,47 +474,47 @@ def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classi
     ip_cost = MagicConstants.ip_div_pc * classical_popcount_costf(pr.n, pr.k).gates
 
     def cost(pr, T1):
-      L = 2/((1-pr.eta)*C(pr.d, mp.pi/3))
-      buckets = 1.0/W(pr.d, T1, T1, mp.pi/3)
-      expected_bucket_size = L * C(pr.d, T1)
-      fill_cost = L * ip_cost
-      average_search_size = expected_bucket_size/2
-      searches_per_bucket = expected_bucket_size
-      if metric == "G":
-        search_cost = searchf(average_search_size, pr.n, pr.k).gates
-      elif metric == "DW":
-        search_cost = searchf(average_search_size, pr.n, pr.k).dw
-      elif metric == "t_count":
-        search_cost = searchf(average_search_size, pr.n, pr.k).t_count
-      elif metric == "naive_quantum":
-        search_cost = mp.sqrt(average_search_size)
-      elif metric == "classical":
-        search_cost = average_search_size * classical_popcount_costf(pr.n, pr.k).gates
-      elif metric == "naive_classical":
-        search_cost = average_search_size
-      else:
-        raise ValueError("Unknown metric")
-      return buckets * (searches_per_bucket * search_cost + fill_cost)
+        L = 2/((1-pr.eta)*C(pr.d, mp.pi/3))
+        buckets = 1.0/W(pr.d, T1, T1, mp.pi/3)
+        expected_bucket_size = L * C(pr.d, T1)
+        fill_cost = L * ip_cost
+        average_search_size = expected_bucket_size/2
+        searches_per_bucket = expected_bucket_size
+        if metric == "G":
+            search_cost = searchf(average_search_size, pr.n, pr.k).gates
+        elif metric == "DW":
+            search_cost = searchf(average_search_size, pr.n, pr.k).dw
+        elif metric == "t_count":
+            search_cost = searchf(average_search_size, pr.n, pr.k).t_count
+        elif metric == "naive_quantum":
+            search_cost = mp.sqrt(average_search_size)
+        elif metric == "classical":
+            search_cost = average_search_size * classical_popcount_costf(pr.n, pr.k).gates
+        elif metric == "naive_classical":
+            search_cost = average_search_size
+        else:
+            raise ValueError("Unknown metric")
+        return buckets * (searches_per_bucket * search_cost + fill_cost)
 
     if optimise:
-      theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
-      # XXX: positive_rate is expensive to calculate
-      positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
-      while not popcounts_dominate_cost(positive_rate, metric):
-        pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
         theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
+        # XXX: positive_rate is expensive to calculate
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
+        while not popcounts_dominate_cost(positive_rate, metric):
+            pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+            theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
+            positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
-      positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
+        positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    return pr.d, pr.n, pr.k, theta, log2(cost(pr, theta)), 1/positive_rate, metric
+    return pr.d, pr.n, pr.k, theta, log2(cost(pr, theta)), metric
 
 
 def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, metric="t_count"):
     if n is None:
-      n = 1
-      while n < d:
-        n = 2*n
+        n = 1
+        while n < d:
+            n = 2*n
 
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else mp.pi/3
@@ -523,40 +523,40 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, me
     ip_cost = MagicConstants.ip_div_pc * classical_popcount_costf(pr.n, pr.k).gates
 
     def cost(pr, T1):
-      T2 = T1 # TODO: Handle theta1 != theta2
-      L = 2/((1-pr.eta)*C(d,mp.pi/3))
-      search_calls = int(mp.ceil(L))
-      filters = 1/W(d, T1, T2, mp.pi/3)
-      populate_table_cost = L * filters * C(d,T2) * ip_cost
-      relevant_bucket_cost = filters * C(d,T1) * ip_cost
-      average_search_size = L * filters * C(d, T1) * C(d,T2) / 2
-      # TODO: Scale insert_cost and relevant_bucket_cost?
-      if metric == "G":
-        search_cost = searchf(average_search_size, pr.n, pr.k).gates
-      elif metric == "DW":
-        search_cost = searchf(average_search_size, pr.n, pr.k).dw
-      elif metric == "t_count":
-        search_cost = searchf(average_search_size, pr.n, pr.k).t_count
-      elif metric == "naive_quantum":
-        search_cost = mp.sqrt(average_search_size)
-      elif metric == "classical":
-        search_cost = average_search_size * classical_popcount_costf(pr.n, pr.k).gates
-      elif metric == "naive_classical":
-        search_cost = average_search_size
-      else:
-        raise ValueError("Unknown metric")
-      return search_calls * (search_cost + relevant_bucket_cost) + populate_table_cost
+        T2 = T1 # TODO: Handle theta1 != theta2
+        L = 2/((1-pr.eta)*C(d,mp.pi/3))
+        search_calls = int(mp.ceil(L))
+        filters = 1/W(d, T1, T2, mp.pi/3)
+        populate_table_cost = L * filters * C(d,T2) * ip_cost
+        relevant_bucket_cost = filters * C(d,T1) * ip_cost
+        average_search_size = L * filters * C(d, T1) * C(d,T2) / 2
+        # TODO: Scale insert_cost and relevant_bucket_cost?
+        if metric == "G":
+            search_cost = searchf(average_search_size, pr.n, pr.k).gates
+        elif metric == "DW":
+            search_cost = searchf(average_search_size, pr.n, pr.k).dw
+        elif metric == "t_count":
+            search_cost = searchf(average_search_size, pr.n, pr.k).t_count
+        elif metric == "naive_quantum":
+            search_cost = mp.sqrt(average_search_size)
+        elif metric == "classical":
+            search_cost = average_search_size * classical_popcount_costf(pr.n, pr.k).gates
+        elif metric == "naive_classical":
+            search_cost = average_search_size
+        else:
+            raise ValueError("Unknown metric")
+        return search_calls * (search_cost + relevant_bucket_cost) + populate_table_cost
 
     if optimise:
-      theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
-      # XXX: positive_rate is expensive to calculate
-      positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
-      while not popcounts_dominate_cost(positive_rate, metric):
-        pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
         theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
+        # XXX: positive_rate is expensive to calculate
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
+        while not popcounts_dominate_cost(positive_rate, metric):
+            pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+            theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
+            positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
-      positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
+          positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    return pr.d, pr.n, pr.k, theta, theta, log2(cost(pr, theta)), 1/positive_rate, metric
+    return pr.d, pr.n, pr.k, theta, theta, log2(cost(pr, theta)), metric
 
