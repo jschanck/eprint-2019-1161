@@ -25,7 +25,7 @@ def log2(x):
     return mp.log(x)/mp.log(2)
 
 
-def local_min(f,x,D1=2,D2=5):
+def local_min(f,x,D1=1,D2=5,LOW=None, HIGH=None):
     y = f(x)
     for k in range(D1, D2+1):
         d = 0.1**k
@@ -33,7 +33,7 @@ def local_min(f,x,D1=2,D2=5):
         if y2 > y:
             d = -d
             y2 = f(x+d)
-        while y2 < y:
+        while y2 < y and LOW < x+d and x+d < HIGH:
             y = y2
             x = x+d
             y2 = f(x+d)
@@ -419,12 +419,12 @@ def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classi
       return buckets * (searches_per_bucket * search_cost + fill_cost)
 
     if optimise:
-      theta = local_min(lambda T: cost(pr,T), theta)
+      theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
       # XXX: positive_rate is expensive to calculate
       positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
       while not popcounts_dominate_cost(positive_rate, metric):
         pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
-        theta = local_min(lambda T: cost(pr,T), theta)
+        theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
       positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
@@ -468,12 +468,12 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, me
       return search_calls * (search_cost + relevant_bucket_cost) + populate_table_cost
 
     if optimise:
-      theta = local_min(lambda T: cost(pr,T), theta)
+      theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
       # XXX: positive_rate is expensive to calculate
       positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
       while not popcounts_dominate_cost(positive_rate, metric):
         pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
-        theta = local_min(lambda T: cost(pr,T), theta)
+        theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
       positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
