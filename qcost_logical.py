@@ -274,8 +274,7 @@ def diffusion_costf(L, n, k):
                        dw=diffusion_dw,
                        toffoli_count=0,
                        t_count=diffusion_t_count,
-                       t_depth=diffusion_t_depth,
-                       t_width=diffusion_t_count/diffusion_t_depth)
+                       t_depth=diffusion_t_depth)
 
 
 def oracle_costf(L, n, k):
