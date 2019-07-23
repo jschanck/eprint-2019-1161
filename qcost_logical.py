@@ -16,6 +16,7 @@ from probabilities_estimates import W, C, pf
 LogicalCosts = namedtuple("LogicalCosts",
                           ("label",
                            "qubits_in", "qubits_out",
+                           "qubits_max", # not sure if this is useful
                            "depth", "gates", "dw",
                            "toffoli_count",
                            "t_count", "t_depth"))
@@ -51,7 +52,7 @@ def local_min(f,x,D1=1,D2=5,LOW=None, HIGH=None):
 def null_costf(qubits_in=0, qubits_out=0):
     # XXX: This gets used for initialisation/measurement. Should we charge gates / depth for those?
     return LogicalCosts(label="null",
-                        qubits_in=qubits_in, qubits_out=qubits_out,
+                        qubits_in=qubits_in, qubits_out=qubits_out, qubits_max=max(qubits_in, qubits_out),
                         gates=0, depth=0, dw=0,
                         toffoli_count=0, t_count=0, t_depth=0)
 
@@ -59,6 +60,7 @@ def delay(cost, depth, label="_"):
     return LogicalCosts(label=label,
                         qubits_in=cost.qubits_in,
                         qubits_out=cost.qubits_out,
+                        qubits_max=cost.qubits_max,
                         gates=cost.gates,
                         depth=cost.depth+depth,
                         dw=cost.dw + cost.qubits_out*depth,
@@ -70,6 +72,7 @@ def reverse(cost):
     return LogicalCosts(label=cost.label,
                         qubits_in=cost.qubits_out,
                         qubits_out=cost.qubits_in,
+                        qubits_max=cost.qubits_max,
                         gates=cost.gates,
                         depth=cost.depth,
                         dw=cost.dw,
@@ -83,6 +86,7 @@ def compose_k_sequential(cost, times, label="_"):
     return LogicalCosts(label=label,
                         qubits_in=cost.qubits_in,
                         qubits_out=cost.qubits_out,
+                        qubits_max=cost.qubits_max,
                         gates=cost.gates*times,
                         depth=cost.depth*times,
                         dw=cost.dw*times,
@@ -95,6 +99,7 @@ def compose_k_parallel(cost, times, label="_"):
     return LogicalCosts(label=label,
                         qubits_in=times * cost.qubits_in,
                         qubits_out=times * cost.qubits_out,
+                        qubits_max=times * cost.qubits_max,
                         gates=times * cost.gates,
                         depth=cost.depth,
                         dw=times * cost.dw,
@@ -108,9 +113,11 @@ def compose_sequential(cost1, cost2, label="_"):
     dw = cost1.dw + cost2.dw
     if cost1.qubits_out > cost2.qubits_in:
         dw += (cost1.qubits_out - cost2.qubits_in) * cost2.depth
+    qubits_out = cost1.qubits_out - cost2.qubits_in + cost2.qubits_out
     return LogicalCosts(label=label,
                         qubits_in=cost1.qubits_in,
-                        qubits_out=cost1.qubits_out - cost2.qubits_in + cost2.qubits_out,
+                        qubits_out=qubits_out,
+                        qubits_max=max(cost1.qubits_max, cost2.qubits_max, qubits_out),
                         gates=cost1.gates + cost2.gates,
                         depth=cost1.depth + cost2.depth,
                         dw=dw,
@@ -129,6 +136,7 @@ def compose_parallel(cost1, cost2, label="_"):
     return LogicalCosts(label=label,
                       qubits_in=cost1.qubits_in + cost2.qubits_in,
                       qubits_out=cost1.qubits_out + cost2.qubits_out,
+                      qubits_max=cost1.qubits_max + cost2.qubits_max,
                       gates=cost1.gates + cost2.gates,
                       depth=max(cost1.depth, cost2.depth),
                       dw=dw,
@@ -170,6 +178,7 @@ def adder_costf(i, CI=False):
     return LogicalCosts(label=str(i)+"-bit adder",
                         qubits_in=adder_qubits_in,
                         qubits_out=adder_qubits_out,
+                        qubits_max=adder_qubits_out,
                         gates=adder_gates,
                         depth=adder_depth,
                         dw=adder_qubits_in * adder_depth,
@@ -206,7 +215,7 @@ def hamming_wt_costf(n):
         qc = compose_parallel(hamming_wt_costf(2**b-1), hamming_wt_costf(n-(2**b-1)))
         adder = adder_costf(b)
         if adder.qubits_in > qc.qubits_out:
-          qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=adder.qubits_out))
+            qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=adder.qubits_out))
         qc = compose_sequential(qc, adder) # XXX: We could feed a bit to the carry input here.
 
     qc = compose_parallel(qc, null_costf(), label=str(n)+"-bit hamming weight")
@@ -235,14 +244,15 @@ def carry_costf(m, c=None):
     # XXX: Ignoring cost of initialising/discarding |-> for phase kickback
 
     return LogicalCosts(label="carry",
-                      qubits_in=m,
-                      qubits_out=m,
-                      gates=carry_gates,
-                      depth=carry_depth,
-                      dw=carry_dw,
-                      toffoli_count=carry_toffoli_count,
-                      t_count=carry_t_count,
-                      t_depth=carry_t_count)
+                        qubits_in=m,
+                        qubits_out=m,
+                        qubits_max=m,
+                        gates=carry_gates,
+                        depth=carry_depth,
+                        dw=carry_dw,
+                        toffoli_count=carry_toffoli_count,
+                        t_count=carry_t_count,
+                        t_depth=carry_t_count)
 
 
 def popcount_costf(L, n, k):
@@ -333,6 +343,7 @@ def diffusion_costf(L):
     return LogicalCosts(label="diffusion",
                         qubits_in=index_wires,
                         qubits_out=index_wires,
+                        qubits_max=index_wires,
                         gates=diffusion_gates,
                         depth=diffusion_depth,
                         dw=diffusion_dw,
