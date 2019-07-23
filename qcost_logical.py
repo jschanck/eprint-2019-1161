@@ -156,18 +156,22 @@ def hamming_wt_costf(n):
     :param n: number of bits in v
 
     """
-    qc = null_costf()
     b = int(mp.floor(log2(n)))
-    n = n - 2**b
-    for i in range(1, b + 1):
-        if n > 0: # Feed some bits to carry inputs
-          L = compose_parallel(
-                compose_k_parallel(adder_costf(i, CI=True),            min(n, 2**(b-i))),
-                compose_k_parallel(adder_costf(i),          2**(b-i) - min(n, 2**(b-i))))
-          n = n - min(n, 2**(b-i))
-        else:
-          L = compose_k_parallel(adder_costf(i), 2**(b-i))
-        qc = compose_sequential(qc, L)
+    if n == 1:
+        qc = null_costf()
+    elif n == 2:
+        qc = adder_costf(1)
+    elif bin(n+1).count('1') == 1:
+        # n = 2**(b+1) - 1.
+        # We can use every input bit of adder tree, including carry inputs.
+        qc = null_costf()
+        for i in range(1, b + 1):
+            L = compose_k_parallel(adder_costf(i, CI=True), 2**(b-i))
+            qc = compose_sequential(qc, L)
+    else:
+        # Decompose n into a sum of terms of the form 2**i - 1
+        qc = compose_parallel(hamming_wt_costf(2**b-1), hamming_wt_costf(n-(2**b-1)))
+        qc = compose_sequential(qc, adder_costf(b))
     qc = compose_sequential(qc, null_costf(), label=str(n)+"-bit hamming weight")
     return qc
 
