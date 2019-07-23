@@ -299,10 +299,10 @@ def popcount_costf(L, n, k):
 
 def diffusion_costf(L):
     """
-    Logical cost of the diffusion operator D S_0 D^-1
+    Logical cost of the diffusion operator D R_0 D^-1
     where
       D samples the uniform distribution on {1,...,L}
-      S_0 is the unitary I - 2|0><0|
+      R_0 is the unitary I - 2|0><0|
 
     :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
@@ -341,19 +341,20 @@ def diffusion_costf(L):
                        t_depth=diffusion_t_depth)
 
 
-def oracle_costf(L, n, k):
+def popcount_grover_iteration_costf(L, n, k):
     """
-    Logical cost of G(popcount) = (D S_0 D^-1) S_popcount
+    Logical cost of G(popcount) = (D R_0 D^-1) R_popcount
     where
-      D samples the uniform distribution on a set of size L
-      S_0 is the unitary I - 2|0><0|
-      S_popcount maps |v> to (-1)^{popcount(u,v)}|v> for some fixed u
+      D samples the uniform distribution on {1,...,L}
+      (D R_0 D^-1) is the diffusion operator.
+      R_popcount maps |i> to (-1)^{popcount(u,v_i)}|i> for some fixed u
 
     :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
     """
+
     popcount_cost = popcount_costf(L, n, k)
     diffusion_cost = diffusion_costf(L)
 
@@ -363,41 +364,52 @@ def oracle_costf(L, n, k):
 def searchf(L, n, k):
     """
     Logical cost of popcount filtered search that succeeds w.h.p.
-      G(G(pc)^i D, ip)^j =
-        ((G(pc)^i D) S_0 (G(pc)^i D)^-1 S_ip)^j G(pc)^i D
     where i and j are chosen so that ij ~ sqrt(L) * search_amplification_factor
-    We only cost G(pc)^ij and G(pc)^-ij.
     This is within a factor of 2 as long as the cost of S_ip < G(pc)^i
+
+    The search routine takes two integer parameters m1 and m2.
+    We pick a random number i in {0, ..., m1-1} and another j in {0, ..., m2-1}.
+    We then apply the unitary
+      G(G(pc)^i D, ip)^j =
+        ((G(pc)^i D) R_0 (G(pc)^i D)^-1 R_ip)^j G(pc)^i D
+    (Although here we only cost G(pc)^ij and G(pc)^-ij.)
+
+    Let P be the number of popcount positives.
+    The routine uses an expected m1/2 iterations of G(pc) for the sampling
+    routine in amplitude amplification. AA calls the sampling routine twice, so we
+    use an expected m1 popcount oracles per AA iteration.
+    Since we don't know P exactly, we're going to leave some probability mass
+    on popcount negatives. We have to account for that in the AA step.
+
+    Assume m1 > pi/4 * sqrt(L/P). Then the probability mass assigned to popcount
+    positives after G(pc)^i is at least 1/filter_amplification_factor^2. Suppose
+    m2 > pi/4 * filter_amplification_factor * sqrt(P).
+    Then we expect to succeed with probability (at least)
+        1/2 * 1/filter_repetition_factor
+    after an expected
+        m2 / 2
+    AA iterations.
+    So we succeed with probability ~ 1 after 2*filter_repetition_factor repetitions.
+
+    We assume the best case for the adversary,
+        m1=pi/4*sqrt(L/P) and m2=pi/4*filter_amplification_factor*sqrt(P).
+    The total number of popcount oracle calls is
+        (pi/4)^2 * filter_amplification_factor * filter_repetition_factor * sqrt(L).
+    This is about 2 * sqrt(L).
 
     :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
     """
-    oracle_cost = oracle_costf(L, n, k)
+    qc = popcount_grover_iteration_costf(L, n, k)
 
-    # The search routine takes two integer parameters m1 and m2.
-    # We pick a random number in {0, ..., m1-1} and another in {0, ..., m2-1}.
-    # We use an expected m1/2 iterations of the popcount oracle for the sampling
-    # routine in amplitude amplification. Hence an expected m1 popcount oracles per
-    # AA iteration. Assuming m1 > pi/4 * sqrt(L/P), where P is the number of popcount
-    # positives. Since we don't know P exactly, we're going to leave some probability mass
-    # on popcount negatives. We have to account for that in the AA step. We do an expected
-    #     m2 * filter_amplification_factor / 2 AA iterations.
-    # If we assume m2 = pi/4 * sqrt(P)
-    # then the whole thing succeeds with probability 1/2 * 1/filter_repetition factor.
-    # So in we'll repeat 2*filter_repetition factor times.
-    # We do m1*m2 total oracle calls.
-    # Assume best case for adversary, m1=pi/4 * sqrt(L/P) and m2=pi/4*sqrt(P) then
-    # this is (pi/4)^2 * filter_amplification_factor * filter_repetition_factor * sqrt(L)
-    # popcount oracle calls. This is about 2 * sqrt(L) popcount oracle calls.
+    count  = mp.sqrt(L)
+    count *= (mp.pi/4)*(mp.pi/4)
+    count *= MagicConstants.filter_amplification_factor
+    count *= MagicConstants.filter_repetition_factor
 
-    oracle_calls  = mp.sqrt(L)
-    oracle_calls *= mp.pi*mp.pi/16
-    oracle_calls *= MagicConstants.filter_amplification_factor
-    oracle_calls *= MagicConstants.filter_repetition_factor
-
-    return compose_k_sequential(oracle_cost, oracle_calls, label="search")
+    return compose_k_sequential(qc, count, label="search")
 
 
 def popcounts_dominate_cost(positive_rate, metric):
