@@ -37,10 +37,10 @@ def local_min(f,x,D1=1,D2=5,LOW=None, HIGH=None):
     y = f(x)
     for k in range(D1, D2+1):
         d = 0.1**k
-        y2 = f(x+d)
+        y2 = f(x+d) if x+d < HIGH else f(HIGH)
         if y2 > y:
             d = -d
-            y2 = f(x+d)
+            y2 = f(x+d) if x+d > LOW else f(LOW)
         while y2 < y and LOW < x+d and x+d < HIGH:
             y = y2
             x = x+d
