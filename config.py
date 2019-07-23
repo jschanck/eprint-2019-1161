@@ -26,7 +26,7 @@ class MagicConstants:
     pocount test.
     """
 
-    ip_div_pc = 1000
+    ip_div_pc = 100
 
     """
     In a filtered quantum search we nest 'Grover search with an unknown
