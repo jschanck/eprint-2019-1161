@@ -208,27 +208,25 @@ def hamming_wt_costf(n):
     :param n: number of bits in v
 
     """
-    b = int(mp.floor(log2(n)))
     if n == 1:
-        qc = null_costf(qubits_in=1, qubits_out=1)
-    elif n == 2:
-        qc = adder_costf(1)
-    elif bin(n+1).count('1') == 1:
-        # n = 2**(b+1) - 1.
-        # We can use every input bit of adder tree, including carry inputs.
-        qc = null_costf(qubits_in=n,qubits_out=n)
+        return null_costf(qubits_in=n, qubits_out=n)
+
+    b = int(mp.floor(log2(n)))
+    qc = null_costf(qubits_in=n,qubits_out=n)
+    if bin(n+1).count('1') == 1:
+        # When n = 2**(b+1) - 1 the adder tree is "packed". We can use every input
+        # bit including carry inputs.
         for i in range(1, b + 1):
             L = compose_k_parallel(adder_costf(i, CI=True), 2**(b-i))
-            if L.qubits_in > qc.qubits_out:
-                qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=L.qubits_in))
             qc = compose_sequential(qc, L)
     else:
-        # Decompose n into a sum of terms of the form 2**i - 1
-        qc = compose_parallel(hamming_wt_costf(2**b-1), hamming_wt_costf(n-(2**b-1)))
-        adder = adder_costf(b)
-        if adder.qubits_in > qc.qubits_out:
-            qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=adder.qubits_out))
-        qc = compose_sequential(qc, adder) # XXX: We could feed a bit to the carry input here.
+        # Decompose into packed adder trees joined by adders.
+        # Use one adder tree on (2**b - 1) bits and one on max(1, n - 2**b) bits.
+        # Reserve one bit for carry input of adder (unless n = 2**b).
+        qc = compose_sequential(qc,
+                compose_parallel(hamming_wt_costf(2**b-1),
+                                 hamming_wt_costf(max(1, n-2**b))))
+        qc = compose_sequential(qc, adder_costf(b, CI=(n-2**b !=0)))
 
     qc = compose_parallel(qc, null_costf(), label=str(n)+"-bit hamming weight")
     return qc
