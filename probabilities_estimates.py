@@ -136,14 +136,13 @@ def binomial(n, i):
         return mp.binomial(n, i)
 
 
-def P(n, k, theta, nmk=False, prec=None):
+def P(n, k, theta, prec=None):
     """
     Probability that two vectors with angle θ pass a popcount filter
 
     :param n: number of popcount vectors
     :param k: number of popcount tests required to pass
     :param theta: angle in radians
-    :param nmk: consider also hamming weight n-k
 
     """
     prec = prec if prec else mp.prec
@@ -153,9 +152,11 @@ def P(n, k, theta, nmk=False, prec=None):
         # r = 0
         # for i in range(k):
         #     r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
-        r = mp.betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi), regularized=True)
-        if nmk:
-            r = min(2*r, mp.mpf(1.0))
+        # r = mp.betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi), regularized=True)
+        # XXX: This routine uses obscene precision
+        def _betainc(a,b,x2):
+          return x2**a * mp.hyp2f1(a, 1-b, a+1, x2, maxprec=2**14) / a / mp.beta(a,b)
+        r = _betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi))
         return r
 
 
