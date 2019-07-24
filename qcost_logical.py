@@ -12,13 +12,12 @@ from probabilities_estimates import W, C, pf
 #       "gates" does not include identity gates
 #       "depth" is longest path from input to output (including identity gates)
 #       "dw" is not necessarily depth*qubits
-# XXX:  "toffoli_count" is not very useful. Remove it?
 LogicalCosts = namedtuple("LogicalCosts",
                           ("label",
                            "qubits_in", "qubits_out",
                            "qubits_max", # not sure if this is useful
                            "depth", "gates", "dw",
-                           "toffoli_count",
+                           "toffoli_count", # not sure if this is useful
                            "t_count", "t_depth"))
 
 PhysicalCosts = namedtuple("PhysicalCosts", ("label", "physical_qubits", "surface_code_cycles")) # What else?
@@ -52,18 +51,26 @@ def local_min(f,x,D1=1,D2=5,LOW=None, HIGH=None):
 def null_costf(qubits_in=0, qubits_out=0):
     # XXX: This gets used for initialisation/measurement. Should we charge gates / depth for those?
     return LogicalCosts(label="null",
-                        qubits_in=qubits_in, qubits_out=qubits_out, qubits_max=max(qubits_in, qubits_out),
-                        gates=0, depth=0, dw=0,
-                        toffoli_count=0, t_count=0, t_depth=0)
+                        qubits_in=qubits_in,
+                        qubits_out=qubits_out,
+                        qubits_max=max(qubits_in, qubits_out),
+                        gates=0,
+                        depth=0,
+                        dw=0,
+                        toffoli_count=0,
+                        t_count=0,
+                        t_depth=0)
 
 def delay(cost, depth, label="_"):
+    # delay only affects the dw cost
+    dw = cost.dw + cost.qubits_out*depth
     return LogicalCosts(label=label,
                         qubits_in=cost.qubits_in,
                         qubits_out=cost.qubits_out,
                         qubits_max=cost.qubits_max,
                         gates=cost.gates,
                         depth=cost.depth+depth,
-                        dw=cost.dw + cost.qubits_out*depth,
+                        dw=dw,
                         toffoli_count=cost.toffoli_count,
                         t_count=cost.t_count,
                         t_depth=cost.t_depth)
@@ -81,8 +88,9 @@ def reverse(cost):
                         t_depth=cost.t_depth)
 
 def compose_k_sequential(cost, times, label="_"):
-    if times == 0: return null_costf()
+    # Ensure that sequential composition makes sense
     assert cost.qubits_in == cost.qubits_out
+
     return LogicalCosts(label=label,
                         qubits_in=cost.qubits_in,
                         qubits_out=cost.qubits_out,
@@ -95,7 +103,6 @@ def compose_k_sequential(cost, times, label="_"):
                         t_depth=cost.t_depth*times)
 
 def compose_k_parallel(cost, times, label="_"):
-    if times == 0: return null_costf()
     return LogicalCosts(label=label,
                         qubits_in=times * cost.qubits_in,
                         qubits_out=times * cost.qubits_out,
@@ -108,16 +115,20 @@ def compose_k_parallel(cost, times, label="_"):
                         t_depth=cost.t_depth)
 
 def compose_sequential(cost1, cost2, label="_"):
+    # Ensure that sequential composition makes sense
     assert cost1.qubits_out >= cost2.qubits_in
+
     # Pad unused wires with identity gates
     dw = cost1.dw + cost2.dw
     if cost1.qubits_out > cost2.qubits_in:
         dw += (cost1.qubits_out - cost2.qubits_in) * cost2.depth
     qubits_out = cost1.qubits_out - cost2.qubits_in + cost2.qubits_out
+    qubits_max = max(cost1.qubits_max, cost2.qubits_max, qubits_out)
+
     return LogicalCosts(label=label,
                         qubits_in=cost1.qubits_in,
                         qubits_out=qubits_out,
-                        qubits_max=max(cost1.qubits_max, cost2.qubits_max, qubits_out),
+                        qubits_max=qubits_max,
                         gates=cost1.gates + cost2.gates,
                         depth=cost1.depth + cost2.depth,
                         dw=dw,
@@ -130,9 +141,10 @@ def compose_parallel(cost1, cost2, label="_"):
     # Pad wires from shallower circuit with identity gates
     dw = cost1.dw + cost2.dw
     if cost1.depth >= cost2.depth:
-      dw += (cost1.depth - cost2.depth) * cost2.qubits_out
+        dw += (cost1.depth - cost2.depth) * cost2.qubits_out
     else:
-      dw += (cost2.depth - cost1.depth) * cost1.qubits_out
+        dw += (cost2.depth - cost1.depth) * cost1.qubits_out
+
     return LogicalCosts(label=label,
                       qubits_in=cost1.qubits_in + cost2.qubits_in,
                       qubits_out=cost1.qubits_out + cost2.qubits_out,
@@ -164,11 +176,10 @@ def adder_costf(i, CI=False):
     Logical cost of i bit adder (Cuccaro et al). With Carry Input if CI=True
 
     """
-    # XXX: Check this!
     adder_cnots = 6 if i == 1 else (5*i+1 if CI else 5*i-3)
     adder_depth = 7 if i == 1 else (2*i+6 if CI else 2*i+4)
-    adder_nots = 2*i-2 if CI else 2*i-4
-    adder_tofs = 2*i-1
+    adder_nots  = 0 if i == 1 else (2*i-2 if CI else 2*i-4)
+    adder_tofs  = 2*i-1
     adder_qubits_in = 2*i+1 if CI else 2*i
     adder_qubits_out = 2*i+2 if CI else 2*i+1
     adder_qubits_max = 2*i+2
@@ -209,7 +220,7 @@ def hamming_wt_costf(n):
         for i in range(1, b + 1):
             L = compose_k_parallel(adder_costf(i, CI=True), 2**(b-i))
             if L.qubits_in > qc.qubits_out:
-              qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=L.qubits_in))
+                qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=L.qubits_in))
             qc = compose_sequential(qc, L)
     else:
         # Decompose n into a sum of terms of the form 2**i - 1
@@ -281,13 +292,13 @@ def popcount_costf(L, n, k):
     qc = delay(qc, 1)
 
     # Use tree of adders compute hamming weight
-    #     |i>|u^v_i>|0>     ->    |u^v_i>|wt(u^v_i)>
+    #     |i>|u^v_i>|0>     ->    |i>|u^v_i>|wt(u^v_i)>
     hamming_wt = hamming_wt_costf(n)
     qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=index_wires+hamming_wt.qubits_in))
     qc = compose_sequential(qc, hamming_wt)
 
     # Compute the high bit of (2^ceil(log(n)) - k) + hamming_wt
-    #     |i>|v_i>|wt(u^v_i)>   ->     (-1)^popcnt(u,v_i) |u^v_i>|wt(u^v_i)>
+    #     |i>|v_i>|wt(u^v_i)>   ->     (-1)^popcnt(u,v_i) |i>|u^v_i>|wt(u^v_i)>
     qc = compose_sequential(qc, carry_costf(int(mp.ceil(log2(n))), k))
 
     # Uncompute hamming weight.
@@ -302,6 +313,8 @@ def popcount_costf(L, n, k):
     qc = delay(qc, 1)
 
     # Discard ancilla
+    # (-1)^popcnt(u,v_i) |i>|0>|0>   ->    (-1)^popcnt(u,v_i) |i>
+
     qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=index_wires))
 
     qc = compose_parallel(qc, null_costf(), label="popcount"+str((n,k)))
@@ -375,9 +388,7 @@ def popcount_grover_iteration_costf(L, n, k):
 
 def searchf(L, n, k):
     """
-    Logical cost of popcount filtered search that succeeds w.h.p.
-    where i and j are chosen so that ij ~ sqrt(L) * search_amplification_factor
-    This is within a factor of 2 as long as the cost of S_ip < G(pc)^i
+    Logical cost of popcount filtered search that succeeds with high probability
 
     The search routine takes two integer parameters m1 and m2.
     We pick a random number i in {0, ..., m1-1} and another j in {0, ..., m2-1}.
