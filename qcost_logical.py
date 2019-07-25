@@ -239,6 +239,7 @@ def carry_costf(m):
     Numbers here are for "high bit only" circuit from Cuccaro et al
     """
     assert m >= 2 # TODO: handle m=1
+
     carry_cnots = 4*m-3
     carry_depth = 2*m+3
     carry_nots  = 0
@@ -317,6 +318,57 @@ def popcount_costf(L, n, k):
     return qc
 
 
+def n_toffoli_costf(n, have_ancilla=False):
+    """
+    Logical cost of toffoli with n-1 controls.
+
+    Table I of Maslov arXiv:1508.03273v2
+    (Source = "Ours", Optimization goal = "T/CNOT")
+    """
+
+    # XXX: This needs to be reviewed.
+
+    assert n >= 3
+
+    if n >= 5 and not have_ancilla:
+      # Use Barenco et al (1995) Lemma 7.3 split into two smaller Toffoli gates.
+      n1 = int(mp.ceil((n-1)/2.0)) + 1
+      n2 = n - n1 + 1
+      return compose_sequential(
+                compose_parallel(null_costf(qubits_in=n-n1, qubits_out=n-n1), n_toffoli_costf(n1, True)),
+                compose_parallel(null_costf(qubits_in=n-n2, qubits_out=n-n2), n_toffoli_costf(n2, True)))
+
+    if n == 3: # Normal toffoli gate
+      n_tof_t_count = MagicConstants.AMMR12_tof_t_count
+      n_tof_t_depth = MagicConstants.AMMR12_tof_t_depth
+      n_tof_gates   = MagicConstants.AMMR12_tof_gates
+      n_tof_depth   = MagicConstants.AMMR12_tof_depth
+      n_tof_dw      = n_tof_depth * (n+1)
+    elif n == 4:
+      n_tof_t_count = 16
+      n_tof_t_depth = 16
+      n_tof_gates   = 36
+      n_tof_depth   = 36 # Maslov Eq. (5), Figure 3 (dashed), Eq. (3) (dashed).
+      n_tof_dw      = n_tof_depth * (n+1)
+    elif n >= 5:
+      n_tof_t_count = 8*n-16
+      n_tof_t_depth = 8*n-16
+      n_tof_gates   = (8*n-16) + (8*n-20) + (4*n-10)
+      n_tof_depth   = (8*n-16) + (8*n-20) + (4*n-10) # XXX
+      n_tof_dw      = n_tof_depth * (n+1)
+
+    n_tof_qubits_max = n if have_ancilla else n+1
+
+    return LogicalCosts(label=str(n)+"-toffoli",
+                        qubits_in=n,
+                        qubits_out=n,
+                        qubits_max=n_tof_qubits_max,
+                        gates=n_tof_gates,
+                        depth=n_tof_depth,
+                        dw=n_tof_dw,
+                        toffoli_count=0,
+                        t_count=n_tof_t_count,
+                        t_depth=n_tof_t_depth)
 
 def diffusion_costf(L):
     """
@@ -332,35 +384,20 @@ def diffusion_costf(L):
     """
     index_wires = int(mp.ceil(log2(L)))
 
-    # a l-controlled NOT takes (32l - 84)T
-    # the diffusion operator in our circuit is index_wires-controlled NOT
-    # TODO: magic constants
-    diffusion_t_count = 32 * index_wires - 84
+    H = LogicalCosts(label="H", qubits_in=1, qubits_out=1, qubits_max=1,
+                     gates=1, depth=1, dw=1,
+                     toffoli_count=0, t_count=0, t_depth=0)
+    Hn = compose_k_parallel(H, index_wires)
 
-    # Include hadamards on index wires to prepare uniform superposition
-    # Ignore the cost of qRAM.
-    diffusion_gates = diffusion_t_count + 2*index_wires
+    anc = null_costf(qubits_in=index_wires, qubits_out=index_wires+1)
 
-    # We currently make an assumption (favourable to a sieving adversary) that the T gates in the
-    # diffusion operator are all sequential and therefore bring down the average T gates required
-    # per T depth.
-    # XXX: Not clear that this is optimal.
-    diffusion_t_depth = diffusion_t_count
-    diffusion_depth = diffusion_t_depth + 2
+    qc = compose_sequential(Hn, anc)
+    qc = compose_sequential(qc, n_toffoli_costf(index_wires+1))
+    qc = compose_sequential(qc, reverse(anc))
+    qc = compose_sequential(qc, Hn)
 
-    # +3 for one ancilla initialized in |->, targetted with cnot, then discarded
-    diffusion_dw = index_wires * diffusion_depth + 3
-
-    return LogicalCosts(label="diffusion",
-                        qubits_in=index_wires,
-                        qubits_out=index_wires,
-                        qubits_max=index_wires+1,
-                        gates=diffusion_gates,
-                        depth=diffusion_depth,
-                        dw=diffusion_dw,
-                        toffoli_count=0, # XXX
-                        t_count=diffusion_t_count,
-                        t_depth=diffusion_t_depth)
+    qc = compose_parallel(qc, null_costf(), label="diffusion")
+    return qc
 
 
 def popcount_grover_iteration_costf(L, n, k):

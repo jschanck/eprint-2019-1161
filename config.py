@@ -15,6 +15,11 @@ class MagicConstants:
     t_depth_div_toffoli = 3
     gates_div_toffoli = 17 # 7 T, 7 CNOT, 2 H, 1 S
 
+    AMMR12_tof_t_count = 7
+    AMMR12_tof_t_depth = 3
+    AMMR12_tof_gates   = 17
+    AMMR12_tof_depth   = 10
+
     """
     We will accept a list size growth by this factor.
     """
