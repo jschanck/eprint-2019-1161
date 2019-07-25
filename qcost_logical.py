@@ -123,7 +123,7 @@ def compose_sequential(cost1, cost2, label="_"):
     if cost1.qubits_out > cost2.qubits_in:
         dw += (cost1.qubits_out - cost2.qubits_in) * cost2.depth
     qubits_out = cost1.qubits_out - cost2.qubits_in + cost2.qubits_out
-    qubits_max = max(cost1.qubits_max, cost2.qubits_max, qubits_out)
+    qubits_max = max(cost1.qubits_max, cost1.qubits_out - cost2.qubits_in + cost2.qubits_max)
 
     return LogicalCosts(label=label,
                         qubits_in=cost1.qubits_in,
