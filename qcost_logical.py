@@ -230,37 +230,37 @@ def hamming_wt_costf(n):
     return qc
 
 
-def carry_costf(m, c=None):
+def carry_costf(m):
     """
     Logical cost of mapping |x> to (-1)^{(x+c)_m}|x> where
     (x+c)_m is the m-th bit (zero indexed) of x+c for an
     arbitrary m bit constant c.
 
-    Numbers here are for CARRY circuit from Häner--Roetteler--Svore arXiv:1611.07995
+    Numbers here are for "high bit only" circuit from Cuccaro et al
     """
-    # XXX: Might be cheaper to use "high bit only" variant of Cuccaro,
-    # depending on optimisation metric.
-
-    carry_qubits = m # XXX: assumes that there are m "dirty" ancilla available
-    carry_toffoli_count = 4*(m-2) + 2
-    carry_t_count = MagicConstants.t_div_toffoli * carry_toffoli_count
-    carry_gates = MagicConstants.gates_div_toffoli * carry_toffoli_count # cnots
-    carry_gates += 2 + 4*bin(int(2**m-c)).count('1')
-    carry_depth = 3*carry_t_count # XXX
-    carry_dw = carry_depth * (m+1) # XXX
-
-    # XXX: Ignoring cost of initialising/discarding |-> for phase kickback
+    assert m >= 2 # TODO: handle m=1
+    carry_cnots = 4*m-3
+    carry_depth = 2*m+3
+    carry_nots  = 0
+    carry_tofs  = 2*m-1
+    carry_qubits_in = m
+    carry_qubits_out = m
+    carry_qubits_max = 2*m+1
+    carry_dw = carry_qubits_max * carry_depth
+    carry_t_depth = carry_tofs * MagicConstants.t_depth_div_toffoli
+    carry_t_count = carry_tofs * MagicConstants.t_div_toffoli
+    carry_gates = carry_cnots + carry_nots + carry_tofs * MagicConstants.gates_div_toffoli
 
     return LogicalCosts(label="carry",
-                        qubits_in=m,
-                        qubits_out=m,
-                        qubits_max=m+1,
+                        qubits_in=carry_qubits_in,
+                        qubits_out=carry_qubits_out,
+                        qubits_max=carry_qubits_max,
                         gates=carry_gates,
                         depth=carry_depth,
                         dw=carry_dw,
-                        toffoli_count=carry_toffoli_count,
+                        toffoli_count=carry_tofs,
                         t_count=carry_t_count,
-                        t_depth=carry_t_count)
+                        t_depth=carry_t_depth)
 
 
 def popcount_costf(L, n, k):
@@ -295,7 +295,7 @@ def popcount_costf(L, n, k):
 
     # Compute the high bit of (2^ceil(log(n)) - k) + hamming_wt
     #     |i>|v_i>|wt(u^v_i)>   ->     (-1)^popcnt(u,v_i) |i>|u^v_i>|wt(u^v_i)>
-    qc = compose_sequential(qc, carry_costf(int(mp.ceil(log2(n))), k))
+    qc = compose_sequential(qc, carry_costf(int(mp.ceil(log2(n)))))
 
     # Uncompute hamming weight.
     qc = compose_sequential(qc, reverse(hamming_wt))
@@ -315,6 +315,7 @@ def popcount_costf(L, n, k):
 
     qc = compose_parallel(qc, null_costf(), label="popcount"+str((n,k)))
     return qc
+
 
 
 def diffusion_costf(L):
