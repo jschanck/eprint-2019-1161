@@ -626,14 +626,14 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else 1.2860
     pr = load_probabilities(d, n, k)
-    # TODO: ip_cost is pretty arbitrary here, replace by popcount cost
-    ip_cost = MagicConstants.ip_div_pc * classical_popcount_costf(pr.n, pr.k).gates
+    # NOTE: We assume checking whether a vector belongs in a bucket costs a popcount call
+    fill_cost_per_call = classical_popcount_costf(pr.n, pr.k).gates
 
     def cost(pr, T1):
         L = 2/((1-pr.eta)*C(pr.d, mp.pi/3))
         buckets = 1.0/W(pr.d, T1, T1, mp.pi/3)
         expected_bucket_size = L * C(pr.d, T1)
-        fill_cost = L * ip_cost
+        fill_cost = L * fill_cost_per_call
         average_search_size = expected_bucket_size/2
         searches_per_bucket = expected_bucket_size
         if metric == "G":
@@ -654,7 +654,6 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
-        # NOTE: positive_rate is expensive to calculate
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, metric):
             pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
@@ -695,16 +694,16 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else mp.pi/3
     pr = load_probabilities(d, n, k)
-    # TODO: ip_cost is pretty arbitrary here
-    ip_cost = MagicConstants.ip_div_pc * classical_popcount_costf(pr.n, pr.k).gates
+    # NOTE: We assume checking whether a vector belongs in a bucket costs a popcount call
+    fill_cost_per_call = classical_popcount_costf(pr.n, pr.k).gates
 
     def cost(pr, T1):
         T2 = T1  # TODO: Handle theta1 != theta2
         L = 2/((1-pr.eta)*C(d, mp.pi/3))
         search_calls = int(mp.ceil(L))
         filters = 1/W(d, T1, T2, mp.pi/3)
-        populate_table_cost = L * filters * C(d, T2) * ip_cost
-        relevant_bucket_cost = filters * C(d, T1) * ip_cost
+        populate_table_cost = L * filters * C(d, T2) * fill_cost_per_call
+        relevant_bucket_cost = filters * C(d, T1) * fill_cost_per_call
         average_search_size = L * filters * C(d, T1) * C(d, T2) / 2
         # TODO: Scale insert_cost and relevant_bucket_cost?
         if metric == "G":
