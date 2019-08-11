@@ -154,7 +154,7 @@ def sanity_check_probabilities(probs):
 
 
 def load_probabilities(d, n, k, beta=None, compute=False, sanity_check=False):
-    probs = load_bundle(d, n)[(d, n, k, beta)]
+    probs = load_bundle(d, n, compute=compute)[(d, n, k, beta)]
     if sanity_check:
         sanity_check_probabilities(probs)
     return probs
