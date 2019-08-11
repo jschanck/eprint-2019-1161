@@ -608,6 +608,15 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
 
 def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
     """
+    Nearest Neighbor Search using random buckets as in BGJ1.
+
+    :param d: search in \(S^{d-1}\)
+    :param n: number of entries in popcount filter
+    :param k: we accept if two vectors agree on ≤ k
+    :param theta1: bucket angle
+    :param optimize: optimize `n`
+    :param metric: target metric
+
     """
     if n is None:
         n = 1
@@ -654,10 +663,30 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    return pr.d, pr.n, pr.k, theta, log2(cost(pr, theta)), metric
+    Results = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta" "log_cost", "pf_inv", "metric"))
+    return Results(d=pr.d,
+                   n=pr.n,
+                   k=pr.k,
+                   theta=float(theta),
+                   log_cost=float(log2(cost(pr))),
+                   pf_inv=int(round(1/positive_rate)),
+                   metric=metric)
 
 
 def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="DW"):
+    """
+    Nearest Neighbor Search via a decodable buckets as in BDGL16.
+
+    :param d: search in \(S^{d-1}\)
+    :param n: number of entries in popcount filter
+    :param k: we accept if two vectors agree on ≤ k
+    :param theta1: filter creation angle
+    :param theta2: filter query angle
+    :param optimize: optimize `n`
+    :param metric: target metric
+
+    """
+
     if n is None:
         n = 1
         while n < d:
@@ -666,7 +695,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else mp.pi/3
     pr = load_probabilities(d, n, k)
-    # XXX: ip_cost is pretty arbitrary here
+    # TODO: ip_cost is pretty arbitrary here
     ip_cost = MagicConstants.ip_div_pc * classical_popcount_costf(pr.n, pr.k).gates
 
     def cost(pr, T1):
@@ -696,7 +725,6 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
-        # NOTE: positive_rate is expensive to calculate
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, metric):
             pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
@@ -705,4 +733,12 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    return pr.d, pr.n, pr.k, theta, theta, log2(cost(pr, theta)), metric
+    Results = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1" "theta2", "log_cost", "pf_inv", "metric"))
+    return Results(d=pr.d,
+                   n=pr.n,
+                   k=pr.k,
+                   theta1=float(theta),
+                   theta2=float(theta),
+                   log_cost=float(log2(cost(pr))),
+                   pf_inv=int(round(1/positive_rate)),
+                   metric=metric)
