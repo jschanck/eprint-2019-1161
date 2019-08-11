@@ -1,31 +1,75 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Quantum Sieving Cost on Logical Layer.
+"""
+
 from mpmath import mp
 from collections import namedtuple
 from utils import load_probabilities
 from config import MagicConstants
 from probabilities_estimates import W, C, pf
 
+"""
+Logical Quantum Costs
 
-# NOTE: "qubits_in" is the number of input qubits.
-#       "qubits_out" is the number of output qubits.
-#       "gates" does not include identity gates
-#       "depth" is longest path from input to output (including identity gates)
-#       "dw" is not necessarily depth*qubits
+:param label: arbitrary label
+:param qubits_in: number of input qubits
+:param qubits_out: number of output qubits
+:param qubits_max:
+:param depth: longest path from input to output (including identity gates)
+:param gates: gates except identity gates
+:param dw: not necessarily depth*qubits
+:param toffoli_count:
+:param t_count:
+:param t_depth:
+
+"""
+
+# TODO: document
+
 LogicalCosts = namedtuple("LogicalCosts",
                           ("label",
-                           "qubits_in", "qubits_out",
-                           "qubits_max", # not sure if this is useful
-                           "depth", "gates", "dw",
-                           "toffoli_count", # not sure if this is useful
-                           "t_count", "t_depth"))
+                           "qubits_in",
+                           "qubits_out",
+                           "qubits_max",  # NOTE : not sure if this is useful
+                           "depth",
+                           "gates",
+                           "dw",
+                           "toffoli_count",  # NOTE: not sure if this is useful
+                           "t_count",
+                           "t_depth"))
 
-PhysicalCosts = namedtuple("PhysicalCosts", ("label", "physical_qubits", "surface_code_cycles")) # What else?
+# NOTE: unused
+# PhysicalCosts = namedtuple("PhysicalCosts", ("label", "physical_qubits", "surface_code_cycles")) # What else?
 
-ClassicalCosts = namedtuple("ClassicalCosts", ("label", "gates", "depth")) # What else?
+"""
+Classic Costs
 
-ClassicalMetrics = {"classical", "naive_classical"}
-QuantumMetrics = {"G", "DW", "t_count", "naive_quantum"}
+:param label: arbitrary label
+:param gates: number of gates
+:param depth: longest path from input to output
+
+"""
+
+ClassicalCosts = namedtuple("ClassicalCosts",
+                            ("label",
+                             "gates",
+                             "depth"))
+
+"""
+Metrics
+"""
+
+ClassicalMetrics = {"classical",
+                    "naive_classical"}
+
+QuantumMetrics = {"G",   # gate count
+                  "DW",  # depth × width
+                  "t_count",  # number of T-gates
+                  "naive_quantum"  # TODO: document
+                  }
+
 Metrics = ClassicalMetrics | QuantumMetrics
 
 
@@ -49,7 +93,11 @@ def local_min(f,x,D1=1,D2=5,LOW=None, HIGH=None):
 
 
 def null_costf(qubits_in=0, qubits_out=0):
-    # XXX: This gets used for initialisation/measurement. Should we charge gates / depth for those?
+    """
+    Cost of initialization/measurement.
+    """
+    # TODO: Should we charge gates / depth for those?
+
     return LogicalCosts(label="null",
                         qubits_in=qubits_in,
                         qubits_out=qubits_out,
@@ -60,6 +108,7 @@ def null_costf(qubits_in=0, qubits_out=0):
                         toffoli_count=0,
                         t_count=0,
                         t_depth=0)
+
 
 def delay(cost, depth, label="_"):
     # delay only affects the dw cost
@@ -75,6 +124,7 @@ def delay(cost, depth, label="_"):
                         t_count=cost.t_count,
                         t_depth=cost.t_depth)
 
+
 def reverse(cost):
     return LogicalCosts(label=cost.label,
                         qubits_in=cost.qubits_out,
@@ -86,6 +136,7 @@ def reverse(cost):
                         toffoli_count=cost.toffoli_count,
                         t_count=cost.t_count,
                         t_depth=cost.t_depth)
+
 
 def compose_k_sequential(cost, times, label="_"):
     # Ensure that sequential composition makes sense
@@ -102,6 +153,7 @@ def compose_k_sequential(cost, times, label="_"):
                         t_count=cost.t_count*times,
                         t_depth=cost.t_depth*times)
 
+
 def compose_k_parallel(cost, times, label="_"):
     return LogicalCosts(label=label,
                         qubits_in=times * cost.qubits_in,
@@ -113,6 +165,7 @@ def compose_k_parallel(cost, times, label="_"):
                         toffoli_count=times * cost.toffoli_count,
                         t_count=times * cost.t_count,
                         t_depth=cost.t_depth)
+
 
 def compose_sequential(cost1, cost2, label="_"):
     # Ensure that sequential composition makes sense
@@ -146,21 +199,20 @@ def compose_parallel(cost1, cost2, label="_"):
         dw += (cost2.depth - cost1.depth) * cost1.qubits_out
 
     return LogicalCosts(label=label,
-                      qubits_in=cost1.qubits_in + cost2.qubits_in,
-                      qubits_out=cost1.qubits_out + cost2.qubits_out,
-                      qubits_max=cost1.qubits_max + cost2.qubits_max,
-                      gates=cost1.gates + cost2.gates,
-                      depth=max(cost1.depth, cost2.depth),
-                      dw=dw,
-                      toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
-                      t_count=cost1.t_count + cost2.t_count,
-                      t_depth=max(cost1.t_depth, cost2.t_depth))
-
+                        qubits_in=cost1.qubits_in + cost2.qubits_in,
+                        qubits_out=cost1.qubits_out + cost2.qubits_out,
+                        qubits_max=cost1.qubits_max + cost2.qubits_max,
+                        gates=cost1.gates + cost2.gates,
+                        depth=max(cost1.depth, cost2.depth),
+                        dw=dw,
+                        toffoli_count=cost1.toffoli_count + cost2.toffoli_count,
+                        t_count=cost1.t_count + cost2.t_count,
+                        t_depth=max(cost1.t_depth, cost2.t_depth))
 
 
 def classical_popcount_costf(n, k):
-    ell = mp.ceil(mp.log(n,2)+1)
-    t = mp.ceil(mp.log(k,2))
+    ell = mp.ceil(mp.log(n, 2)+1)
+    t = mp.ceil(mp.log(k, 2))
     gates = 10*n - 9*ell - t - 2
     depth = 1 + 2*ell + 2 + mp.ceil(mp.log(ell - t - 1, 2))
 
@@ -171,17 +223,17 @@ def classical_popcount_costf(n, k):
     return cc
 
 
-def adder_costf(i, CI=False):
+def adder_costf(i, ci=False):
     """
-    Logical cost of i bit adder (Cuccaro et al). With Carry Input if CI=True
+    Logical cost of i bit adder (Cuccaro et al). With Carry Input if ci=True
 
     """
-    adder_cnots = 6 if i == 1 else (5*i+1 if CI else 5*i-3)
-    adder_depth = 7 if i == 1 else (2*i+6 if CI else 2*i+4)
-    adder_nots  = 0 if i == 1 else (2*i-2 if CI else 2*i-4)
+    adder_cnots = 6 if i == 1 else (5*i+1 if ci else 5*i-3)
+    adder_depth = 7 if i == 1 else (2*i+6 if ci else 2*i+4)
+    adder_nots  = 0 if i == 1 else (2*i-2 if ci else 2*i-4)
     adder_tofs  = 2*i-1
-    adder_qubits_in = 2*i+1 if CI else 2*i
-    adder_qubits_out = 2*i+2 if CI else 2*i+1
+    adder_qubits_in = 2*i+1 if ci else 2*i
+    adder_qubits_out = 2*i+2 if ci else 2*i+1
     adder_qubits_max = 2*i+2
     adder_t_depth = adder_tofs * MagicConstants.t_depth_div_toffoli
     adder_t_count = adder_tofs * MagicConstants.t_div_toffoli
@@ -202,19 +254,20 @@ def adder_costf(i, CI=False):
 def hamming_wt_costf(n):
     """
     Logical cost of mapping |v>|0> to |v>|H(v)>.
-    (The adder tree uses in-place addition, so some of the bits of |v> overlap |H(v)>
-    and there are ancilla as well.)
+
+    ..  note :: The adder tree uses in-place addition, so some of the bits of |v> overlap |H(v)> and
+    there are ancilla as well.
 
     :param n: number of bits in v
 
     """
     b = int(mp.floor(log2(n)))
-    qc = null_costf(qubits_in=n,qubits_out=n)
+    qc = null_costf(qubits_in=n, qubits_out=n)
     if bin(n+1).count('1') == 1:
-        # When n = 2**(b+1) - 1 the adder tree is "packed". We can use every input
-        # bit including carry inputs.
+        # When n = 2**(b+1) - 1 the adder tree is "packed". We can use every input bit including
+        # carry inputs.
         for i in range(1, b + 1):
-            L = compose_k_parallel(adder_costf(i, CI=True), 2**(b-i))
+            L = compose_k_parallel(adder_costf(i, ci=True), 2**(b-i))
             qc = compose_sequential(qc, L)
     else:
         # Decompose into packed adder trees joined by adders.
@@ -222,9 +275,9 @@ def hamming_wt_costf(n):
         # Reserve one bit for carry input of adder (unless n = 2**b).
         carry_in = (n != 2**b)
         qc = compose_sequential(qc,
-                compose_parallel(hamming_wt_costf(2**b-1),
-                                 hamming_wt_costf(max(1, n-2**b))))
-        qc = compose_sequential(qc, adder_costf(b, CI=carry_in))
+                                compose_parallel(hamming_wt_costf(2**b-1),
+                                                 hamming_wt_costf(max(1, n-2**b))))
+        qc = compose_sequential(qc, adder_costf(b, ci=carry_in))
 
     qc = compose_parallel(qc, null_costf(), label=str(n)+"-bit hamming weight")
     return qc
@@ -232,13 +285,13 @@ def hamming_wt_costf(n):
 
 def carry_costf(m):
     """
-    Logical cost of mapping |x> to (-1)^{(x+c)_m}|x> where
-    (x+c)_m is the m-th bit (zero indexed) of x+c for an
-    arbitrary m bit constant c.
+    Logical cost of mapping |x> to (-1)^{(x+c)_m}|x> where (x+c)_m is the m-th bit (zero indexed) of
+    x+c for an arbitrary m bit constant c.
 
-    Numbers here are for "high bit only" circuit from Cuccaro et al
+    ..  note :: Numbers here are for "high bit only" circuit from Cuccaro et al
     """
-    assert m >= 2 # TODO: handle m=1
+    if m < 2:
+        raise NotImplementedError("Case m==1 not implemented.")
 
     carry_cnots = 4*m-3
     carry_depth = 2*m+3
@@ -281,11 +334,11 @@ def popcount_costf(L, n, k):
     qc = null_costf(qubits_in=index_wires, qubits_out=n+index_wires)
 
     # Query table index i
-    # XXX: We're skipping a qRAM call here.
+    # NOTE: We're skipping a qRAM call here.
     qc = delay(qc, 1)
 
     # XOR in the fixed sketch "u"
-    # XXX: We're skipping ~ n NOT gates for mapping |v> to |u^v>
+    # NOTE: We're skipping ~ n NOT gates for mapping |v> to |u^v>
     qc = delay(qc, 1)
 
     # Use tree of adders compute hamming weight
@@ -302,11 +355,11 @@ def popcount_costf(L, n, k):
     qc = compose_sequential(qc, reverse(hamming_wt))
 
     # Uncompute XOR
-    # XXX: We're skipping ~ n NOT gates for mapping |u^v> to |v>
+    # NOTE: We're skipping ~ n NOT gates for mapping |u^v> to |v>
     qc = delay(qc, 1)
 
     # Uncompute table entry
-    # XXX: We're skipping a qRAM call here.
+    # NOTE: We're skipping a qRAM call here.
     qc = delay(qc, 1)
 
     # Discard ancilla
@@ -314,7 +367,8 @@ def popcount_costf(L, n, k):
 
     qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=index_wires))
 
-    qc = compose_parallel(qc, null_costf(), label="popcount"+str((n,k)))
+    qc = compose_parallel(qc, null_costf(), label="popcount"+str((n, k)))
+
     return qc
 
 
@@ -322,40 +376,39 @@ def n_toffoli_costf(n, have_ancilla=False):
     """
     Logical cost of toffoli with n-1 controls.
 
-    Table I of Maslov arXiv:1508.03273v2
-    (Source = "Ours", Optimization goal = "T/CNOT")
+    ..  note :: Table I of Maslov arXiv:1508.03273v2 (Source = "Ours", Optimization goal = "T/CNOT")
     """
 
-    # XXX: This needs to be reviewed.
+    # TODO: This needs to be reviewed.
 
     assert n >= 3
 
     if n >= 5 and not have_ancilla:
-      # Use Barenco et al (1995) Lemma 7.3 split into two smaller Toffoli gates.
-      n1 = int(mp.ceil((n-1)/2.0)) + 1
-      n2 = n - n1 + 1
-      return compose_sequential(
-                compose_parallel(null_costf(qubits_in=n-n1, qubits_out=n-n1), n_toffoli_costf(n1, True)),
-                compose_parallel(null_costf(qubits_in=n-n2, qubits_out=n-n2), n_toffoli_costf(n2, True)))
+        # Use Barenco et al (1995) Lemma 7.3 split into two smaller Toffoli gates.
+        n1 = int(mp.ceil((n-1)/2.0)) + 1
+        n2 = n - n1 + 1
+        return compose_sequential(
+            compose_parallel(null_costf(qubits_in=n-n1, qubits_out=n-n1), n_toffoli_costf(n1, True)),
+            compose_parallel(null_costf(qubits_in=n-n2, qubits_out=n-n2), n_toffoli_costf(n2, True)))
 
-    if n == 3: # Normal toffoli gate
-      n_tof_t_count = MagicConstants.AMMR12_tof_t_count
-      n_tof_t_depth = MagicConstants.AMMR12_tof_t_depth
-      n_tof_gates   = MagicConstants.AMMR12_tof_gates
-      n_tof_depth   = MagicConstants.AMMR12_tof_depth
-      n_tof_dw      = n_tof_depth * (n+1)
+    if n == 3:  # Normal toffoli gate
+        n_tof_t_count = MagicConstants.AMMR12_tof_t_count
+        n_tof_t_depth = MagicConstants.AMMR12_tof_t_depth
+        n_tof_gates   = MagicConstants.AMMR12_tof_gates
+        n_tof_depth   = MagicConstants.AMMR12_tof_depth
+        n_tof_dw      = n_tof_depth * (n+1)
     elif n == 4:
-      n_tof_t_count = 16
-      n_tof_t_depth = 16
-      n_tof_gates   = 36
-      n_tof_depth   = 36 # Maslov Eq. (5), Figure 3 (dashed), Eq. (3) (dashed).
-      n_tof_dw      = n_tof_depth * (n+1)
+        n_tof_t_count = 16
+        n_tof_t_depth = 16
+        n_tof_gates   = 36
+        n_tof_depth   = 36  # Maslov Eq. (5), Figure 3 (dashed), Eq. (3) (dashed).
+        n_tof_dw      = n_tof_depth * (n+1)
     elif n >= 5:
-      n_tof_t_count = 8*n-16
-      n_tof_t_depth = 8*n-16
-      n_tof_gates   = (8*n-16) + (8*n-20) + (4*n-10)
-      n_tof_depth   = (8*n-16) + (8*n-20) + (4*n-10) # XXX
-      n_tof_dw      = n_tof_depth * (n+1)
+        n_tof_t_count = 8*n-16
+        n_tof_t_depth = 8*n-16
+        n_tof_gates   = (8*n-16) + (8*n-20) + (4*n-10)
+        n_tof_depth   = (8*n-16) + (8*n-20) + (4*n-10)  # TODO: check
+        n_tof_dw      = n_tof_depth * (n+1)
 
     n_tof_qubits_max = n if have_ancilla else n+1
 
@@ -370,14 +423,14 @@ def n_toffoli_costf(n, have_ancilla=False):
                         t_count=n_tof_t_count,
                         t_depth=n_tof_t_depth)
 
+
 def diffusion_costf(L):
     """
     Logical cost of the diffusion operator D R_0 D^-1
-    where
-      D samples the uniform distribution on {1,...,L}
-      R_0 is the unitary I - 2|0><0|
 
-    :param L: length of the list, i.e. |L|
+    where D samples the uniform distribution on {1,...,L} R_0 is the unitary I - 2|0><0|
+
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
@@ -402,13 +455,12 @@ def diffusion_costf(L):
 
 def popcount_grover_iteration_costf(L, n, k):
     """
-    Logical cost of G(popcount) = (D R_0 D^-1) R_popcount
-    where
-      D samples the uniform distribution on {1,...,L}
-      (D R_0 D^-1) is the diffusion operator.
-      R_popcount maps |i> to (-1)^{popcount(u,v_i)}|i> for some fixed u
+    Logical cost of G(popcount) = (D R_0 D^-1) R_popcount.
 
-    :param L: length of the list, i.e. |L|
+    where D samples the uniform distribution on {1,...,L} (D R_0 D^-1) is the diffusion operator.
+    R_popcount maps |i> to (-1)^{popcount(u,v_i)}|i> for some fixed u
+
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
@@ -422,7 +474,7 @@ def popcount_grover_iteration_costf(L, n, k):
 
 def searchf(L, n, k):
     """
-    Logical cost of popcount filtered search that succeeds with high probability
+    Logical cost of popcount filtered search that succeeds with high probability.
 
     The search routine takes two integer parameters m1 and m2.
     We pick a random number i in {0, ..., m1-1} and another j in {0, ..., m2-1}.
@@ -432,6 +484,7 @@ def searchf(L, n, k):
     (Although here we only cost G(pc)^ij and G(pc)^-ij.)
 
     Let P be the number of popcount positives.
+
     The routine uses an expected m1/2 iterations of G(pc) for the sampling
     routine in amplitude amplification. AA calls the sampling routine twice, so we
     use an expected m1 popcount oracles per AA iteration.
@@ -446,6 +499,7 @@ def searchf(L, n, k):
     after an expected
         m2 / 2
     AA iterations.
+
     So we succeed with probability ~ 1 after 2*filter_repetition_factor repetitions.
 
     We assume the best case for the adversary,
@@ -470,22 +524,21 @@ def searchf(L, n, k):
 
 
 def popcounts_dominate_cost(positive_rate, metric):
-  if metric in ClassicalMetrics:
-      return 1.0/positive_rate > MagicConstants.ip_div_pc
-  else:
-      # XXX: Double check that this is what we want.
-      # quantum search does sqrt(1/positive_rate) popcounts
-      # per inner product.
-      return 1.0/positive_rate > MagicConstants.ip_div_pc**2
+    if metric in ClassicalMetrics:
+        return 1.0/positive_rate > MagicConstants.ip_div_pc
+    else:
+        # TODO: Double check that this is what we want. Quantum search does sqrt(1/positive_rate)
+        # popcounts per inner product.
+        return 1.0/positive_rate > MagicConstants.ip_div_pc**2
 
 
-def all_pairs(d, n=None, k=None, epsilon=0.01, optimise=True, metric="t_count"):
+def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="t_count"):
     if n is None:
         n = 1
         while n < d:
             n = 2*n
-
     k = k if k else int(MagicConstants.k_div_n * n)
+
     pr = load_probabilities(d, n, k)
 
     epsilon = mp.mpf(epsilon)
@@ -511,7 +564,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimise=True, metric="t_count"):
         return search_calls * search_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
-    while optimise and not popcounts_dominate_cost(positive_rate, metric):
+    while optimize and not popcounts_dominate_cost(positive_rate, metric):
         pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
         positive_rate = pf(pr.d, pr.n, pr.k)
 
