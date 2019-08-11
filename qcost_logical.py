@@ -558,7 +558,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="t_count"):
         elif metric == "classical":
             search_cost = expected_bucket_size * classical_popcount_costf(pr.n, pr.k).gates
         elif metric == "naive_classical":
-            search_cost = average_search_size
+            search_cost = expected_bucket_size
         else:
             raise ValueError("Unknown metric")
         return search_calls * search_cost
