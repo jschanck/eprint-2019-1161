@@ -668,7 +668,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
                    n=pr.n,
                    k=pr.k,
                    theta=float(theta),
-                   log_cost=float(log2(cost(pr))),
+                   log_cost=float(log2(cost(pr, theta))),
                    pf_inv=int(round(1/positive_rate)),
                    metric=metric)
 
@@ -733,12 +733,12 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    Results = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1" "theta2", "log_cost", "pf_inv", "metric"))
+    Results = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric"))
     return Results(d=pr.d,
                    n=pr.n,
                    k=pr.k,
                    theta1=float(theta),
                    theta2=float(theta),
-                   log_cost=float(log2(cost(pr))),
+                   log_cost=float(log2(cost(pr, theta))),
                    pf_inv=int(round(1/positive_rate)),
                    metric=metric)

@@ -141,6 +141,7 @@ def binomial(n, i):
         return mp.binomial(n, i)
 
 
+@memoize
 def P(n, k, theta, prec=None):
     """
     Probability that two vectors with angle θ pass a popcount filter
