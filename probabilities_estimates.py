@@ -162,7 +162,9 @@ def P(n, k, theta, prec=None):
         # NOTE: This routine uses obscene precision
 
         def _betainc(a, b, x2):
-            return x2**a * mp.hyp2f1(a, 1-b, a+1, x2, maxprec=2**14) / a / mp.beta(a, b)
+            return x2**a * mp.hyp2f1(a, 1-b, a+1, x2,
+                                     maxprec=2**mp.ceil(2*mp.log(n, 2)),
+                                     maxterms=2**mp.ceil(mp.log(n, 2))) / a / mp.beta(a, b)
         r = _betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi))
         return r
 
