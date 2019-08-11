@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+Estimating relevant probabilities.
 
+To run doctests, run: ``PYTHONPATH=`pwd` sage -t probabilities_estimates.py``
+
+"""
 from mpmath import mp
 
 from collections import namedtuple
@@ -153,9 +158,10 @@ def P(n, k, theta, prec=None):
         # for i in range(k):
         #     r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
         # r = mp.betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi), regularized=True)
-        # XXX: This routine uses obscene precision
-        def _betainc(a,b,x2):
-          return x2**a * mp.hyp2f1(a, 1-b, a+1, x2, maxprec=2**14) / a / mp.beta(a,b)
+        # NOTE: This routine uses obscene precision
+
+        def _betainc(a, b, x2):
+            return x2**a * mp.hyp2f1(a, 1-b, a+1, x2, maxprec=2**14) / a / mp.beta(a, b)
         r = _betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi))
         return r
 
@@ -168,7 +174,7 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
     We start with Pr[P_{k,n}]::
 
         sage: pf(80, 128, 40)
-        mpf('0.00031063713572376084')
+        mpf('0.00031063713572376122')
 
         sage: pf(80, 128, 128)
         mpf('1.0000000000000002')
@@ -176,15 +182,14 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
     Pr[P_{k,n} ∧ ¬G]::
 
         sage: pf(80, 128, 40, ub=mp.pi/3)
-        mpf('3.3598092589552721e-7')
-
+        mpf('3.3598092589552732e-7')
 
     Pr[¬G]::
 
         sage: pf(80, 128, 128, ub=mp.pi/3)
         mpf('1.0042233739846644e-6')
 
-        sage: pf_ngr(80, 128, 128)
+        sage: ngr_pf(80, 128, 128)
         mpf('1.0042233739846644e-6')
 
         sage: ngr(80)
@@ -193,14 +198,14 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
     Pr[Pr_{k,n} ∧ G]::
 
         sage: pf(80, 128, 40, lb=mp.pi/3)
-        mpf('0.00031030115479786579')
+        mpf('0.00031030115479786595')
 
     Pr[G]::
 
         sage: pf(80, 128, 128, lb=mp.pi/3)
         mpf('0.99999899577662632')
 
-        sage: pf_gr(80, 128, 128)
+        sage: gr_pf(80, 128, 128)
         mpf('0.99999899577662632')
 
         sage: gr(80)
@@ -209,18 +214,18 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
     Pr[P_{k,n} | C(w,β)]::
 
         sage: pf(80, 128, 40, beta=mp.pi/3)
-        mpf('0.019786655048072227')
+        mpf('0.019786655048072234')
 
     Pr[P_{k,n}  ∧ ¬G | C(w,β)]::
 
         sage: pf(80, 128, 40, beta=mp.pi/3, ub=mp.pi/3)
-        mpf('0.00077177364924089641')
+        mpf('0.00077177364924089652')
 
     Pr[¬G | C(w,β)]::
 
         sage: pf(80, 128, 128, beta=mp.pi/3, ub=mp.pi/3)
         mpf('0.0021964683579090904')
-        sage: pf_ngr(80, 128, 128, beta=mp.pi/3)
+        sage: ngr_pf(80, 128, 128, beta=mp.pi/3)
         mpf('0.0021964683579090904')
         sage: ngr(80, beta=mp.pi/3)
         mpf('0.0021964683579090904')
@@ -228,16 +233,16 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
     Pr[Pr_{k,n} ∧ G | C(w,β)]::
 
         sage: pf(80, 128, 40, beta=mp.pi/3, lb=mp.pi/3)
-        mpf('0.019014953591444492')
+        mpf('0.019014953591444488')
 
-        sage: pf_gr(80, 128, 40, beta=mp.pi/3)
-        mpf('0.019014953591444492')
+        sage: gr_pf(80, 128, 40, beta=mp.pi/3)
+        mpf('0.019014953591444488')
 
     Pr[G | C(w,β)]::
 
         sage: pf(80, 128, 128, beta=mp.pi/3, lb=mp.pi/3)
         mpf('0.99780353164285229')
-        sage: pf_gr(80, 128, 128, beta=mp.pi/3)
+        sage: gr_pf(80, 128, 128, beta=mp.pi/3)
         mpf('0.99780353164285229')
         sage: gr(80, beta=mp.pi/3)
         mpf('0.9978035316420909')
@@ -344,6 +349,7 @@ def probabilities(d, n, k, beta=None, prec=None):
                               beta=beta, prec=prec)
         return probs
 
+
 def fast_probabilities(d, n, k, beta=None, prec=None):
     """
     Useful probabilities.
@@ -355,6 +361,8 @@ def fast_probabilities(d, n, k, beta=None, prec=None):
     :param prec: compute with this precision
 
     """
+    # NOTE: This function is unused.
+
     prec = prec if prec else mp.prec
 
     with mp.workprec(prec):
