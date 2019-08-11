@@ -11,6 +11,10 @@ from config import MagicConstants
 from probabilities_estimates import W, C, pf
 
 """
+COSTS
+"""
+
+"""
 Logical Quantum Costs
 
 :param label: arbitrary label
@@ -25,8 +29,6 @@ Logical Quantum Costs
 :param t_depth:
 
 """
-
-# TODO: document
 
 LogicalCosts = namedtuple("LogicalCosts",
                           ("label",
@@ -58,7 +60,7 @@ ClassicalCosts = namedtuple("ClassicalCosts",
                              "depth"))
 
 """
-Metrics
+METRICS
 """
 
 ClassicalMetrics = {"classical",
@@ -77,15 +79,31 @@ def log2(x):
     return mp.log(x)/mp.log(2)
 
 
-def local_min(f,x,D1=1,D2=5,LOW=None, HIGH=None):
+def local_min(f, x, d1=1, d2=5, low=None, high=None):
+    """
+    Search the neighborhood around ``f(x)`` for a local minimum between ``low`` and ``high``.
+
+    ..  note :: We could replace this function with a call to ``scipy.optimize.fminbound``.
+    However, this doesn't seem to be faster.  Also, ``f(x)`` is not necessarily defined on all of
+    `[low … high]`, raising an ``AssertionError`` which would need to be caught by a wrapper around
+    ``f``.
+
+    :param f: function to call
+    :param x: initial guess for ``x`` minimizing ``f(x)``
+    :param d1: We move in steps of size `0.1^{d1}` … 0.1^{d2}`, starting with ``d1``
+    :param d2: We move in steps of size `0.1^{d1}` … 0.1^{d2}`, finishing at ``d2``
+    :param low: lower bound on input space
+    :param high: upper bound on input space
+
+    """
     y = f(x)
-    for k in range(D1, D2+1):
+    for k in range(d1, d2+1):
         d = 0.1**k
-        y2 = f(x+d) if x+d < HIGH else f(HIGH)
+        y2 = f(x+d) if x+d < high else f(high)
         if y2 > y:
             d = -d
-            y2 = f(x+d) if x+d > LOW else f(LOW)
-        while y2 < y and LOW < x+d and x+d < HIGH:
+            y2 = f(x+d) if x+d > low else f(low)
+        while y2 < y and low < x+d and x+d < high:
             y = y2
             x = x+d
             y2 = f(x+d)
@@ -532,7 +550,18 @@ def popcounts_dominate_cost(positive_rate, metric):
         return 1.0/positive_rate > MagicConstants.ip_div_pc**2
 
 
-def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="t_count"):
+def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
+    """
+    Nearest Neighbor Search via a quadratic search over all pairs.
+
+    :param d: search in \(S^{d-1}\)
+    :param n: number of entries in popcount filter
+    :param k: we accept if two vectors agree on ≤ k
+    :param epsilon: consider lists of size `(1+ϵ)kC_d(θ)`
+    :param optimize: optimize `n`
+    :param metric: target metric
+
+    """
     if n is None:
         n = 1
         while n < d:
@@ -544,7 +573,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="t_count"):
     epsilon = mp.mpf(epsilon)
 
     def cost(pr):
-        L = (1+epsilon) * 2/((1-pr.eta)*C(pr.d,mp.pi/3))
+        L = (1+epsilon) * 2/((1-pr.eta)*C(pr.d, mp.pi/3))
         search_calls = int(mp.ceil(2*(1+epsilon)/(1-pr.eta) * L))
         expected_bucket_size = ((1-pr.eta)/(1+epsilon))**2 * L/2
         if metric == "G":
@@ -560,7 +589,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="t_count"):
         elif metric == "naive_classical":
             search_cost = expected_bucket_size
         else:
-            raise ValueError("Unknown metric")
+            raise ValueError("Unknown metric '%s'"%metric)
         return search_calls * search_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
@@ -568,10 +597,18 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="t_count"):
         pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
         positive_rate = pf(pr.d, pr.n, pr.k)
 
-    return pr.d, pr.n, pr.k, log2(cost(pr)), 1/positive_rate, metric
+    Results = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
+    return Results(d=pr.d,
+                   n=pr.n,
+                   k=pr.k,
+                   log_cost=float(log2(cost(pr))),
+                   pf_inv=int(round(1/positive_rate)),
+                   metric=metric)
 
 
-def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classical"):
+def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
+    """
+    """
     if n is None:
         n = 1
         while n < d:
@@ -580,7 +617,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classi
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else 1.2860
     pr = load_probabilities(d, n, k)
-    # XXX: ip_cost is pretty arbitrary here
+    # TODO: ip_cost is pretty arbitrary here, replace by popcount cost
     ip_cost = MagicConstants.ip_div_pc * classical_popcount_costf(pr.n, pr.k).gates
 
     def cost(pr, T1):
@@ -606,13 +643,13 @@ def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classi
             raise ValueError("Unknown metric")
         return buckets * (searches_per_bucket * search_cost + fill_cost)
 
-    if optimise:
-        theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
-        # XXX: positive_rate is expensive to calculate
+    if optimize:
+        theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
+        # NOTE: positive_rate is expensive to calculate
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, metric):
             pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
-            theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
+            theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
@@ -620,7 +657,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimise=True, metric="classi
     return pr.d, pr.n, pr.k, theta, log2(cost(pr, theta)), metric
 
 
-def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, metric="t_count"):
+def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="DW"):
     if n is None:
         n = 1
         while n < d:
@@ -633,13 +670,13 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, me
     ip_cost = MagicConstants.ip_div_pc * classical_popcount_costf(pr.n, pr.k).gates
 
     def cost(pr, T1):
-        T2 = T1 # TODO: Handle theta1 != theta2
-        L = 2/((1-pr.eta)*C(d,mp.pi/3))
+        T2 = T1  # TODO: Handle theta1 != theta2
+        L = 2/((1-pr.eta)*C(d, mp.pi/3))
         search_calls = int(mp.ceil(L))
         filters = 1/W(d, T1, T2, mp.pi/3)
-        populate_table_cost = L * filters * C(d,T2) * ip_cost
-        relevant_bucket_cost = filters * C(d,T1) * ip_cost
-        average_search_size = L * filters * C(d, T1) * C(d,T2) / 2
+        populate_table_cost = L * filters * C(d, T2) * ip_cost
+        relevant_bucket_cost = filters * C(d, T1) * ip_cost
+        average_search_size = L * filters * C(d, T1) * C(d, T2) / 2
         # TODO: Scale insert_cost and relevant_bucket_cost?
         if metric == "G":
             search_cost = searchf(average_search_size, pr.n, pr.k).gates
@@ -657,16 +694,15 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimise=True, me
             raise ValueError("Unknown metric")
         return search_calls * (search_cost + relevant_bucket_cost) + populate_table_cost
 
-    if optimise:
-        theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
-        # XXX: positive_rate is expensive to calculate
+    if optimize:
+        theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
+        # NOTE: positive_rate is expensive to calculate
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, metric):
             pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
-            theta = local_min(lambda T: cost(pr,T), theta, LOW=mp.pi/6, HIGH=mp.pi/2)
+            theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
-          positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
+        positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
     return pr.d, pr.n, pr.k, theta, theta, log2(cost(pr, theta)), metric
-
