@@ -550,6 +550,9 @@ def popcounts_dominate_cost(positive_rate, metric):
         return 1.0/positive_rate > MagicConstants.ip_div_pc**2
 
 
+AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
+
+
 def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
     """
     Nearest Neighbor Search via a quadratic search over all pairs.
@@ -597,13 +600,15 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
         pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
         positive_rate = pf(pr.d, pr.n, pr.k)
 
-    Results = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
-    return Results(d=pr.d,
-                   n=pr.n,
-                   k=pr.k,
-                   log_cost=float(log2(cost(pr))),
-                   pf_inv=int(round(1/positive_rate)),
-                   metric=metric)
+    return AllPairsResult(d=pr.d,
+                          n=pr.n,
+                          k=pr.k,
+                          log_cost=float(log2(cost(pr))),
+                          pf_inv=int(round(1/positive_rate)),
+                          metric=metric)
+
+
+RandomBucketResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta" "log_cost", "pf_inv", "metric"))
 
 
 def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
@@ -662,14 +667,16 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    Results = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta" "log_cost", "pf_inv", "metric"))
-    return Results(d=pr.d,
-                   n=pr.n,
-                   k=pr.k,
-                   theta=float(theta),
-                   log_cost=float(log2(cost(pr, theta))),
-                   pf_inv=int(round(1/positive_rate)),
-                   metric=metric)
+    return RandomBucketResult(d=pr.d,
+                              n=pr.n,
+                              k=pr.k,
+                              theta=float(theta),
+                              log_cost=float(log2(cost(pr, theta))),
+                              pf_inv=int(round(1/positive_rate)),
+                              metric=metric)
+
+
+TableBucketResult = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric"))
 
 
 def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="DW"):
@@ -732,12 +739,11 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    Results = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric"))
-    return Results(d=pr.d,
-                   n=pr.n,
-                   k=pr.k,
-                   theta1=float(theta),
-                   theta2=float(theta),
-                   log_cost=float(log2(cost(pr, theta))),
-                   pf_inv=int(round(1/positive_rate)),
-                   metric=metric)
+    return TableBucketResult(d=pr.d,
+                             n=pr.n,
+                             k=pr.k,
+                             theta1=float(theta),
+                             theta2=float(theta),
+                             log_cost=float(log2(cost(pr, theta))),
+                             pf_inv=int(round(1/positive_rate)),
+                             metric=metric)

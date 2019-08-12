@@ -5,6 +5,7 @@ from probabilities_estimates import probabilities, Probabilities
 from config import MagicConstants
 
 import os
+import csv
 import cPickle
 
 
@@ -160,21 +161,52 @@ def load_probabilities(d, n, k, beta=None, compute=False, sanity_check=False):
     return probs
 
 
-def stats(d, n, k, beta=None, prec=None):
-    """
-    Useful quantites.
+# def stats(d, n, k, beta=None, prec=None):
+#     """
+#     Useful quantites.
 
-    :param d: We consider the sphere `S^{d-1}`
-    :param n: Number of popcount vectors
-    :param k: popcount threshold
-    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
-    :param prec: compute with this precision
+#     :param d: We consider the sphere `S^{d-1}`
+#     :param n: Number of popcount vectors
+#     :param k: popcount threshold
+#     :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
+#     :param prec: compute with this precision
 
-    """
-    from probabilities_estimates import C
+#     """
+#     from probabilities_estimates import C
 
-    probs = probabilities(d, n, k, beta=beta, prec=prec)
-    N = 1/C(d, mp.pi/3)
-    P = probs.pf*N
-    ckn = 1/(1-probs.eta)
-    return (N, P, ckn)
+#     probs = probabilities(d, n, k, beta=beta, prec=prec)
+#     N = 1/C(d, mp.pi/3)
+#     P = probs.pf*N
+#     ckn = 1/(1-probs.eta)
+#     return (N, P, ckn)
+
+def __bulk_cost_estimate(args):
+    f, d, metric = args
+    return f(d, metric=metric)
+
+
+def bulk_cost_estimate(f, D, metric, filename=None, ncores=1):
+    from multiprocessing import Pool
+    jobs = []
+    for d in D:
+        jobs.append((f, d, metric))
+
+    if ncores > 1:
+        r = list(Pool(ncores).imap_unordered(__bulk_cost_estimate, jobs))
+    else:
+        r = map(__bulk_cost_estimate, jobs)
+
+    r = sorted(r)  # relying on "d" being the first entry here
+
+    if filename is None:
+        filename = "cost-estimate-{f}-{metric}.csv".format(f=f.__name__,
+                                                           metric=metric)
+
+    with open(filename, "w") as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=",",
+                               quotechar='"',
+                               quoting=csv.QUOTE_MINIMAL)
+
+        csvwriter.writerow(r[0]._fields)
+        for r_ in r:
+            csvwriter.writerow(r_)
