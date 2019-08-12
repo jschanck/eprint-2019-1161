@@ -27,11 +27,14 @@ class MagicConstants:
     list_growth_bound = 2.0
 
     """
-    We somewhat arbitrarily assume that an inner product is at most this much more expensive than a
-    pocount test.
+    Assuming 32 bits are used to represent full vectors, we expect the ratio between a full inner
+    product and a popcount call to be 32^2 * d / (n*log(n,2)), where 32^2 is the cost of a naive
+    multiplier and n*log(n,2) approximates the cost of a hamming weight call.  For typical
+    parameters d=256, n=256, this simplifies to 128.  To have some good confidence that popcount
+    dominates, we pick, somewhat arbitrarily 1024.
     """
 
-    ip_div_pc = 100
+    ip_div_pc = 1024
 
     """
     In a filtered quantum search we nest 'Grover search with an unknown number of marked elements'
