@@ -608,7 +608,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw"):
                           metric=metric)
 
 
-RandomBucketResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric"))
+RandomBucketsResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric"))
 
 
 def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw"):
@@ -667,16 +667,16 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw"):
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    return RandomBucketResult(d=pr.d,
-                              n=pr.n,
-                              k=pr.k,
-                              theta=float(theta),
-                              log_cost=float(log2(cost(pr, theta))),
-                              pf_inv=int(round(1/positive_rate)),
-                              metric=metric)
+    return RandomBucketsResult(d=pr.d,
+                               n=pr.n,
+                               k=pr.k,
+                               theta=float(theta),
+                               log_cost=float(log2(cost(pr, theta))),
+                               pf_inv=int(round(1/positive_rate)),
+                               metric=metric)
 
 
-TableBucketResult = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric"))
+TableBucketsResult = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric"))
 
 
 def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw"):
@@ -739,11 +739,11 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    return TableBucketResult(d=pr.d,
-                             n=pr.n,
-                             k=pr.k,
-                             theta1=float(theta),
-                             theta2=float(theta),
-                             log_cost=float(log2(cost(pr, theta))),
-                             pf_inv=int(round(1/positive_rate)),
-                             metric=metric)
+    return TableBucketsResult(d=pr.d,
+                              n=pr.n,
+                              k=pr.k,
+                              theta1=float(theta),
+                              theta2=float(theta),
+                              log_cost=float(log2(cost(pr, theta))),
+                              pf_inv=int(round(1/positive_rate)),
+                              metric=metric)
