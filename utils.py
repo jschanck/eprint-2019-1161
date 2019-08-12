@@ -182,13 +182,14 @@ def load_probabilities(d, n, k, beta=None, compute=False, sanity_check=False):
 
 def __bulk_cost_estimate(args):
     try:
-        f, d, metric = args
-        return f(d, metric=metric)
+        f, d, metric, kwds = args
+        return f(d, metric=metric, **kwds)
     except Exception as e:
-        print("Exception in f: {f}, d: {d}, metric: {metric}".format(f=f,d=d,metric=metric))
+        print("Exception in f: {f}, d: {d}, metric: {metric}".format(f=f, d=d, metric=metric))
         raise e
 
-def bulk_cost_estimate(f, D, metric, filename=None, ncores=1):
+
+def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     """
     Run cost estimates and write to csv file.
 
@@ -203,20 +204,20 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1):
 
     try:
         for f_ in f:
-            bulk_cost_estimate(f_, D, metric, ncores=ncores)
+            bulk_cost_estimate(f_, D, metric, ncores=ncores, **kwds)
         return
     except TypeError:
         pass
 
     if not isinstance(metric, str):
         for metric_ in metric:
-            bulk_cost_estimate(f, D, metric_, ncores=ncores)
+            bulk_cost_estimate(f, D, metric_, ncores=ncores, **kwds)
         return
 
     from multiprocessing import Pool
     jobs = []
     for d in D[::-1]:
-        jobs.append((f, d, metric))
+        jobs.append((f, d, metric, kwds))
 
     if ncores > 1:
         r = list(Pool(ncores).imap_unordered(__bulk_cost_estimate, jobs))

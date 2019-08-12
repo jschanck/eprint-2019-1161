@@ -6,7 +6,7 @@ Quantum Sieving Cost on Logical Layer.
 
 from mpmath import mp
 from collections import namedtuple
-from utils import load_probabilities
+from utils import load_probabilities, PrecomputationRequired
 from config import MagicConstants
 from probabilities_estimates import W, C, pf
 
@@ -553,7 +553,7 @@ def popcounts_dominate_cost(positive_rate, metric):
 AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
 
 
-def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw"):
+def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw", allow_suboptimal=False):
     """
     Nearest Neighbor Search via a quadratic search over all pairs.
 
@@ -563,6 +563,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw"):
     :param epsilon: consider lists of size `(1+ϵ)kC_d(θ)`
     :param optimize: optimize `n`
     :param metric: target metric
+    :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters given what is precomputed
 
     """
     if n is None:
@@ -597,7 +598,13 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw"):
 
     positive_rate = pf(pr.d, pr.n, pr.k)
     while optimize and not popcounts_dominate_cost(positive_rate, metric):
-        pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+        try:
+            pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+        except PrecomputationRequired as e:
+            if allow_suboptimal:
+                break
+            else:
+                raise e
         positive_rate = pf(pr.d, pr.n, pr.k)
 
     return AllPairsResult(d=pr.d,
@@ -611,7 +618,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw"):
 RandomBucketsResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric"))
 
 
-def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw"):
+def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", allow_suboptimal=False):
     """
     Nearest Neighbor Search using random buckets as in BGJ1.
 
@@ -621,6 +628,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw"):
     :param theta1: bucket angle
     :param optimize: optimize `n`
     :param metric: target metric
+    :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters given what is precomputed
 
     """
     if n is None:
@@ -661,7 +669,13 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw"):
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, metric):
-            pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+            try:
+                pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+            except PrecomputationRequired as e:
+                if allow_suboptimal:
+                    break
+                else:
+                    raise e
             theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
@@ -679,7 +693,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw"):
 TableBucketsResult = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric"))
 
 
-def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw"):
+def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw", allow_suboptimal=False):
     """
     Nearest Neighbor Search via a decodable buckets as in BDGL16.
 
@@ -690,6 +704,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     :param theta2: filter query angle
     :param optimize: optimize `n`
     :param metric: target metric
+    :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters given what is precomputed
 
     """
 
@@ -733,7 +748,13 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, metric):
-            pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+            try:
+                pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
+            except PrecomputationRequired as e:
+                if allow_suboptimal:
+                    break
+                else:
+                    raise e
             theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
