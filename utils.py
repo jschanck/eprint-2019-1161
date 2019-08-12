@@ -186,6 +186,30 @@ def __bulk_cost_estimate(args):
 
 
 def bulk_cost_estimate(f, D, metric, filename=None, ncores=1):
+    """
+    Run cost estimates and write to csv file.
+
+    :param f: one of ``all_pairs``, ``random_buckets`` or ``table_buckets`` or an iterable of those
+    :param D: an iterable of dimensions to run ``f`` on
+    :param metric: a metric from ``Metrics`` or an iterable of such metrics
+    :param filename: csv filename to write to (may accept "{metric}" and "{f}" placeholders)
+    :param ncores: number of CPU cores to use
+    :returns: ``None``, but files are written to disk.
+
+    """
+
+    try:
+        for f_ in f:
+            bulk_cost_estimate(f_, D, metric, ncores=ncores)
+        return
+    except TypeError:
+        pass
+
+    if not isinstance(metric, str):
+        for metric_ in metric:
+            bulk_cost_estimate(f, D, metric_, ncores=ncores)
+        return
+
     from multiprocessing import Pool
     jobs = []
     for d in D:
@@ -199,8 +223,9 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1):
     r = sorted(r)  # relying on "d" being the first entry here
 
     if filename is None:
-        filename = "cost-estimate-{f}-{metric}.csv".format(f=f.__name__,
-                                                           metric=metric)
+        filename = os.path.join("..", "data", "cost-estimate-{f}-{metric}.csv")
+
+    filename = filename.format(f=f.__name__, metric=metric)
 
     with open(filename, "w") as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=",",
