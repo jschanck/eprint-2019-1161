@@ -608,7 +608,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
                           metric=metric)
 
 
-RandomBucketResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta" "log_cost", "pf_inv", "metric"))
+RandomBucketResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric"))
 
 
 def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
