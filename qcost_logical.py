@@ -66,8 +66,8 @@ METRICS
 ClassicalMetrics = {"classical",
                     "naive_classical"}
 
-QuantumMetrics = {"G",   # gate count
-                  "DW",  # depth × width
+QuantumMetrics = {"g",   # gate count
+                  "dw",  # depth × width
                   "t_count",  # number of T-gates
                   "naive_quantum"  # TODO: document
                   }
@@ -553,7 +553,7 @@ def popcounts_dominate_cost(positive_rate, metric):
 AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
 
 
-def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
+def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw"):
     """
     Nearest Neighbor Search via a quadratic search over all pairs.
 
@@ -579,9 +579,9 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
         L = (1+epsilon) * 2/((1-pr.eta)*C(pr.d, mp.pi/3))
         search_calls = int(mp.ceil(2*(1+epsilon)/(1-pr.eta) * L))
         expected_bucket_size = ((1-pr.eta)/(1+epsilon))**2 * L/2
-        if metric == "G":
+        if metric == "g":
             search_cost = searchf(expected_bucket_size, pr.n, pr.k).gates
-        elif metric == "DW":
+        elif metric == "dw":
             search_cost = searchf(expected_bucket_size, pr.n, pr.k).dw
         elif metric == "t_count":
             search_cost = searchf(expected_bucket_size, pr.n, pr.k).t_count
@@ -611,7 +611,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="DW"):
 RandomBucketResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric"))
 
 
-def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
+def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw"):
     """
     Nearest Neighbor Search using random buckets as in BGJ1.
 
@@ -641,9 +641,9 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
         fill_cost = L * fill_cost_per_call
         average_search_size = expected_bucket_size/2
         searches_per_bucket = expected_bucket_size
-        if metric == "G":
+        if metric == "g":
             search_cost = searchf(average_search_size, pr.n, pr.k).gates
-        elif metric == "DW":
+        elif metric == "dw":
             search_cost = searchf(average_search_size, pr.n, pr.k).dw
         elif metric == "t_count":
             search_cost = searchf(average_search_size, pr.n, pr.k).t_count
@@ -679,7 +679,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="DW"):
 TableBucketResult = namedtuple("TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric"))
 
 
-def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="DW"):
+def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw"):
     """
     Nearest Neighbor Search via a decodable buckets as in BDGL16.
 
@@ -713,9 +713,9 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         relevant_bucket_cost = filters * C(d, T1) * fill_cost_per_call
         average_search_size = L * filters * C(d, T1) * C(d, T2) / 2
         # TODO: Scale insert_cost and relevant_bucket_cost?
-        if metric == "G":
+        if metric == "g":
             search_cost = searchf(average_search_size, pr.n, pr.k).gates
-        elif metric == "DW":
+        elif metric == "dw":
             search_cost = searchf(average_search_size, pr.n, pr.k).dw
         elif metric == "t_count":
             search_cost = searchf(average_search_size, pr.n, pr.k).t_count
