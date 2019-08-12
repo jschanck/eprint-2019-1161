@@ -116,7 +116,7 @@ def load_bundle(d, n, compute=False):
         if compute:
             return create_bundle(d, n, prec=int(compute))
         else:
-            raise PrecomputationRequired()
+            raise PrecomputationRequired("d: {d}, n: {n}".format(d=d,n=n))
 
 
 def __bulk_create_and_store_bundles(args):
@@ -181,9 +181,12 @@ def load_probabilities(d, n, k, beta=None, compute=False, sanity_check=False):
 #     return (N, P, ckn)
 
 def __bulk_cost_estimate(args):
-    f, d, metric = args
-    return f(d, metric=metric)
-
+    try:
+        f, d, metric = args
+        return f(d, metric=metric)
+    except Exception as e:
+        print("Exception in f: {f}, d: {d}, metric: {metric}".format(f=f,d=d,metric=metric))
+        raise e
 
 def bulk_cost_estimate(f, D, metric, filename=None, ncores=1):
     """
@@ -212,7 +215,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1):
 
     from multiprocessing import Pool
     jobs = []
-    for d in D:
+    for d in D[::-1]:
         jobs.append((f, d, metric))
 
     if ncores > 1:

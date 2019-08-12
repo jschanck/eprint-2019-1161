@@ -103,10 +103,10 @@ def local_min(f, x, d1=1, d2=5, low=None, high=None):
         if y2 > y:
             d = -d
             y2 = f(x+d) if x+d > low else f(low)
-        while y2 < y and low < x+d and x+d < high:
+        while (y2 < y) and (low < x+d) and (x+d < high):
             y = y2
             x = x+d
-            y2 = f(x+d)
+            y2 = f(x)
     return x
 
 
