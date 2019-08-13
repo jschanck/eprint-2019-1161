@@ -541,13 +541,13 @@ def searchf(L, n, k):
     return compose_k_sequential(qc, count, label="search")
 
 
-def popcounts_dominate_cost(positive_rate, metric):
+def popcounts_dominate_cost(positive_rate, d, n, metric):
     if metric in ClassicalMetrics:
-        return 1.0/positive_rate > MagicConstants.ip_div_pc
+        return 1.0/positive_rate > MagicConstants.ip_div_pc * d/float(n)
     else:
         # TODO: Double check that this is what we want. Quantum search does sqrt(1/positive_rate)
         # popcounts per inner product.
-        return 1.0/positive_rate > MagicConstants.ip_div_pc**2
+        return 1.0/positive_rate > (MagicConstants.ip_div_pc * d/float(n))**2
 
 
 AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
@@ -597,7 +597,7 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw", allow
         return search_calls * search_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
-    while optimize and not popcounts_dominate_cost(positive_rate, metric):
+    while optimize and not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
         try:
             pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
         except PrecomputationRequired as e:
@@ -668,7 +668,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     if optimize:
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
-        while not popcounts_dominate_cost(positive_rate, metric):
+        while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
                 pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
             except PrecomputationRequired as e:
@@ -747,7 +747,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     if optimize:
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi/6, high=mp.pi/2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
-        while not popcounts_dominate_cost(positive_rate, metric):
+        while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
                 pr = load_probabilities(pr.d, 2*pr.n, int(MagicConstants.k_div_n * 2 * pr.n))
             except PrecomputationRequired as e:
