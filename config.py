@@ -28,10 +28,8 @@ class MagicConstants:
 
     """
     Assuming 32 bits are used to represent full vectors, we expect the ratio between a full inner
-    product and a popcount call to be 32^2 * d / (n*log(n,2)), where 32^2 is the cost of a naive
-    multiplier and n*log(n,2) approximates the cost of a hamming weight call.  For typical
-    parameters d=256, n=256, this simplifies to 128.  To have some good confidence that popcount
-    dominates, we pick, somewhat arbitrarily 1024.
+    product and a popcount call to be 32^2 * d / n, where 32^2 is the cost of a naive multiplier and
+    n approximates the cost of a hamming weight call.  We typically have d ~ n, so we just use 1024.
     """
 
     ip_div_pc = 1024
