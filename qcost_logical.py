@@ -67,7 +67,7 @@ ClassicalMetrics = {"classical",
                     "naive_classical"}
 
 QuantumMetrics = {"g",   # gate count
-                  "dw",  # depth × width
+                  "dw",  # depth x width
                   "t_count",  # number of T-gates
                   "naive_quantum"  # TODO: document
                   }
@@ -339,7 +339,7 @@ def popcount_costf(L, n, k):
     """
     Logical cost of mapping |i> to (-1)^{popcount(u,v_i)}|i> for fixed u.
 
-    :param L: length of the list, i.e. |L|
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
@@ -480,7 +480,7 @@ def popcount_grover_iteration_costf(L, n, k):
 
     :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
-    :param k: we accept if two vectors agree on ≤ k
+    :param k: we accept if two vectors agree on <= k
 
     """
 
@@ -526,7 +526,7 @@ def searchf(L, n, k):
         (pi/4)^2 * filter_amplification_factor * filter_repetition_factor * sqrt(L).
     This is about 2 * sqrt(L).
 
-    :param L: length of the list, i.e. |L|
+    :param L: length of the list, i.e. |L|
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
 
