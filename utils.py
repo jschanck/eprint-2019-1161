@@ -20,7 +20,7 @@ def pretty_probs(probs, dps=10):
     :param probs: a ``Probabilitiess`` object.
 
     """
-    fmt = "{0:7s}: {1:%ds}"%dps
+    fmt = "{0:7s}: {1:%ds}" % dps
     with mp.workdps(dps):
         print(fmt.format("gr", probs.gr))
         print(fmt.format("ngr", 1 - probs.gr))
@@ -28,9 +28,9 @@ def pretty_probs(probs, dps=10):
         print(fmt.format("npf", 1 - probs.pf))
         print(fmt.format("gr^pf", probs.gr_pf))
         print(fmt.format("ngr^pf", probs.ngr_pf))
-        print(fmt.format("gr|pf", probs.gr_pf/probs.pf))
-        print(fmt.format("pf|gr", probs.gr_pf/probs.gr))
-        print(fmt.format("ngr|pf", probs.ngr_pf/probs.pf))
+        print(fmt.format("gr|pf", probs.gr_pf / probs.pf))
+        print(fmt.format("pf|gr", probs.gr_pf / probs.gr))
+        print(fmt.format("ngr|pf", probs.ngr_pf / probs.pf))
 
 
 def create_bundle(d, n, K=None, BETA=None, prec=None):
@@ -48,14 +48,14 @@ def create_bundle(d, n, K=None, BETA=None, prec=None):
 
     prec = prec if prec else mp.prec
     BETA = BETA if BETA else (None,)
-    K = K if K else (int(MagicConstants.k_div_n*n),)
+    K = K if K else (int(MagicConstants.k_div_n * n),)
 
-    if 2**mp.floor(mp.log(n, 2)) != n:
-        raise ValueError("n must be a power of two but got %d"%n)
+    if 2 ** mp.floor(mp.log(n, 2)) != n:
+        raise ValueError("n must be a power of two but got %d" % n)
 
     for k in K:
         if not 0 <= k <= n:
-            raise ValueError("k not in [0, %d]"%(0, n))
+            raise ValueError("k not in [0, %d]" % (0, n))
 
     for beta in BETA:
         beta_mpf = mp.mpf(beta) if beta else None
@@ -69,7 +69,7 @@ def create_bundle(d, n, K=None, BETA=None, prec=None):
 def bundle_fn(d, n=None):
     if n is None:
         d, n = [keys[:2] for keys in d.keys()][0]
-    return os.path.join("probabilities", "%03d_%04d"%(d, n))
+    return os.path.join("probabilities", "%03d_%04d" % (d, n))
 
 
 def store_bundle(bundle):
@@ -116,7 +116,7 @@ def load_bundle(d, n, compute=False):
         if compute:
             return create_bundle(d, n, prec=int(compute))
         else:
-            raise PrecomputationRequired("d: {d}, n: {n}".format(d=d,n=n))
+            raise PrecomputationRequired("d: {d}, n: {n}".format(d=d, n=n))
 
 
 def __bulk_create_and_store_bundles(args):
@@ -125,14 +125,18 @@ def __bulk_create_and_store_bundles(args):
     store_bundle(bundle)
 
 
-def bulk_create_and_store_bundles(D,
-                                  N=(128, 256, 512, 1024, 2048, 4096, 8192),
-                                  BETA=(None, mp.pi/3-mp.pi/10, mp.pi/3, mp.pi/3+mp.pi/10),
-                                  prec=2*53, ncores=1):
+def bulk_create_and_store_bundles(
+    D,
+    N=(128, 256, 512, 1024, 2048, 4096, 8192),
+    BETA=(None, mp.pi / 3 - mp.pi / 10, mp.pi / 3, mp.pi / 3 + mp.pi / 10),
+    prec=2 * 53,
+    ncores=1,
+):
     """
     Precompute a bunch of probabilities.
     """
     from multiprocessing import Pool
+
     jobs = []
     for d in D:
         for n in N:
@@ -148,9 +152,10 @@ def sanity_check_probabilities(probs):
     from sieves import cnkf
 
     if cnkf(probs) > MagicConstants.list_growth_bound:
-        raise ValueError("List growth (%.1f) beyond tolerable limits (%.1f)"%(float(cnkf(probs)),
-                                                                              MagicConstants.list_growth_bound))
-    if 1/probs.pf < MagicConstants.ip_div_pc:
+        raise ValueError(
+            "List growth (%.1f) beyond tolerable limits (%.1f)" % (float(cnkf(probs)), MagicConstants.list_growth_bound)
+        )
+    if 1 / probs.pf < MagicConstants.ip_div_pc:
         raise ValueError("The cost of inner products might dominate for these parameters")
 
 
@@ -179,6 +184,7 @@ def load_probabilities(d, n, k, beta=None, compute=False, sanity_check=False):
 #     P = probs.pf*N
 #     ckn = 1/(1-probs.eta)
 #     return (N, P, ckn)
+
 
 def __bulk_cost_estimate(args):
     try:
@@ -215,6 +221,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
         return
 
     from multiprocessing import Pool
+
     jobs = []
     for d in D[::-1]:
         jobs.append((f, d, metric, kwds))
@@ -232,9 +239,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     filename = filename.format(f=f.__name__, metric=metric)
 
     with open(filename, "w") as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=",",
-                               quotechar='"',
-                               quoting=csv.QUOTE_MINIMAL)
+        csvwriter = csv.writer(csvfile, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
         csvwriter.writerow(r[0]._fields)
         for r_ in r:

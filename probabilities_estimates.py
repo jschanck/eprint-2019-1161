@@ -11,10 +11,9 @@ from collections import namedtuple
 from functools import partial
 from memoize import memoize
 
-Probabilities = namedtuple("Probabilities",
-                           ("d", "n", "k",
-                            "gr", "ngr", "pf", "ngr_pf", "gr_pf", "rho", "eta",
-                            "beta", "prec"))
+Probabilities = namedtuple(
+    "Probabilities", ("d", "n", "k", "gr", "ngr", "pf", "ngr_pf", "gr_pf", "rho", "eta", "beta", "prec")
+)
 
 
 def C(d, theta, integrate=False, prec=None):
@@ -37,11 +36,15 @@ def C(d, theta, integrate=False, prec=None):
         theta = mp.mpf(theta)
         d = mp.mpf(d)
         if integrate:
-            r = (1/mp.sqrt(mp.pi) *
-                 mp.gamma(d/2) / mp.gamma((d-1)/2) *
-                 mp.quad(lambda x: mp.sin(x)**(d-2), (0, theta), error=True)[0])
+            r = (
+                1
+                / mp.sqrt(mp.pi)
+                * mp.gamma(d / 2)
+                / mp.gamma((d - 1) / 2)
+                * mp.quad(lambda x: mp.sin(x) ** (d - 2), (0, theta), error=True)[0]
+            )
         else:
-            r = mp.betainc((d-1)/2, 1/2., x2=mp.sin(theta)**2, regularized=True)/2
+            r = mp.betainc((d - 1) / 2, 1 / 2.0, x2=mp.sin(theta) ** 2, regularized=True) / 2
         return r
 
 
@@ -71,9 +74,7 @@ def A(d, theta, prec=53):
     with mp.workprec(prec):
         theta = mp.mpf(theta)
         d = mp.mpf(d)
-        r = (1/mp.sqrt(mp.pi) *
-             mp.gamma(d/2) / mp.gamma((d-1)/2) *
-             mp.sin(theta)**(d-2))
+        r = 1 / mp.sqrt(mp.pi) * mp.gamma(d / 2) / mp.gamma((d - 1) / 2) * mp.sin(theta) ** (d - 2)
         return r
 
 
@@ -81,53 +82,57 @@ def A(d, theta, prec=53):
 def log2_sphere(d):
     # NOTE: hardcoding 53 here
     with mp.workprec(53):
-        return (d/2*mp.log(mp.pi, 2) + 1) / mp.gamma(d/2)
+        return (d / 2 * mp.log(mp.pi, 2) + 1) / mp.gamma(d / 2)
 
 
 @memoize
 def sphere(d):
     # NOTE: hardcoding 53 here
     with mp.workprec(53):
-        return 2**(d/2*mp.log(mp.pi, 2) + 1) / mp.gamma(d/2)
+        return 2 ** (d / 2 * mp.log(mp.pi, 2) + 1) / mp.gamma(d / 2)
 
 
 @memoize
 def W(d, alpha, beta, theta, integrate=True, prec=None):
-    assert alpha <= mp.pi/2
-    assert beta  <= mp.pi/2
-    assert 0 >= (mp.cos(beta) - mp.cos(alpha)*mp.cos(theta))*(mp.cos(beta)*mp.cos(theta) - mp.cos(alpha))
+    assert alpha <= mp.pi / 2
+    assert beta <= mp.pi / 2
+    assert 0 >= (mp.cos(beta) - mp.cos(alpha) * mp.cos(theta)) * (mp.cos(beta) * mp.cos(theta) - mp.cos(alpha))
 
-    if theta >= alpha+beta:
+    if theta >= alpha + beta:
         return mp.mpf(0.0)
 
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
         alpha = mp.mpf(alpha)
-        beta  = mp.mpf(beta)
+        beta = mp.mpf(beta)
         theta = mp.mpf(theta)
         d = mp.mpf(d)
         if integrate:
-            c = mp.atan(mp.cos(alpha)/(mp.cos(beta)*mp.sin(theta)) - 1/mp.tan(theta))
+            c = mp.atan(mp.cos(alpha) / (mp.cos(beta) * mp.sin(theta)) - 1 / mp.tan(theta))
 
             def f_alpha(x):
-                return mp.sin(x)**(d-2) * mp.betainc((d-2)/2, 1/2.,
-                                                     x2=mp.sin(mp.re(mp.acos(mp.tan(theta-c)/mp.tan(x))))**2,
-                                                     regularized=True)
+                return mp.sin(x) ** (d - 2) * mp.betainc(
+                    (d - 2) / 2,
+                    1 / 2.0,
+                    x2=mp.sin(mp.re(mp.acos(mp.tan(theta - c) / mp.tan(x)))) ** 2,
+                    regularized=True,
+                )
 
             def f_beta(x):
-                return mp.sin(x)**(d-2) * mp.betainc((d-2)/2, 1/2.,
-                                                     x2=mp.sin(mp.re(mp.acos(mp.tan(c)/mp.tan(x))))**2,
-                                                     regularized=True)
+                return mp.sin(x) ** (d - 2) * mp.betainc(
+                    (d - 2) / 2, 1 / 2.0, x2=mp.sin(mp.re(mp.acos(mp.tan(c) / mp.tan(x)))) ** 2, regularized=True
+                )
 
-            S_alpha = mp.quad(f_alpha, (theta-c, alpha), error=True)[0]/2
-            S_beta  = mp.quad(f_beta,  (c,       beta),  error=True)[0]/2
+            S_alpha = mp.quad(f_alpha, (theta - c, alpha), error=True)[0] / 2
+            S_beta = mp.quad(f_beta, (c, beta), error=True)[0] / 2
 
-            return (S_alpha + S_beta) * sphere(d-1) / sphere(d)
+            return (S_alpha + S_beta) * sphere(d - 1) / sphere(d)
         else:
             # Wedge volume formula from Lemma 2.2 of [BDGL16] Anja Becker, Léo Ducas, Nicolas Gama,
             # Thijs Laarhoven. "New directions in nearest neighbor searching with applications to
             # lattice sieving." SODA 2016. https://eprint.iacr.org/2015/1128
-            # g_sq = (mp.cos(alpha)**2 + mp.cos(beta)**2 - 2*mp.cos(alpha)*mp.cos(beta)*mp.cos(theta))/mp.sin(theta)**2
+            # g_sq = (mp.cos(alpha)**2 + mp.cos(beta)**2 -
+            # 2*mp.cos(alpha)*mp.cos(beta)*mp.cos(theta))/mp.sin(theta)**2
             # log2_A = mp.log(g_sq, 2) - 2*mp.log(1-g_sq, 2)
             # r = (d-4) * mp.log(mp.sqrt(1-g_sq), 2) + log2_A - 2*mp.log(d-4, 2) + log2_sphere(d-2) - log2_sphere(d)
             # return 2**r
@@ -162,10 +167,16 @@ def P(n, k, theta, prec=None):
         # NOTE: This routine uses obscene precision
 
         def _betainc(a, b, x2):
-            return x2**a * mp.hyp2f1(a, 1-b, a+1, x2,
-                                     maxprec=2**mp.ceil(2*mp.log(n, 2)),
-                                     maxterms=2**mp.ceil(mp.log(n, 2))) / a / mp.beta(a, b)
-        r = _betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi))
+            return (
+                x2 ** a
+                * mp.hyp2f1(
+                    a, 1 - b, a + 1, x2, maxprec=2 ** mp.ceil(2 * mp.log(n, 2)), maxterms=2 ** mp.ceil(mp.log(n, 2))
+                )
+                / a
+                / mp.beta(a, b)
+            )
+
+        r = _betainc(n - (k - 1), (k - 1) + 1, x2=1 - (theta / mp.pi))
         return r
 
 
@@ -267,19 +278,19 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
         if ub is None:
             ub = mp.pi
         if beta is None:
-            return mp.quad(lambda x: P(n, k, x)*A(d, x), (lb, ub), error=True)[0]
+            return mp.quad(lambda x: P(n, k, x) * A(d, x), (lb, ub), error=True)[0]
         else:
-            num = mp.quad(lambda x: P(n, k, x)*W(d, beta, beta, x)*A(d, x), (lb, min(ub, 2*beta)), error=True)[0]
+            num = mp.quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (lb, min(ub, 2 * beta)), error=True)[0]
             if not beta_and:
                 # TODO: Duplicate effort. This is the same denominator as in ngr
-                den = mp.quad(lambda x:        W(d, beta, beta, x)*A(d, x), (0, 2*beta), error=True)[0]
+                den = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, 2 * beta), error=True)[0]
             else:
                 den = 1
-            return num/den
+            return num / den
 
 
-ngr_pf = partial(pf, lb=0, ub=mp.pi/3)
-gr_pf  = partial(pf, lb=mp.pi/3)
+ngr_pf = partial(pf, lb=0, ub=mp.pi / 3)
+gr_pf = partial(pf, lb=mp.pi / 3)
 
 
 def ngr(d, beta=None, prec=None):
@@ -294,16 +305,16 @@ def ngr(d, beta=None, prec=None):
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
         if beta is None:
-            return C(d, mp.pi/3)
-        elif beta < mp.pi/6:
+            return C(d, mp.pi / 3)
+        elif beta < mp.pi / 6:
             return mp.mpf(1.0)
         else:
             # Pr[¬G ∧ E]
-            num = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (0, mp.pi/3), error=True)[0]
+            num = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
             # Pr[E]
-            den = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (0, 2*beta), error=True)[0]
+            den = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, 2 * beta), error=True)[0]
             # Pr[¬G | E] = Pr[¬G ∧ E]/Pr[E]
-            return num/den
+            return num / den
 
 
 def gr(d, beta=None, prec=None):
@@ -317,7 +328,7 @@ def gr(d, beta=None, prec=None):
     """
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
-        return 1-ngr(d, beta, prec)
+        return 1 - ngr(d, beta, prec)
 
 
 def probabilities(d, n, k, beta=None, prec=None):
@@ -338,18 +349,23 @@ def probabilities(d, n, k, beta=None, prec=None):
         ngr_ = ngr(d, beta=beta, prec=prec)
         ngr_pf_ = ngr_pf(d, n, k, beta=beta, prec=prec)
         gr_pf_ = gr_pf(d, n, k, beta=beta, prec=prec)
-        rho = 1 - ngr_pf_/pf_
-        eta = 1 - ngr_pf_/ngr_
+        rho = 1 - ngr_pf_ / pf_
+        eta = 1 - ngr_pf_ / ngr_
 
-        probs = Probabilities(d=d, n=n, k=k,
-                              ngr=ngr_,
-                              gr=1-ngr_,
-                              pf=pf_,
-                              gr_pf=gr_pf_,
-                              ngr_pf=ngr_pf_,
-                              rho=rho,
-                              eta=eta,
-                              beta=beta, prec=prec)
+        probs = Probabilities(
+            d=d,
+            n=n,
+            k=k,
+            ngr=ngr_,
+            gr=1 - ngr_,
+            pf=pf_,
+            gr_pf=gr_pf_,
+            ngr_pf=ngr_pf_,
+            rho=rho,
+            eta=eta,
+            beta=beta,
+            prec=prec,
+        )
         return probs
 
 
@@ -370,33 +386,46 @@ def fast_probabilities(d, n, k, beta=None, prec=None):
 
     with mp.workprec(prec):
         if beta is None:
-            S1 = mp.quad(lambda x: P(n, k, x)*A(d, x), (0, mp.pi/3), error=True)[0]
-            S2 = mp.quad(lambda x: P(n, k, x)*A(d, x), (mp.pi/3, mp.pi), error=True)[0]
+            S1 = mp.quad(lambda x: P(n, k, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
+            S2 = mp.quad(lambda x: P(n, k, x) * A(d, x), (mp.pi / 3, mp.pi), error=True)[0]
             pf_ = S1 + S2
-            ngr_ = C(d, mp.pi/3)
+            ngr_ = C(d, mp.pi / 3)
             ngr_pf_ = S1
-        elif beta < mp.pi/6:
-            pf_ = mp.quad(lambda x: P(n, k, x)*W(d, beta, beta, x)*A(d, x), (0, min(mp.pi, 2*beta)), error=True)[0]
+        elif beta < mp.pi / 6:
+            pf_ = mp.quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (0, min(mp.pi, 2 * beta)), error=True)[
+                0
+            ]
             ngr_ = mp.mpf(1.0)
             ngr_pf_ = mp.mpf(1.0)
         else:
-            S1 = mp.quad(lambda x: P(n, k, x)*W(d, beta, beta, x)*A(d, x), (0, min(mp.pi/3, 2*beta)), error=True)[0]
-            S2 = mp.quad(lambda x: P(n, k, x)*W(d, beta, beta, x)*A(d, x), (min(mp.pi/3,2*beta), min(mp.pi, 2*beta)), error=True)[0]
-            S3 = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (0, mp.pi/3), error=True)[0]
-            S4 = mp.quad(lambda x: W(d, beta, beta, x)*A(d, x), (mp.pi/3, 2*beta), error=True)[0]
-            ngr_ = S3/(S3+S4)
-            pf_ = (S1+S2)/(S3 + S4)
-            ngr_pf_ = S1/(S3+S4)
+            S1 = mp.quad(
+                lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (0, min(mp.pi / 3, 2 * beta)), error=True
+            )[0]
+            S2 = mp.quad(
+                lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x),
+                (min(mp.pi / 3, 2 * beta), min(mp.pi, 2 * beta)),
+                error=True,
+            )[0]
+            S3 = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
+            S4 = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (mp.pi / 3, 2 * beta), error=True)[0]
+            ngr_ = S3 / (S3 + S4)
+            pf_ = (S1 + S2) / (S3 + S4)
+            ngr_pf_ = S1 / (S3 + S4)
 
         # TODO: We could probably skip computing pf_. I think it's easier to compute the positive rate on the fly.
         # TODO: Remove gr, gr_pf, and rho. We never use them.
-        probs = Probabilities(d=d, n=n, k=k,
-                              ngr=ngr_,
-                              gr=1-ngr_,
-                              pf=pf_,
-                              gr_pf=-1,
-                              ngr_pf=ngr_pf_,
-                              rho=-1,
-                              eta=1-ngr_pf_/ngr_,
-                              beta=beta, prec=prec)
+        probs = Probabilities(
+            d=d,
+            n=n,
+            k=k,
+            ngr=ngr_,
+            gr=1 - ngr_,
+            pf=pf_,
+            gr_pf=-1,
+            ngr_pf=ngr_pf_,
+            rho=-1,
+            eta=1 - ngr_pf_ / ngr_,
+            beta=beta,
+            prec=prec,
+        )
         return probs
