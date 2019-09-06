@@ -244,3 +244,41 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
         csvwriter.writerow(r[0]._fields)
         for r_ in r:
             csvwriter.writerow(r_)
+
+
+def read_csv(filename, columns, read_range=None, ytransform=lambda y: y):
+    with open(filename) as csvfile:
+        reader = csv.reader(csvfile, delimiter=",")
+        data = []
+        for i, row in enumerate(reader):
+            if i == 0:
+                columns = row.index(columns[0]), row.index(columns[1])
+                continue
+            data.append((int(row[columns[0]]), ytransform(float(row[columns[1]]))))
+
+    if read_range is not None:
+        data = [(x, y) for x, y in data if x in read_range]
+    data = sorted(data)
+    X = [x for x, y in data]
+    Y = [y for x, y in data]
+    return tuple(X), tuple(Y)
+
+
+def linear_fit(filename, columns=("d", "log_cost"),
+               low_index=0, high_index=100000, leading_coefficient=None):
+    from scipy.optimize import curve_fit
+
+    X, Y = read_csv(filename, columns=columns, read_range=range(low_index, high_index))
+
+    if leading_coefficient is None:
+        def f(x, a, b):
+            return a * x + b
+    else:
+        def f(x, b):
+            return leading_coefficient * x + b
+
+    r = list(curve_fit(f, X, Y)[0])
+    if leading_coefficient is not None:
+        r = [leading_coefficient] + r
+    print("{r[0]:.4}*x + {r[1]:.3}".format(r=r))
+    return r
