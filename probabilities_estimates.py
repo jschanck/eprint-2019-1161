@@ -159,11 +159,11 @@ def P(n, k, theta, prec=None):
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
         theta = mp.mpf(theta)
-        # binomial cdf for 0 <= successes < k
+        # binomial cdf for 0 <= successes <= k
         # r = 0
         # for i in range(k):
         #     r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
-        # r = mp.betainc(n-(k-1), (k-1)+1, x2=1-(theta/mp.pi), regularized=True)
+        # r = mp.betainc(n-k, k+1, x2=1-(theta/mp.pi), regularized=True)
         # NOTE: This routine uses obscene precision
 
         def _betainc(a, b, x2):
@@ -176,7 +176,7 @@ def P(n, k, theta, prec=None):
                 / mp.beta(a, b)
             )
 
-        r = _betainc(n - (k - 1), (k - 1) + 1, x2=1 - (theta / mp.pi))
+        r = _betainc(n - k, k + 1, x2=1 - (theta / mp.pi))
         return r
 
 
