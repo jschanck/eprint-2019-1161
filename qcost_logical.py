@@ -568,18 +568,23 @@ def searchf(L, n, k):
 
 
 def popcounts_dominate_cost(positive_rate, d, n, metric):
+    ip_div_pc = (MagicConstants.word_size**2)*d/float(n)
     if metric in ClassicalMetrics:
-        return 1.0 / positive_rate > MagicConstants.ip_div_pc * d / float(n)
+        return 1.0 / positive_rate > ip_div_pc
     else:
-        # TODO: Double check that this is what we want. Quantum search does sqrt(1/positive_rate)
-        # popcounts per inner product.
-        return 1.0 / positive_rate > (MagicConstants.ip_div_pc * d / float(n)) ** 2
+        return 1.0 / positive_rate > ip_div_pc**2
 
+def raw_cost(cost, metric):
+    if metric == "g": result = cost.gates
+    elif metric == "dw": result = cost.dw
+    elif metric == "t_count": result = cost.t_count
+    elif metric == "classical": result = cost.gates
+    else: raise ValueError("Unknown metric '%s'" % metric)
+    return result
 
 AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
 
-
-def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw", allow_suboptimal=False):
+def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=False):
     """
     Nearest Neighbor Search via a quadratic search over all pairs.
 
@@ -600,27 +605,19 @@ def all_pairs(d, n=None, k=None, epsilon=0.01, optimize=True, metric="dw", allow
 
     pr = load_probabilities(d, n, k)
 
-    epsilon = mp.mpf(epsilon)
-
     def cost(pr):
-        L = (1 + epsilon) * 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
-        search_calls = int(mp.ceil(2 * (1 + epsilon) / (1 - pr.eta) * L))
-        expected_bucket_size = ((1 - pr.eta) / (1 + epsilon)) ** 2 * L / 2
-        if metric == "g":
-            search_cost = searchf(expected_bucket_size, pr.n, pr.k).gates
-        elif metric == "dw":
-            search_cost = searchf(expected_bucket_size, pr.n, pr.k).dw
-        elif metric == "t_count":
-            search_cost = searchf(expected_bucket_size, pr.n, pr.k).t_count
-        elif metric == "naive_quantum":
-            search_cost = mp.sqrt(expected_bucket_size)
-        elif metric == "classical":
-            search_cost = expected_bucket_size * classical_popcount_costf(pr.n, pr.k).gates
-        elif metric == "naive_classical":
-            search_cost = expected_bucket_size
+        N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
+
+        if metric in ClassicalMetrics:
+          look_cost = classical_popcount_costf(pr.n, pr.k)
+          looks = (N**2 - N) / 2.
         else:
-            raise ValueError("Unknown metric '%s'" % metric)
-        return search_calls * search_cost
+          look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+          looks_factor = (2/(5. * (1 - pr.eta)) + 1/3.)
+          looks = int(mp.ceil(looks_factor * N**(3/2.)))
+
+        full_cost = looks * raw_cost(look_cost, metric)
+        return full_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
     while optimize and not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
@@ -662,31 +659,27 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else 1.2860
     pr = load_probabilities(d, n, k)
-    # NOTE: We assume checking whether a vector belongs in a bucket costs a popcount call
-    fill_cost_per_call = classical_popcount_costf(pr.n, pr.k).gates
+    ip_cost = MagicConstants.word_size**2 * d
 
     def cost(pr, T1):
-        L = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
-        buckets = 1.0 / W(pr.d, T1, T1, mp.pi / 3)
-        expected_bucket_size = L * C(pr.d, T1)
-        fill_cost = L * fill_cost_per_call
-        average_search_size = expected_bucket_size / 2
-        searches_per_bucket = expected_bucket_size
-        if metric == "g":
-            search_cost = searchf(average_search_size, pr.n, pr.k).gates
-        elif metric == "dw":
-            search_cost = searchf(average_search_size, pr.n, pr.k).dw
-        elif metric == "t_count":
-            search_cost = searchf(average_search_size, pr.n, pr.k).t_count
-        elif metric == "naive_quantum":
-            search_cost = mp.sqrt(average_search_size)
-        elif metric == "classical":
-            search_cost = average_search_size * classical_popcount_costf(pr.n, pr.k).gates
-        elif metric == "naive_classical":
-            search_cost = average_search_size
+        N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
+        W0 = W(pr.d, T1, T1, mp.pi / 3)
+        buckets = 1.0 / W0
+        bucket_size = N * C(pr.d, T1)
+
+        if metric in ClassicalMetrics:
+          look_cost = classical_popcount_costf(pr.n, pr.k)
+          looks_per_bucket = (bucket_size**2 - bucket_size) / 2.
         else:
-            raise ValueError("Unknown metric")
-        return buckets * (searches_per_bucket * search_cost + fill_cost)
+          look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+          looks_factor = 2*W0/(5 * (1 - pr.eta)) + 1.0/3
+          looks_per_bucket = looks_factor * bucket_size**(3/2.)
+
+        fill_bucket_cost = N * ip_cost
+        search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric)
+        full_cost = buckets*(fill_bucket_cost + search_bucket_cost)
+
+        return full_cost
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi / 6, high=mp.pi / 2)
@@ -743,33 +736,26 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else mp.pi / 3
     pr = load_probabilities(d, n, k)
-    # NOTE: We assume checking whether a vector belongs in a bucket costs a popcount call
-    fill_cost_per_call = classical_popcount_costf(pr.n, pr.k).gates
+    ip_cost = MagicConstants.word_size**2 * d
 
     def cost(pr, T1):
-        T2 = T1  # TODO: Handle theta1 != theta2
-        L = 2 / ((1 - pr.eta) * C(d, mp.pi / 3))
-        search_calls = int(mp.ceil(L))
-        filters = 1 / W(d, T1, T2, mp.pi / 3)
-        populate_table_cost = L * filters * C(d, T2) * fill_cost_per_call
-        relevant_bucket_cost = filters * C(d, T1) * fill_cost_per_call
-        average_search_size = L * filters * C(d, T1) * C(d, T2) / 2
-        # TODO: Scale insert_cost and relevant_bucket_cost?
-        if metric == "g":
-            search_cost = searchf(average_search_size, pr.n, pr.k).gates
-        elif metric == "dw":
-            search_cost = searchf(average_search_size, pr.n, pr.k).dw
-        elif metric == "t_count":
-            search_cost = searchf(average_search_size, pr.n, pr.k).t_count
-        elif metric == "naive_quantum":
-            search_cost = mp.sqrt(average_search_size)
-        elif metric == "classical":
-            search_cost = average_search_size * classical_popcount_costf(pr.n, pr.k).gates
-        elif metric == "naive_classical":
-            search_cost = average_search_size
+        T2 = T1
+        N = 2 / ((1 - pr.eta) * C(d, mp.pi / 3))
+        W0 = W(d, T1, T2, mp.pi / 3)
+        filters = 1.0 / W0
+        insert_cost = filters * C(d, T2) * ip_cost
+        query_cost = filters * C(d, T1) * ip_cost
+        bucket_size = (filters * C(d, T1)) * (N * C(d, T2))
+
+        if metric in ClassicalMetrics:
+          look_cost = classical_popcount_costf(pr.n, pr.k)
+          looks_per_bucket = bucket_size
         else:
-            raise ValueError("Unknown metric")
-        return search_calls * (search_cost + relevant_bucket_cost) + populate_table_cost
+          look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+          looks_per_bucket = 0.5 * bucket_size**(1/2.)
+
+        search_cost = looks_per_bucket * raw_cost(look_cost, metric)
+        return N*insert_cost + N*query_cost + N*search_cost
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi / 6, high=mp.pi / 2)

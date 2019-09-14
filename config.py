@@ -35,7 +35,7 @@ class MagicConstants:
     hamming weight call.
     """
 
-    ip_div_pc = 1024
+    word_size = 32
 
     """
     In a filtered quantum search we nest 'Grover search with an unknown number
