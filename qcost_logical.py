@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Quantum Sieving Cost on Logical Layer.
+Quantum Nearest Neighbor Cost on Logical Layer.
 """
 
 from mpmath import mp
@@ -24,9 +24,9 @@ Logical Quantum Costs
 :param depth: longest path from input to output (including identity gates)
 :param gates: gates except identity gates
 :param dw: not necessarily depth*qubits
-:param toffoli_count:
-:param t_count:
-:param t_depth:
+:param toffoli_count: number of Toffoli gates
+:param t_count: number of T gates
+:param t_depth: T gate depth
 
 """
 
@@ -241,6 +241,13 @@ def compose_parallel(cost1, cost2, label="_"):
 
 
 def classical_popcount_costf(n, k):
+    """
+    Classical gate count for popcount.
+
+    :param n: number of entries in popcount filter
+    :param k: we accept if two vectors agree on ≤ k
+
+    """
     ell = mp.ceil(mp.log(n, 2) + 1)
     t = mp.ceil(mp.log(k, 2))
     gates = 10 * n - 9 * ell - t - 2
@@ -319,6 +326,7 @@ def carry_costf(m):
     x+c for an arbitrary m bit constant c.
 
     ..  note :: Numbers here are for "high bit only" circuit from Cuccaro et al
+
     """
     if m < 2:
         raise NotImplementedError("Case m==1 not implemented.")
@@ -409,6 +417,7 @@ def n_toffoli_costf(n, have_ancilla=False):
     Logical cost of toffoli with n-1 controls.
 
     ..  note :: Table I of Maslov arXiv:1508.03273v2 (Source = "Ours", Optimization goal = "T/CNOT")
+
     """
 
     # TODO: This needs to be reviewed.
@@ -568,21 +577,29 @@ def searchf(L, n, k):
 
 
 def popcounts_dominate_cost(positive_rate, d, n, metric):
-    ip_div_pc = (MagicConstants.word_size**2)*d/float(n)
+    ip_div_pc = (MagicConstants.word_size ** 2) * d / float(n)
     if metric in ClassicalMetrics:
         return 1.0 / positive_rate > ip_div_pc
     else:
-        return 1.0 / positive_rate > ip_div_pc**2
+        return 1.0 / positive_rate > ip_div_pc ** 2
+
 
 def raw_cost(cost, metric):
-    if metric == "g": result = cost.gates
-    elif metric == "dw": result = cost.dw
-    elif metric == "t_count": result = cost.t_count
-    elif metric == "classical": result = cost.gates
-    else: raise ValueError("Unknown metric '%s'" % metric)
+    if metric == "g":
+        result = cost.gates
+    elif metric == "dw":
+        result = cost.dw
+    elif metric == "t_count":
+        result = cost.t_count
+    elif metric == "classical":
+        result = cost.gates
+    else:
+        raise ValueError("Unknown metric '%s'" % metric)
     return result
 
+
 AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
+
 
 def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=False):
     """
@@ -601,6 +618,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         n = 1
         while n < d:
             n = 2 * n
+
     k = k if k else int(MagicConstants.k_div_n * n)
 
     pr = load_probabilities(d, n, k)
@@ -609,12 +627,12 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
 
         if metric in ClassicalMetrics:
-          look_cost = classical_popcount_costf(pr.n, pr.k)
-          looks = (N**2 - N) / 2.
+            look_cost = classical_popcount_costf(pr.n, pr.k)
+            looks = (N ** 2 - N) / 2.0
         else:
-          look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-          looks_factor = (2/(5. * (1 - pr.eta)) + 1/3.)
-          looks = int(mp.ceil(looks_factor * N**(3/2.)))
+            look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+            looks_factor = 2 / (5.0 * (1 - pr.eta)) + 1 / 3.0
+            looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
 
         full_cost = looks * raw_cost(look_cost, metric)
         return full_cost
@@ -659,7 +677,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else 1.2860
     pr = load_probabilities(d, n, k)
-    ip_cost = MagicConstants.word_size**2 * d
+    ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
         N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
@@ -668,16 +686,16 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         bucket_size = N * C(pr.d, T1)
 
         if metric in ClassicalMetrics:
-          look_cost = classical_popcount_costf(pr.n, pr.k)
-          looks_per_bucket = (bucket_size**2 - bucket_size) / 2.
+            look_cost = classical_popcount_costf(pr.n, pr.k)
+            looks_per_bucket = (bucket_size ** 2 - bucket_size) / 2.0
         else:
-          look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-          looks_factor = 2*W0/(5 * (1 - pr.eta)) + 1.0/3
-          looks_per_bucket = looks_factor * bucket_size**(3/2.)
+            look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+            looks_factor = 2 * W0 / (5 * (1 - pr.eta)) + 1.0 / 3
+            looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
 
         fill_bucket_cost = N * ip_cost
         search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric)
-        full_cost = buckets*(fill_bucket_cost + search_bucket_cost)
+        full_cost = buckets * (fill_bucket_cost + search_bucket_cost)
 
         return full_cost
 
@@ -736,7 +754,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     k = k if k else int(MagicConstants.k_div_n * n)
     theta = theta1 if theta1 else mp.pi / 3
     pr = load_probabilities(d, n, k)
-    ip_cost = MagicConstants.word_size**2 * d
+    ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
         T2 = T1
@@ -748,14 +766,14 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         bucket_size = (filters * C(d, T1)) * (N * C(d, T2))
 
         if metric in ClassicalMetrics:
-          look_cost = classical_popcount_costf(pr.n, pr.k)
-          looks_per_bucket = bucket_size
+            look_cost = classical_popcount_costf(pr.n, pr.k)
+            looks_per_bucket = bucket_size
         else:
-          look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-          looks_per_bucket = 0.5 * bucket_size**(1/2.)
+            look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+            looks_per_bucket = 0.5 * bucket_size ** (1 / 2.0)
 
         search_cost = looks_per_bucket * raw_cost(look_cost, metric)
-        return N*insert_cost + N*query_cost + N*search_cost
+        return N * insert_cost + N * query_cost + N * search_cost
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi / 6, high=mp.pi / 2)
