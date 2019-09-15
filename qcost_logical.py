@@ -584,7 +584,7 @@ def popcounts_dominate_cost(positive_rate, d, n, metric):
         return 1.0 / positive_rate > ip_div_pc ** 2
 
 
-def raw_cost(cost, metric):
+def raw_cost(cost, metric, N):
     if metric == "g":
         result = cost.gates
     elif metric == "dw":
@@ -593,6 +593,10 @@ def raw_cost(cost, metric):
         result = cost.t_count
     elif metric == "classical":
         result = cost.gates
+    elif metric == "naive_quantum":
+        return mp.sqrt(N)
+    elif metric == "naive_classical":
+        return N
     else:
         raise ValueError("Unknown metric '%s'" % metric)
     return result
@@ -634,7 +638,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
             looks_factor = 2 / (5.0 * (1 - pr.eta)) + 1 / 3.0
             looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
 
-        full_cost = looks * raw_cost(look_cost, metric)
+        full_cost = looks * raw_cost(look_cost, metric, N)
         return full_cost, look_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
@@ -651,7 +655,8 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
     fc, dc = cost(pr)
 
     return AllPairsResult(
-        d=pr.d, n=pr.n, k=pr.k, log_cost=float(log2(fc)), pf_inv=int(round(1 / positive_rate)), metric=metric, detailed_costs=dc
+        d=pr.d, n=pr.n, k=pr.k, log_cost=float(log2(fc)), pf_inv=int(round(1 / positive_rate)), metric=metric,
+        detailed_costs=dc
     )
 
 
@@ -699,7 +704,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
             looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
 
         fill_bucket_cost = N * ip_cost
-        search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric)
+        search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric, N)
         full_cost = buckets * (fill_bucket_cost + search_bucket_cost)
 
         return full_cost, look_cost
@@ -780,7 +785,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_per_bucket = 0.5 * bucket_size ** (1 / 2.0)
 
-        search_cost = looks_per_bucket * raw_cost(look_cost, metric)
+        search_cost = looks_per_bucket * raw_cost(look_cost, metric, N)
         return N * insert_cost + N * query_cost + N * search_cost, look_cost
 
     if optimize:
