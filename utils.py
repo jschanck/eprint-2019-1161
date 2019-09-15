@@ -244,15 +244,15 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
 
         fields = r[0]._fields[:-1]
         if r[0].metric in QuantumMetrics:
-            fields += LogicalCosts._fields
+            fields += LogicalCosts._fields[1:]
         elif r[0].metric in ClassicalMetrics:
-            fields += ClassicalCosts._fields
+            fields += ClassicalCosts._fields[1:]
         else:
             raise ValueError("Unknown metric {metric}".format(metric=r[0].metric))
         csvwriter.writerow(fields)
 
         for r_ in r:
-            csvwriter.writerow(r_[:-1] + r_.detailed_costs)
+            csvwriter.writerow(r_[:-1] + r_.detailed_costs[1:])
 
 
 def read_csv(filename, columns, read_range=None, ytransform=lambda y: y):
