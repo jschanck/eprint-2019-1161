@@ -3,7 +3,6 @@ from mpmath import mp
 from collections import OrderedDict
 from probabilities_estimates import probabilities, Probabilities
 from config import MagicConstants
-from qcost_logical import LogicalCosts, ClassicalCosts, QuantumMetrics, ClassicalMetrics
 
 import os
 import csv
@@ -208,6 +207,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     :returns: ``None``, but files are written to disk.
 
     """
+    from qcost_logical import LogicalCosts, ClassicalCosts, QuantumMetrics, ClassicalMetrics
 
     try:
         for f_ in f:
@@ -246,7 +246,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
         if r[0].metric in QuantumMetrics:
             fields += LogicalCosts._fields
         elif r[0].metric in ClassicalMetrics:
-            fields += ClassicalMetrics._fields
+            fields += ClassicalCosts._fields
         else:
             raise ValueError("Unknown metric {metric}".format(metric=r[0].metric))
         csvwriter.writerow(fields)
