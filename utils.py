@@ -3,6 +3,7 @@ from mpmath import mp
 from collections import OrderedDict
 from probabilities_estimates import probabilities, Probabilities
 from config import MagicConstants
+from qcost_logical import LogicalCosts, ClassicalCosts, QuantumMetrics, ClassicalMetrics
 
 import os
 import csv
@@ -229,7 +230,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     if ncores > 1:
         r = list(Pool(ncores).imap_unordered(__bulk_cost_estimate, jobs))
     else:
-        r = map(__bulk_cost_estimate, jobs)
+        r = list(map(__bulk_cost_estimate, jobs))
 
     r = sorted(r)  # relying on "d" being the first entry here
 
@@ -241,9 +242,17 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     with open(filename, "w") as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
-        csvwriter.writerow(r[0]._fields)
+        fields = r[0]._fields[:-1]
+        if r[0].metric in QuantumMetrics:
+            fields += LogicalCosts._fields
+        elif r[0].metric in ClassicalMetrics:
+            fields += ClassicalMetrics._fields
+        else:
+            raise ValueError("Unknown metric {metric}".format(metric=r[0].metric))
+        csvwriter.writerow(fields)
+
         for r_ in r:
-            csvwriter.writerow(r_)
+            csvwriter.writerow(r_[:-1] + r_.detailed_costs)
 
 
 def read_csv(filename, columns, read_range=None, ytransform=lambda y: y):
