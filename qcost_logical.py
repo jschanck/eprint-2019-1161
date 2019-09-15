@@ -598,7 +598,7 @@ def raw_cost(cost, metric):
     return result
 
 
-AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric"))
+AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric", "detailed_costs"))
 
 
 def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=False):
@@ -635,7 +635,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
             looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
 
         full_cost = looks * raw_cost(look_cost, metric)
-        return full_cost
+        return full_cost, look_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
     while optimize and not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
@@ -648,12 +648,16 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
                 raise e
         positive_rate = pf(pr.d, pr.n, pr.k)
 
+    fc, dc = cost(pr)
+
     return AllPairsResult(
-        d=pr.d, n=pr.n, k=pr.k, log_cost=float(log2(cost(pr))), pf_inv=int(round(1 / positive_rate)), metric=metric
+        d=pr.d, n=pr.n, k=pr.k, log_cost=float(log2(fc)), pf_inv=int(round(1 / positive_rate)), metric=metric, detailed_costs=dc
     )
 
 
-RandomBucketsResult = namedtuple("RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric"))
+RandomBucketsResult = namedtuple(
+    "RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric", "detailed_costs")
+)
 
 
 def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", allow_suboptimal=False):
@@ -666,7 +670,8 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     :param theta1: bucket angle
     :param optimize: optimize `n`
     :param metric: target metric
-    :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters given what is precomputed
+    :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters
+        given what is precomputed
 
     """
     if n is None:
@@ -697,10 +702,10 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric)
         full_cost = buckets * (fill_bucket_cost + search_bucket_cost)
 
-        return full_cost
+        return full_cost, look_cost
 
     if optimize:
-        theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi / 6, high=mp.pi / 2)
+        theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
@@ -710,24 +715,27 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
                     break
                 else:
                     raise e
-            theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi / 6, high=mp.pi / 2)
+            theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
+
+    fc, dc = cost(pr, theta)
 
     return RandomBucketsResult(
         d=pr.d,
         n=pr.n,
         k=pr.k,
         theta=float(theta),
-        log_cost=float(log2(cost(pr, theta))),
+        log_cost=float(log2(fc)),
         pf_inv=int(round(1 / positive_rate)),
         metric=metric,
+        detailed_costs=dc
     )
 
 
 TableBucketsResult = namedtuple(
-    "TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric")
+    "TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric", "detailed_costs")
 )
 
 
@@ -742,8 +750,8 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     :param theta2: filter query angle
     :param optimize: optimize `n`
     :param metric: target metric
-    :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters given what is precomputed
-
+    :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters
+        given what is precomputed
     """
 
     if n is None:
@@ -773,10 +781,10 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
             looks_per_bucket = 0.5 * bucket_size ** (1 / 2.0)
 
         search_cost = looks_per_bucket * raw_cost(look_cost, metric)
-        return N * insert_cost + N * query_cost + N * search_cost
+        return N * insert_cost + N * query_cost + N * search_cost, look_cost
 
     if optimize:
-        theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi / 6, high=mp.pi / 2)
+        theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
@@ -786,10 +794,12 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
                     break
                 else:
                     raise e
-            theta = local_min(lambda T: cost(pr, T), theta, low=mp.pi / 6, high=mp.pi / 2)
+            theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
+
+    fc, dc = cost(pr, theta)
 
     return TableBucketsResult(
         d=pr.d,
@@ -797,7 +807,8 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         k=pr.k,
         theta1=float(theta),
         theta2=float(theta),
-        log_cost=float(log2(cost(pr, theta))),
+        log_cost=float(log2(fc)),
         pf_inv=int(round(1 / positive_rate)),
         metric=metric,
+        detailed_costs=dc,
     )
