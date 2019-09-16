@@ -594,9 +594,9 @@ def raw_cost(cost, metric, N):
     elif metric == "classical":
         result = cost.gates
     elif metric == "naive_quantum":
-        return mp.sqrt(N)
+        return 1
     elif metric == "naive_classical":
-        return N
+        return 1
     else:
         raise ValueError("Unknown metric '%s'" % metric)
     return result
