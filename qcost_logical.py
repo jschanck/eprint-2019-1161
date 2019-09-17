@@ -692,7 +692,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     def cost(pr, T1):
         N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
         W0 = W(pr.d, T1, T1, mp.pi / 3)
-        buckets = 1.0 / W0
+        buckets = 1.0 / W0 / (1 - pr.eta)
         bucket_size = N * C(pr.d, T1)
 
         if metric in ClassicalMetrics:
@@ -700,7 +700,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
             looks_per_bucket = (bucket_size ** 2 - bucket_size) / 2.0
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-            looks_factor = 2 * W0 / (5 * (1 - pr.eta)) + 1.0 / 3
+            looks_factor = ((1-pr.eta) * 2 *  W0) / (5 * C(pr.d, T1)) + 1.0 / 3
             looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
 
         fill_bucket_cost = N * ip_cost
@@ -783,7 +783,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
             looks_per_bucket = bucket_size
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-            looks_per_bucket = 0.5 * bucket_size ** (1 / 2.0)
+            looks_per_bucket = bucket_size ** (1 / 2.0)
 
         search_cost = looks_per_bucket * raw_cost(look_cost, metric, N)
         return N * insert_cost + N * query_cost + N * search_cost, look_cost
