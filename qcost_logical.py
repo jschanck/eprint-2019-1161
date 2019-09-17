@@ -525,57 +525,6 @@ def popcount_grover_iteration_costf(L, n, k):
     return compose_sequential(diffusion_cost, popcount_cost, label="oracle")
 
 
-def searchf(L, n, k):
-    """
-    Logical cost of popcount filtered search that succeeds with high probability.
-
-    The search routine takes two integer parameters m1 and m2.
-    We pick a random number i in {0, ..., m1-1} and another j in {0, ..., m2-1}.
-    We then apply the unitary
-      G(G(pc)^i D, ip)^j =
-        ((G(pc)^i D) R_0 (G(pc)^i D)^-1 R_ip)^j G(pc)^i D
-    (Although here we only cost G(pc)^ij and G(pc)^-ij.)
-
-    Let P be the number of popcount positives.
-
-    The routine uses an expected m1/2 iterations of G(pc) for the sampling
-    routine in amplitude amplification. AA calls the sampling routine twice, so we
-    use an expected m1 popcount oracles per AA iteration.
-    Since we don't know P exactly, we're going to leave some probability mass
-    on popcount negatives. We have to account for that in the AA step.
-
-    Assume m1 > pi/4 * sqrt(L/P). Then the probability mass assigned to popcount
-    positives after G(pc)^i is at least 1/filter_amplification_factor^2. Suppose
-    m2 > pi/4 * filter_amplification_factor * sqrt(P).
-    Then we expect to succeed with probability (at least)
-        1/2 * 1/filter_repetition_factor
-    after an expected
-        m2 / 2
-    AA iterations.
-
-    So we succeed with probability ~ 1 after 2*filter_repetition_factor repetitions.
-
-    We assume the best case for the adversary,
-        m1=pi/4*sqrt(L/P) and m2=pi/4*filter_amplification_factor*sqrt(P).
-    The total number of popcount oracle calls is
-        (pi/4)^2 * filter_amplification_factor * filter_repetition_factor * sqrt(L).
-    This is about 2 * sqrt(L).
-
-    :param L: length of the list, i.e. |L|
-    :param n: number of entries in popcount filter
-    :param k: we accept if two vectors agree on ≤ k
-
-    """
-    qc = popcount_grover_iteration_costf(L, n, k)
-
-    count = mp.sqrt(L)
-    count *= (mp.pi / 4) * (mp.pi / 4)
-    count *= MagicConstants.filter_amplification_factor
-    count *= MagicConstants.filter_repetition_factor
-
-    return compose_k_sequential(qc, count, label="search")
-
-
 def popcounts_dominate_cost(positive_rate, d, n, metric):
     ip_div_pc = (MagicConstants.word_size ** 2) * d / float(n)
     if metric in ClassicalMetrics:

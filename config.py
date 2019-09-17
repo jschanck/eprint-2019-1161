@@ -36,15 +36,3 @@ class MagicConstants:
     """
 
     word_size = 32
-
-    """
-    In a filtered quantum search we nest 'Grover search with an unknown number
-    of marked elements' inside of 'amplitude amplification with an unknown
-    success probability'.  We numerically optimise the trade-off between the
-    amount of amplification (number of queries) and success probability
-    (expected number of repetitions).  q(x) = 3*asin(sqrt(x))/(Pi +
-    asin(sqrt(x)) search_amplification_factor = 1/sqrt(x)
-    search_repetition_factor = 1/(1-q(x))
-    """
-    filter_amplification_factor = 1.67199  # x = 0.3577070585
-    filter_repetition_factor    = 2.03439  # x = 0.3577070585
