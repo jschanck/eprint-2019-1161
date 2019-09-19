@@ -9,6 +9,7 @@ from collections import namedtuple
 from utils import load_probabilities, PrecomputationRequired
 from config import MagicConstants
 from probabilities_estimates import W, C, pf
+from ge19 import estimate_abstract_to_physical
 
 """
 COSTS
@@ -66,6 +67,7 @@ ClassicalMetrics = {"classical", "naive_classical"}
 QuantumMetrics = {
     "g",  # gate count
     "dw",  # depth x width
+    "ge19", # depth x width x physical qubit measurements Gidney Ekera 
     "t_count",  # number of T-gates
     "naive_quantum",  # TODO: document
 }
@@ -533,11 +535,15 @@ def popcounts_dominate_cost(positive_rate, d, n, metric):
         return 1.0 / positive_rate > ip_div_pc ** 2
 
 
-def raw_cost(cost, metric, N):
+def raw_cost(cost, metric):
     if metric == "g":
         result = cost.gates
     elif metric == "dw":
         result = cost.dw
+    elif metric == "ge19":
+        phys = estimate_abstract_to_physical(cost.toffoli_count, cost.qubits_max, cost.depth,
+                                             prefers_parallel=False, prefers_serial=True)
+        result = cost.dw * phys[0]**2
     elif metric == "t_count":
         result = cost.t_count
     elif metric == "classical":
@@ -587,7 +593,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
             looks_factor = 2 / (5.0 * (1 - pr.eta)) + 1 / 3.0
             looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
 
-        full_cost = looks * raw_cost(look_cost, metric, N)
+        full_cost = looks * raw_cost(look_cost, metric)
         return full_cost, look_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
@@ -653,7 +659,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
             looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
 
         fill_bucket_cost = N * ip_cost
-        search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric, N)
+        search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric)
         full_cost = buckets * (fill_bucket_cost + search_bucket_cost)
 
         return full_cost, look_cost
@@ -730,12 +736,14 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         if metric in ClassicalMetrics:
             look_cost = classical_popcount_costf(pr.n, pr.k)
             looks_per_bucket = bucket_size
+            search_one_cost = ClassicalCosts(label="search", gates=look_cost.gates*looks_per_bucket, depth=look_cost.depth*looks_per_bucket)
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_per_bucket = bucket_size ** (1 / 2.0)
+            search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
 
-        search_cost = looks_per_bucket * raw_cost(look_cost, metric, N)
-        return N * insert_cost + N * query_cost + N * search_cost, look_cost
+        search_cost = raw_cost(search_one_cost, metric)
+        return N * insert_cost + N * query_cost + N * search_cost, search_one_cost
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
