@@ -250,10 +250,10 @@ def classical_popcount_costf(n, k):
     :param k: we accept if two vectors agree on ≤ k
 
     """
-    ell = mp.ceil(mp.log(n, 2) + 1)
+    ell = mp.ceil(mp.log(n, 2))
     t = mp.ceil(mp.log(k, 2))
-    gates = 10 * n - 9 * ell - t - 2
-    depth = 1 + 2 * ell + 2 + mp.ceil(mp.log(ell - t - 1, 2))
+    gates = 11 * n - 9 * ell - 10
+    depth = 2 * ell
 
     cc = ClassicalCosts(label="popcount", gates=gates, depth=depth)
 
@@ -327,19 +327,21 @@ def carry_costf(m):
     Logical cost of mapping |x> to (-1)^{(x+c)_m}|x> where (x+c)_m is the m-th bit (zero indexed) of
     x+c for an arbitrary m bit constant c.
 
-    ..  note :: Numbers here are for "high bit only" circuit from Cuccaro et al
+    ..  note :: numbers here are adapted from Fig 3 of https://arxiv.org/pdf/1611.07995.pdf
+                the commented numbers are from ``High Bit Only'' of https://arxiv.org/pdf/quant-ph/0410184.pdf
+                m is equivalent to \ell in the LaTeX
 
     """
     if m < 2:
         raise NotImplementedError("Case m==1 not implemented.")
 
-    carry_cnots = 4 * m - 3
-    carry_depth = 2 * m + 3
-    carry_nots = 0
-    carry_tofs = 2 * m - 1
-    carry_qubits_in = m
-    carry_qubits_out = m
-    carry_qubits_max = 2 * m + 1
+    carry_cnots = 2*m  # 4 * m - 3
+    carry_depth = 8*m - 8  # 2 * m + 3
+    carry_nots = 2*(m - 1)  # 0
+    carry_tofs = 4*(m - 2) + 2  # 2 * m - 1
+    carry_qubits_in = 2*m  # m
+    carry_qubits_out = 2*m  # m
+    carry_qubits_max = 2*m  # 2 * m + 1
     carry_dw = carry_qubits_max * carry_depth
     carry_t_depth = carry_tofs * MagicConstants.t_depth_div_toffoli
     carry_t_count = carry_tofs * MagicConstants.t_div_toffoli
@@ -774,3 +776,47 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         metric=metric,
         detailed_costs=dc,
     )
+
+
+if __name__ == "__main__":
+  def p(name, val):
+    if type(val) is int:
+      print("/consts/{:s}/.initial={:d},".format(name,val))
+    elif type(val) is str:
+      print("/consts/{:s}/.initial={:s},".format(name,val))
+    else:
+      print("/consts/{:s}/.initial={:.1f},".format(name,val))
+
+
+  p("ge19adv512",  float(table_buckets(512, metric="classical").log_cost - table_buckets(512, metric="ge19").log_cost))
+  p("ge19adv768",  float(table_buckets(768, metric="classical").log_cost - table_buckets(768, metric="ge19").log_cost))
+  p("ge19adv1024", float(table_buckets(1024, metric="classical").log_cost - table_buckets(1024, metric="ge19").log_cost))
+
+  d=352
+  p("real/dim", int(d))
+  xc = table_buckets(d, metric="classical")
+  xdw = table_buckets(d, metric="dw")
+  p("real/ram", float(xc.log_cost))
+  p("real/dw", float(xdw.log_cost))
+  p("real/adv", float(log2(2**xc.log_cost / 2**xdw.log_cost)))
+  p("real/one/dw", float(log2(xdw.detailed_costs.dw)))
+  p("real/one/depth", float(log2(xdw.detailed_costs.depth)))
+  p("real/one/width", float(log2(xdw.detailed_costs.qubits_max)))
+  p("real/one/ram", float(log2(xc.detailed_costs.gates)))
+  p("real/one/ramdepth", float(log2(xc.detailed_costs.depth)))
+
+  md = 96
+
+  pr = load_probabilities(xdw.d, xdw.n, xdw.k)
+  tot = log2(2 / ((1 - pr.eta) * C(d, mp.pi / 3)))
+  seq = md - log2(xdw.detailed_costs.depth)
+  qpar = tot - seq
+  p("real/md96/qpar", float(qpar))
+  p("real/md96/qubits", float(log2(2**qpar*xdw.detailed_costs.qubits_max)))
+
+  pr = load_probabilities(xc.d, xc.n, xc.k)
+  tot = log2(2 / ((1 - pr.eta) * C(d, mp.pi / 3)))
+  seq = md - log2(xc.detailed_costs.depth)
+  cpar = tot - seq
+  p("real/md96/cpar", float(cpar))
+
