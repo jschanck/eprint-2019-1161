@@ -250,10 +250,10 @@ def classical_popcount_costf(n, k):
     :param k: we accept if two vectors agree on ≤ k
 
     """
-    ell = mp.ceil(mp.log(n, 2) + 1)
+    ell = mp.ceil(mp.log(n, 2))
     t = mp.ceil(mp.log(k, 2))
-    gates = 10 * n - 9 * ell - t - 2
-    depth = 1 + 2 * ell + 2 + mp.ceil(mp.log(ell - t - 1, 2))
+    gates = 10 * n - 8 * ell - t - 10
+    depth = 2 * ell - 1 + mp.ceil(mp.log(ell - t, 2))
 
     cc = ClassicalCosts(label="popcount", gates=gates, depth=depth)
 
