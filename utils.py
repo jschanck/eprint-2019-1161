@@ -50,8 +50,8 @@ def create_bundle(d, n, K=None, BETA=None, prec=None):
     BETA = BETA if BETA else (None,)
     K = K if K else (int(MagicConstants.k_div_n * n),)
 
-    if 2 ** mp.floor(mp.log(n, 2)) != n:
-        raise ValueError("n must be a power of two but got %d" % n)
+    # if 2 ** mp.floor(mp.log(n, 2)) != n:
+    #     raise ValueError("n must be a power of two but got %d" % n)
 
     for k in K:
         if not 0 <= k <= n:
