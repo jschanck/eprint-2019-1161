@@ -252,8 +252,8 @@ def classical_popcount_costf(n, k):
     """
     ell = mp.ceil(mp.log(n, 2))
     t = mp.ceil(mp.log(k, 2))
-    gates = 10 * n - 8 * ell - t - 10
-    depth = 2 * ell - 1 + mp.ceil(mp.log(ell - t, 2))
+    gates = 11 * n - 9 * ell - 10
+    depth = 2 * ell
 
     cc = ClassicalCosts(label="popcount", gates=gates, depth=depth)
 
