@@ -787,7 +787,10 @@ if __name__ == "__main__":
     else:
       print("/consts/{:s}/.initial={:.1f},".format(name,val))
 
-
+  d = 256
+  while float(table_buckets(d+16, metric="classical").log_cost - table_buckets(d+16, metric="ge19").log_cost) < 0:
+    d += 16
+  p("ge19crossover", d)
   p("ge19adv512",  float(table_buckets(512, metric="classical").log_cost - table_buckets(512, metric="ge19").log_cost))
   p("ge19adv768",  float(table_buckets(768, metric="classical").log_cost - table_buckets(768, metric="ge19").log_cost))
   p("ge19adv1024", float(table_buckets(1024, metric="classical").log_cost - table_buckets(1024, metric="ge19").log_cost))
