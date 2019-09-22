@@ -258,3 +258,19 @@ def linear_fit(filename, columns=("d", "log_cost"),
         r = [leading_coefficient] + r
     print("{r[0]:.4}*x + {r[1]:.3}".format(r=r))
     return r
+
+
+def max_N_inc_factor():
+    from math import floor
+    max_factor = 0
+    dir = './probabilities'
+    for filename in os.listdir(dir):
+        sep = filename.find('_')
+        d = int(filename[:sep].lstrip())
+        n = int(filename[sep+1:].lstrip())
+        k = floor(n * 11/32.)
+        probs = load_probabilities(d, n, k)
+        inc_factor = 1/float(1 - probs.eta)
+        if inc_factor > max_factor:
+            max_factor = inc_factor
+    return max_factor

@@ -4,7 +4,7 @@
 class MagicConstants:
 
     """
-    k/n ≈ 1/3 and chosen to keep false negative rate ≤ 2.
+    k/n ≈ 1/3.
     """
 
     k_div_n = 11/32.
