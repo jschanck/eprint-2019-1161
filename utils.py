@@ -148,21 +148,8 @@ def bulk_create_and_store_bundles(
         return map(__bulk_create_and_store_bundles, jobs)
 
 
-def sanity_check_probabilities(probs):
-    from sieves import cnkf
-
-    if cnkf(probs) > MagicConstants.list_growth_bound:
-        raise ValueError(
-            "List growth (%.1f) beyond tolerable limits (%.1f)" % (float(cnkf(probs)), MagicConstants.list_growth_bound)
-        )
-    if 1 / probs.pf < MagicConstants.ip_div_pc:
-        raise ValueError("The cost of inner products might dominate for these parameters")
-
-
-def load_probabilities(d, n, k, beta=None, compute=False, sanity_check=False):
+def load_probabilities(d, n, k, beta=None, compute=False):
     probs = load_bundle(d, n, compute=compute)[(d, n, k, beta)]
-    if sanity_check:
-        sanity_check_probabilities(probs)
     return probs
 
 
