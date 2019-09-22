@@ -23,12 +23,6 @@ class MagicConstants:
     AMMR12_tof_depth   = 10
 
     """
-    We will accept a list size growth by this factor.
-    """
-
-    list_growth_bound = 2.0
-
-    """
     Assuming 32 bits are used to represent full vectors, we expect the ratio
     between a full inner product and a popcount call to be 32^2 * d / n, where
     32^2 is the cost of a naive multiplier and n approximates the cost of a
