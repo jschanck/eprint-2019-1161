@@ -67,9 +67,9 @@ ClassicalMetrics = {"classical", "naive_classical"}
 QuantumMetrics = {
     "g",  # gate count
     "dw",  # depth x width
-    "ge19", # depth x width x physical qubit measurements Gidney Ekera 
+    "ge19",  # depth x width x physical qubit measurements Gidney Ekera
     "t_count",  # number of T-gates
-    "naive_quantum",  # TODO: document
+    "naive_quantum",  # query cost
 }
 
 Metrics = ClassicalMetrics | QuantumMetrics
@@ -335,13 +335,13 @@ def carry_costf(m):
     if m < 2:
         raise NotImplementedError("Case m==1 not implemented.")
 
-    carry_cnots = 2*m  # 4 * m - 3
-    carry_depth = 8*m - 8  # 2 * m + 3
-    carry_nots = 2*(m - 1)  # 0
-    carry_tofs = 4*(m - 2) + 2  # 2 * m - 1
-    carry_qubits_in = 2*m  # m
-    carry_qubits_out = 2*m  # m
-    carry_qubits_max = 2*m  # 2 * m + 1
+    carry_cnots = 2 * m  # 4 * m - 3
+    carry_depth = 8 * m - 8  # 2 * m + 3
+    carry_nots = 2 * (m - 1)  # 0
+    carry_tofs = 4 * (m - 2) + 2  # 2 * m - 1
+    carry_qubits_in = 2 * m  # m
+    carry_qubits_out = 2 * m  # m
+    carry_qubits_max = 2 * m  # 2 * m + 1
     carry_dw = carry_qubits_max * carry_depth
     carry_t_depth = carry_tofs * MagicConstants.t_depth_div_toffoli
     carry_t_count = carry_tofs * MagicConstants.t_div_toffoli
@@ -543,9 +543,10 @@ def raw_cost(cost, metric):
     elif metric == "dw":
         result = cost.dw
     elif metric == "ge19":
-        phys = estimate_abstract_to_physical(cost.toffoli_count, cost.qubits_max, cost.depth,
-                                             prefers_parallel=False, prefers_serial=True)
-        result = cost.dw * phys[0]**2
+        phys = estimate_abstract_to_physical(
+            cost.toffoli_count, cost.qubits_max, cost.depth, prefers_parallel=False, prefers_serial=True
+        )
+        result = cost.dw * phys[0] ** 2
     elif metric == "t_count":
         result = cost.t_count
     elif metric == "classical":
@@ -612,8 +613,13 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
     fc, dc = cost(pr)
 
     return AllPairsResult(
-        d=pr.d, n=pr.n, k=pr.k, log_cost=float(log2(fc)), pf_inv=int(round(1 / positive_rate)), metric=metric,
-        detailed_costs=dc
+        d=pr.d,
+        n=pr.n,
+        k=pr.k,
+        log_cost=float(log2(fc)),
+        pf_inv=int(round(1 / positive_rate)),
+        metric=metric,
+        detailed_costs=dc,
     )
 
 
@@ -657,7 +663,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
             looks_per_bucket = (bucket_size ** 2 - bucket_size) / 2.0
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-            looks_factor = ((1-pr.eta) * 2 *  W0) / (5 * C(pr.d, T1)) + 1.0 / 3
+            looks_factor = ((1 - pr.eta) * 2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
             looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
 
         fill_bucket_cost = N * ip_cost
@@ -692,7 +698,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         log_cost=float(log2(fc)),
         pf_inv=int(round(1 / positive_rate)),
         metric=metric,
-        detailed_costs=dc
+        detailed_costs=dc,
     )
 
 
@@ -738,7 +744,9 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         if metric in ClassicalMetrics:
             look_cost = classical_popcount_costf(pr.n, pr.k)
             looks_per_bucket = bucket_size
-            search_one_cost = ClassicalCosts(label="search", gates=look_cost.gates*looks_per_bucket, depth=look_cost.depth*looks_per_bucket)
+            search_one_cost = ClassicalCosts(
+                label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
+            )
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_per_bucket = bucket_size ** (1 / 2.0)
@@ -776,50 +784,3 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         metric=metric,
         detailed_costs=dc,
     )
-
-
-if __name__ == "__main__":
-  def p(name, val):
-    if type(val) is int:
-      print("/consts/{:s}/.initial={:d},".format(name,val))
-    elif type(val) is str:
-      print("/consts/{:s}/.initial={:s},".format(name,val))
-    else:
-      print("/consts/{:s}/.initial={:.1f},".format(name,val))
-
-  d = 256
-  while float(table_buckets(d+16, metric="classical").log_cost - table_buckets(d+16, metric="ge19").log_cost) < 0:
-    d += 16
-  p("ge19crossover", d)
-  p("ge19adv512",  float(table_buckets(512, metric="classical").log_cost - table_buckets(512, metric="ge19").log_cost))
-  p("ge19adv768",  float(table_buckets(768, metric="classical").log_cost - table_buckets(768, metric="ge19").log_cost))
-  p("ge19adv1024", float(table_buckets(1024, metric="classical").log_cost - table_buckets(1024, metric="ge19").log_cost))
-
-  d=352
-  p("real/dim", int(d))
-  xc = table_buckets(d, metric="classical")
-  xdw = table_buckets(d, metric="dw")
-  p("real/ram", float(xc.log_cost))
-  p("real/dw", float(xdw.log_cost))
-  p("real/adv", float(log2(2**xc.log_cost / 2**xdw.log_cost)))
-  p("real/one/dw", float(log2(xdw.detailed_costs.dw)))
-  p("real/one/depth", float(log2(xdw.detailed_costs.depth)))
-  p("real/one/width", float(log2(xdw.detailed_costs.qubits_max)))
-  p("real/one/ram", float(log2(xc.detailed_costs.gates)))
-  p("real/one/ramdepth", float(log2(xc.detailed_costs.depth)))
-
-  md = 96
-
-  pr = load_probabilities(xdw.d, xdw.n, xdw.k)
-  tot = log2(2 / ((1 - pr.eta) * C(d, mp.pi / 3)))
-  seq = md - log2(xdw.detailed_costs.depth)
-  qpar = tot - seq
-  p("real/md96/qpar", float(qpar))
-  p("real/md96/qubits", float(log2(2**qpar*xdw.detailed_costs.qubits_max)))
-
-  pr = load_probabilities(xc.d, xc.n, xc.k)
-  tot = log2(2 / ((1 - pr.eta) * C(d, mp.pi / 3)))
-  seq = md - log2(xc.detailed_costs.depth)
-  cpar = tot - seq
-  p("real/md96/cpar", float(cpar))
-

@@ -166,26 +166,6 @@ def load_probabilities(d, n, k, beta=None, compute=False, sanity_check=False):
     return probs
 
 
-# def stats(d, n, k, beta=None, prec=None):
-#     """
-#     Useful quantites.
-
-#     :param d: We consider the sphere `S^{d-1}`
-#     :param n: Number of popcount vectors
-#     :param k: popcount threshold
-#     :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
-#     :param prec: compute with this precision
-
-#     """
-#     from probabilities_estimates import C
-
-#     probs = probabilities(d, n, k, beta=beta, prec=prec)
-#     N = 1/C(d, mp.pi/3)
-#     P = probs.pf*N
-#     ckn = 1/(1-probs.eta)
-#     return (N, P, ckn)
-
-
 def __bulk_cost_estimate(args):
     try:
         f, d, metric, kwds = args
