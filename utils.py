@@ -260,7 +260,7 @@ def linear_fit(filename, columns=("d", "log_cost"),
     return r
 
 
-def max_N_inc_factor():
+def max_N_inc_factor(g6k_popcount=False):
     from math import floor
     max_factor = 0
     dir = './probabilities'
@@ -268,9 +268,11 @@ def max_N_inc_factor():
         sep = filename.find('_')
         d = int(filename[:sep].lstrip())
         n = int(filename[sep+1:].lstrip())
+        if n != 256 and g6k_popcount:
+            continue
         k = floor(n * 11/32.)
         probs = load_probabilities(d, n, k)
-        # first increase due to false negatives, then due to N choose 2
+        # first increase due to false negatives, second due to N choose 2
         inc_factor = 1/float(1 - probs.eta)
         inc_factor *= 2
         if inc_factor > max_factor:
