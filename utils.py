@@ -166,7 +166,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     """
     Run cost estimates and write to csv file.
 
-    :param f: one of ``all_pairs``, ``random_buckets`` or ``table_buckets`` or an iterable of those
+    :param f: one of ``all_pairs``, ``random_buckets`` or ``list_decoding`` or an iterable of those
     :param D: an iterable of dimensions to run ``f`` on
     :param metric: a metric from ``Metrics`` or an iterable of such metrics
     :param filename: csv filename to write to (may accept "{metric}" and "{f}" placeholders)

@@ -4,7 +4,7 @@ Constants to be dumped into the LaTeX file.
 """
 from mpmath import mp
 from probabilities_estimates import C
-from qcost_logical import table_buckets, log2, load_probabilities
+from qcost_logical import list_decoding, log2, load_probabilities
 
 if __name__ == "__main__":
 
@@ -17,26 +17,26 @@ if __name__ == "__main__":
             print("/consts/{:s}/.initial={:.1f},".format(name, val))
 
     d = 256
-    while float(table_buckets(d + 16, metric="classical").log_cost - table_buckets(d + 16, metric="ge19").log_cost) < 0:
+    while float(list_decoding(d + 16, metric="classical").log_cost - list_decoding(d + 16, metric="ge19").log_cost) < 0:
         d += 16
         p("ge19crossover", d)
         p(
             "ge19adv512",
-            float(table_buckets(512, metric="classical").log_cost - table_buckets(512, metric="ge19").log_cost),
+            float(list_decoding(512, metric="classical").log_cost - list_decoding(512, metric="ge19").log_cost),
         )
         p(
             "ge19adv768",
-            float(table_buckets(768, metric="classical").log_cost - table_buckets(768, metric="ge19").log_cost),
+            float(list_decoding(768, metric="classical").log_cost - list_decoding(768, metric="ge19").log_cost),
         )
         p(
             "ge19adv1024",
-            float(table_buckets(1024, metric="classical").log_cost - table_buckets(1024, metric="ge19").log_cost),
+            float(list_decoding(1024, metric="classical").log_cost - list_decoding(1024, metric="ge19").log_cost),
         )
 
     d = 352
     p("real/dim", int(d))
-    xc = table_buckets(d, metric="classical")
-    xdw = table_buckets(d, metric="dw")
+    xc = list_decoding(d, metric="classical")
+    xdw = list_decoding(d, metric="dw")
     p("real/ram", float(xc.log_cost))
     p("real/dw", float(xdw.log_cost))
     p("real/adv", float(log2(2 ** xc.log_cost / 2 ** xdw.log_cost)))

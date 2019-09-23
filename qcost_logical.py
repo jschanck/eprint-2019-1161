@@ -702,12 +702,12 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     )
 
 
-TableBucketsResult = namedtuple(
-    "TableBucketsResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric", "detailed_costs")
+ListDecodingResult = namedtuple(
+    "ListDecodingResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric", "detailed_costs")
 )
 
 
-def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw", allow_suboptimal=False):
+def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw", allow_suboptimal=False):
     """
     Nearest Neighbor Search via a decodable buckets as in BDGL16.
 
@@ -773,7 +773,7 @@ def table_buckets(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
 
     fc, dc = cost(pr, theta)
 
-    return TableBucketsResult(
+    return ListDecodingResult(
         d=pr.d,
         n=pr.n,
         k=pr.k,
