@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Estimating relevant probabilities.
+Estimating relevant probabilities on the sphere and for popcount.
 
-To run doctests, run: ``PYTHONPATH=`pwd` sage -t probabilities_estimates.py``
+To run doctests, run: ``PYTHONPATH=`pwd` sage -t probabilities.py``
 
 """
 from mpmath import mp
@@ -362,66 +362,6 @@ def probabilities(d, n, k, beta=None, prec=None):
             ngr_pf=ngr_pf_,
             rho=rho,
             eta=eta,
-            beta=beta,
-            prec=prec,
-        )
-        return probs
-
-
-def fast_probabilities(d, n, k, beta=None, prec=None):
-    """
-    Useful probabilities.
-
-    :param d: We consider the sphere `S^{d-1}`
-    :param n: Number of popcount vectors
-    :param k: popcount threshold
-    :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
-    :param prec: compute with this precision
-
-    """
-    # NOTE: This function is unused.
-
-    prec = prec if prec else mp.prec
-
-    with mp.workprec(prec):
-        if beta is None:
-            S1 = mp.quad(lambda x: P(n, k, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
-            S2 = mp.quad(lambda x: P(n, k, x) * A(d, x), (mp.pi / 3, mp.pi), error=True)[0]
-            pf_ = S1 + S2
-            ngr_ = C(d, mp.pi / 3)
-            ngr_pf_ = S1
-        elif beta < mp.pi / 6:
-            pf_ = mp.quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (0, min(mp.pi, 2 * beta)), error=True)[
-                0
-            ]
-            ngr_ = mp.mpf(1.0)
-            ngr_pf_ = mp.mpf(1.0)
-        else:
-            S1 = mp.quad(
-                lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (0, min(mp.pi / 3, 2 * beta)), error=True
-            )[0]
-            S2 = mp.quad(
-                lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x),
-                (min(mp.pi / 3, 2 * beta), min(mp.pi, 2 * beta)),
-                error=True,
-            )[0]
-            S3 = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
-            S4 = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (mp.pi / 3, 2 * beta), error=True)[0]
-            ngr_ = S3 / (S3 + S4)
-            pf_ = (S1 + S2) / (S3 + S4)
-            ngr_pf_ = S1 / (S3 + S4)
-
-        probs = Probabilities(
-            d=d,
-            n=n,
-            k=k,
-            ngr=ngr_,
-            gr=1 - ngr_,
-            pf=pf_,
-            gr_pf=-1,
-            ngr_pf=ngr_pf_,
-            rho=-1,
-            eta=1 - ngr_pf_ / ngr_,
             beta=beta,
             prec=prec,
         )

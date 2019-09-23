@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Quantum Nearest Neighbor Cost on Logical Layer.
+Quantum and Classical Nearest Neighbor Cost.
 """
 
 from mpmath import mp
 from collections import namedtuple
 from utils import load_probabilities, PrecomputationRequired
 from config import MagicConstants
-from probabilities_estimates import W, C, pf
+from probabilities import W, C, pf
 from ge19 import estimate_abstract_to_physical
 
 """

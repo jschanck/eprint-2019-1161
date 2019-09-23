@@ -3,8 +3,8 @@
 Constants to be dumped into the LaTeX file.
 """
 from mpmath import mp
-from probabilities_estimates import C
-from qcost_logical import list_decoding, log2, load_probabilities
+from probabilities import C
+from cost import list_decoding, log2, load_probabilities
 
 if __name__ == "__main__":
 

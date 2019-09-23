@@ -2,8 +2,8 @@
 from __future__ import print_function
 import numpy as np
 from collections import OrderedDict
-from probabilities_estimates import pf as pff
-from probabilities_estimates import ngr as ngrf
+from probabilities import pf as pff
+from probabilities import ngr as ngrf
 
 
 def gauss_reduced(u, v):
