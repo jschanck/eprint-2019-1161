@@ -282,7 +282,6 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
         else:
             num = mp.quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (lb, min(ub, 2 * beta)), error=True)[0]
             if not beta_and:
-                # TODO: Duplicate effort. This is the same denominator as in ngr
                 den = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, 2 * beta), error=True)[0]
             else:
                 den = 1
@@ -412,8 +411,6 @@ def fast_probabilities(d, n, k, beta=None, prec=None):
             pf_ = (S1 + S2) / (S3 + S4)
             ngr_pf_ = S1 / (S3 + S4)
 
-        # TODO: We could probably skip computing pf_. I think it's easier to compute the positive rate on the fly.
-        # TODO: Remove gr, gr_pf, and rho. We never use them.
         probs = Probabilities(
             d=d,
             n=n,

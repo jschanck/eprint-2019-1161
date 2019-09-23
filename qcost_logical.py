@@ -114,7 +114,6 @@ def null_costf(qubits_in=0, qubits_out=0):
     """
     Cost of initialization/measurement.
     """
-    # TODO: Should we charge gates / depth for those?
 
     return LogicalCosts(
         label="null",
