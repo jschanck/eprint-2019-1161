@@ -270,7 +270,10 @@ def max_N_inc_factor():
         n = int(filename[sep+1:].lstrip())
         k = floor(n * 11/32.)
         probs = load_probabilities(d, n, k)
+        # increase due to false negatives
         inc_factor = 1/float(1 - probs.eta)
+        # increase due to factor of 2 in N choose 2
+        inc_factor *= 2
         if inc_factor > max_factor:
             max_factor = inc_factor
     return max_factor
