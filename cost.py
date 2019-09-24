@@ -268,8 +268,8 @@ def adder_costf(i, ci=False):
     adder_depth = 7 if i == 1 else (2 * i + 6 if ci else 2 * i + 4)
     adder_nots = 0 if i == 1 else (2 * i - 2 if ci else 2 * i - 4)
     adder_tofs = 2 * i - 1
-    adder_qubits_in = 2 * i + 1 if ci else 2 * i
-    adder_qubits_out = 2 * i + 2 if ci else 2 * i + 1
+    adder_qubits_in = 2 * i + 1
+    adder_qubits_out = 2 * i + 2
     adder_qubits_max = 2 * i + 2
     adder_t_depth = adder_tofs * MagicConstants.t_depth_div_toffoli
     adder_t_count = adder_tofs * MagicConstants.t_div_toffoli
