@@ -9,7 +9,10 @@ from config import MagicConstants
 
 import os
 import csv
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 
 class PrecomputationRequired(Exception):
@@ -86,11 +89,11 @@ def store_bundle(bundle):
 
     for (d, n, k, beta) in bundle:
         with mp.workprec(bundle[(d, n, k, beta)].prec):
-            vals = OrderedDict([(k_, str(v_)) for k_, v_ in bundle[(d, n, k, beta)].__dict__.items()])
+            vals = OrderedDict([(k_, str(v_)) for k_, v_ in bundle[(d, n, k, beta)]._asdict().items()])
         bundle_[(d, n, k, beta)] = vals
 
     with open(bundle_fn(bundle), "wb") as fh:
-        cPickle.dump(bundle_, fh)
+        pickle.dump(bundle_, fh)
 
 
 def load_bundle(d, n, compute=False):
@@ -101,7 +104,7 @@ def load_bundle(d, n, compute=False):
     bundle = OrderedDict()
     try:
         with open(bundle_fn(d, n), "rb") as fh:
-            bundle_ = cPickle.load(fh)
+            bundle_ = pickle.load(fh)
             for (d, n, k, beta) in bundle_:
                 with mp.workprec(int(bundle_[(d, n, k, beta)]["prec"])):
                     d_ = dict()
@@ -223,5 +226,3 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
 
         for r_ in r:
             csvwriter.writerow(r_[:-1] + r_.detailed_costs[1:])
-
-
