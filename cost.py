@@ -592,7 +592,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
             looks = (N ** 2 - N) / 2.0
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-            looks_factor = 2 / (5.0 * (1 - pr.eta)) + 1 / 3.0
+            looks_factor = 11.0/15
             looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
 
         full_cost = looks * raw_cost(look_cost, metric)
@@ -654,7 +654,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     def cost(pr, T1):
         N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
         W0 = W(pr.d, T1, T1, mp.pi / 3)
-        buckets = 1.0 / W0 / (1 - pr.eta)
+        buckets = 1.0 / W0
         bucket_size = N * C(pr.d, T1)
 
         if metric in ClassicalMetrics:
@@ -662,7 +662,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
             looks_per_bucket = (bucket_size ** 2 - bucket_size) / 2.0
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-            looks_factor = ((1 - pr.eta) * 2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
+            looks_factor = (2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
             looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
 
         fill_bucket_cost = N * ip_cost
