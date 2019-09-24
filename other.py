@@ -116,7 +116,7 @@ def max_N_inc_factor(g6k_popcount=False):
         sep = filename.find('_')
         d = int(filename[:sep].lstrip())
         n = int(filename[sep+1:].lstrip())
-        if n != 256 and g6k_popcount:
+        if n != 255 and g6k_popcount:
             continue
         k = floor(n * 11/32.)
         probs = load_probabilities(d, n, k)
