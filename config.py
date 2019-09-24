@@ -7,7 +7,7 @@ class MagicConstants:
     k/n ≈ 1/3.
     """
 
-    k_div_n = 11/32.
+    k_div_n = 1/3.
 
     """
     We assume one Toffoli gate takes 7 T-gates.

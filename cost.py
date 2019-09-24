@@ -580,7 +580,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         while n < d:
             n = 2 * n
 
-    k = k if k else int(MagicConstants.k_div_n * n)
+    k = k if k else int(MagicConstants.k_div_n * (n-1))
 
     pr = load_probabilities(d, n-1, k)
 
@@ -601,7 +601,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
     positive_rate = pf(pr.d, pr.n, pr.k)
     while optimize and not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
         try:
-            pr = load_probabilities(pr.d, 2 * (pr.n+1) - 1, int(MagicConstants.k_div_n * 2 * (pr.n+1)))
+            pr = load_probabilities(pr.d, 2 * (pr.n+1) - 1, int(MagicConstants.k_div_n * 2 * (pr.n+1) - 1))
         except PrecomputationRequired as e:
             if allow_suboptimal:
                 break
@@ -646,7 +646,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         while n < d:
             n = 2 * n
 
-    k = k if k else int(MagicConstants.k_div_n * n)
+    k = k if k else int(MagicConstants.k_div_n * (n-1))
     theta = theta1 if theta1 else 1.2860
     pr = load_probabilities(d, n-1, k)
     ip_cost = MagicConstants.word_size ** 2 * d
@@ -676,7 +676,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
-                pr = load_probabilities(pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * 2 * (pr.n + 1)))
+                pr = load_probabilities(pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * 2 * (pr.n + 1) - 1))
             except PrecomputationRequired as e:
                 if allow_suboptimal:
                     break
@@ -726,7 +726,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         while n < d:
             n = 2 * n
 
-    k = k if k else int(MagicConstants.k_div_n * n)
+    k = k if k else int(MagicConstants.k_div_n * (n-1))
     theta = theta1 if theta1 else mp.pi / 3
     pr = load_probabilities(d, n-1, k)
     ip_cost = MagicConstants.word_size ** 2 * d
@@ -759,7 +759,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
-                pr = load_probabilities(pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * 2 * (pr.n + 1)))
+                pr = load_probabilities(pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * 2 * (pr.n + 1) - 1))
             except PrecomputationRequired as e:
                 if allow_suboptimal:
                     break
