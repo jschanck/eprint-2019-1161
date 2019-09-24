@@ -6,8 +6,8 @@ from mpmath import mp
 from probabilities import C
 from cost import list_decoding, log2, load_probabilities
 
-if __name__ == "__main__":
 
+def main():
     def p(name, val):
         if type(val) is int:
             print("/consts/{:s}/.initial={:d},".format(name, val))
@@ -60,3 +60,7 @@ if __name__ == "__main__":
     seq = md - log2(xc.detailed_costs.depth)
     cpar = tot - seq
     p("real/md96/cpar", float(cpar))
+
+
+if __name__ == "__main__":
+    main()
