@@ -109,15 +109,13 @@ def linear_fit(filename, columns=("d", "log_cost"),
     return r
 
 
-def max_N_inc_factor(g6k_popcount=False):
+def max_N_inc_factor():
     max_factor = 0
     dir = './probabilities'
     for filename in os.listdir(dir):
         sep = filename.find('_')
         d = int(filename[:sep].lstrip())
         n = int(filename[sep+1:].lstrip())
-        if n != 255 and g6k_popcount:
-            continue
         k = int(MagicConstants.k_div_n * n)
         probs = load_probabilities(d, n, k)
         # first increase due to false negatives, second due to N choose 2
