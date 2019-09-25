@@ -3,6 +3,7 @@
 Useful functions that don't need to go into the appendix of the paper.
 """
 
+from config import MagicConstants
 from probabilities import A, C, P, W, Probabilities
 from mpmath import mp
 from utils import load_probabilities
@@ -109,7 +110,6 @@ def linear_fit(filename, columns=("d", "log_cost"),
 
 
 def max_N_inc_factor(g6k_popcount=False):
-    from math import floor
     max_factor = 0
     dir = './probabilities'
     for filename in os.listdir(dir):
@@ -118,7 +118,7 @@ def max_N_inc_factor(g6k_popcount=False):
         n = int(filename[sep+1:].lstrip())
         if n != 255 and g6k_popcount:
             continue
-        k = floor(n * 11/32.)
+        k = int(MagicConstants.k_div_n * n)
         probs = load_probabilities(d, n, k)
         # first increase due to false negatives, second due to N choose 2
         inc_factor = 1/float(1 - probs.eta)
