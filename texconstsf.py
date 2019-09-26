@@ -39,6 +39,24 @@ def main():
     p("classical784", float(list_decoding(784, metric="classical").log_cost))
     p("classical1024", float(list_decoding(1024, metric="classical").log_cost))
 
+
+    d = 432
+    xc = list_decoding(d, metric="classical")
+    xdw = list_decoding(d, metric="dw")
+
+    p("para/dim40", int(d))
+    p("para/depth40", float(log2(xdw.detailed_costs.depth)))
+    p("para/adv40", float(xc.log_cost - xdw.log_cost))
+
+    d = 800
+    xc = list_decoding(d, metric="classical")
+    xdw = list_decoding(d, metric="dw")
+
+    p("para/dim64", int(d))
+    p("para/depth64", float(log2(xdw.detailed_costs.depth)))
+    p("para/adv64", float(xc.log_cost - xdw.log_cost))
+
+
     d = 352
     p("real/dim", int(d))
     xc = list_decoding(d, metric="classical")
