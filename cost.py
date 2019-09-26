@@ -439,10 +439,8 @@ def n_toffoli_costf(n, have_ancilla=False):
         n_tof_gates = MagicConstants.AMMR12_tof_gates
         n_tof_depth = MagicConstants.AMMR12_tof_depth
         n_tof_dw = n_tof_depth * (n + 1)
-    # FIXME (maybe)
-    # the cost can be smaller if using "clean" ancillas (see first "Ours" in 
-    # Table 1 of Maslov's paper)
-    elif n == 4:
+    elif n == 4: # Note: the cost can be smaller if using "clean" ancillas
+                 # (see first "Ours" in Table 1 of Maslov's paper)
         n_tof_t_count = 16
         n_tof_t_depth = 16
         n_tof_gates = 36
