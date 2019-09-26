@@ -29,9 +29,15 @@ def main():
             float(list_decoding(768, metric="classical").log_cost - list_decoding(768, metric="ge19").log_cost),
         )
         p(
+            "ge19adv784",
+            float(list_decoding(784, metric="classical").log_cost - list_decoding(784, metric="ge19").log_cost),
+        )
+        p(
             "ge19adv1024",
             float(list_decoding(1024, metric="classical").log_cost - list_decoding(1024, metric="ge19").log_cost),
         )
+    p("classical784", float(list_decoding(784, metric="classical").log_cost))
+    p("classical1024", float(list_decoding(1024, metric="classical").log_cost))
 
     d = 352
     p("real/dim", int(d))
