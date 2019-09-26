@@ -327,20 +327,19 @@ def carry_costf(m):
     x+c for an arbitrary m bit constant c.
 
     ..  note :: numbers here are adapted from Fig 3 of https://arxiv.org/pdf/1611.07995.pdf
-                the commented numbers are from ``High Bit Only'' of https://arxiv.org/pdf/quant-ph/0410184.pdf
                 m is equivalent to \ell in the LaTeX
 
     """
     if m < 2:
         raise NotImplementedError("Case m==1 not implemented.")
 
-    carry_cnots = 2 * m  # 4 * m - 3
-    carry_depth = 8 * m - 8  # 2 * m + 3
-    carry_nots = 2 * (m - 1)  # 0
-    carry_tofs = 4 * (m - 2) + 2  # 2 * m - 1
-    carry_qubits_in = 2 * m  # m
-    carry_qubits_out = 2 * m  # m
-    carry_qubits_max = 2 * m  # 2 * m + 1
+    carry_cnots = 2 * m
+    carry_depth = 8 * m - 8
+    carry_nots = 2 * (m - 1)
+    carry_tofs = 4 * (m - 2) + 2
+    carry_qubits_in = 2 * m
+    carry_qubits_out = 2 * m
+    carry_qubits_max = 2 * m
     carry_dw = carry_qubits_max * carry_depth
     carry_t_depth = carry_tofs * MagicConstants.t_depth_div_toffoli
     carry_t_count = carry_tofs * MagicConstants.t_div_toffoli
