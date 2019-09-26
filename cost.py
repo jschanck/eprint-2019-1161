@@ -450,7 +450,7 @@ def n_toffoli_costf(n, have_ancilla=False):
         n_tof_t_count = 8 * n - 16
         n_tof_t_depth = 8 * n - 16
         n_tof_gates = (8 * n - 16) + (8 * n - 20) + (4 * n - 10)
-        n_tof_depth = (8 * n - 16) + (8 * n - 20) + (4 * n - 10)  # TODO: check
+        n_tof_depth = (8 * n - 16) + (8 * n - 20) + (4 * n - 10) 
         n_tof_dw = n_tof_depth * (n + 1)
 
     n_tof_qubits_max = n if have_ancilla else n + 1
