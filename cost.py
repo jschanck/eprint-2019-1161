@@ -422,8 +422,6 @@ def n_toffoli_costf(n, have_ancilla=False):
 
     """
 
-    # TODO: This needs to be reviewed.
-
     assert n >= 3
 
     if n >= 5 and not have_ancilla:
@@ -441,6 +439,9 @@ def n_toffoli_costf(n, have_ancilla=False):
         n_tof_gates = MagicConstants.AMMR12_tof_gates
         n_tof_depth = MagicConstants.AMMR12_tof_depth
         n_tof_dw = n_tof_depth * (n + 1)
+    # FIXME (maybe)
+    # the cost can be smaller if using "clean" ancillas (see first "Ours" in 
+    # Table 1 of Maslov's paper)
     elif n == 4:
         n_tof_t_count = 16
         n_tof_t_depth = 16
