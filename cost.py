@@ -567,7 +567,6 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
     :param d: search in \(S^{d-1}\)
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
-    :param epsilon: consider lists of size `(1+ϵ)kC_d(θ)`
     :param optimize: optimize `n`
     :param metric: target metric
     :param allow_suboptimal: when ``optimize=True``, return the best possible set of parameters given what is precomputed
