@@ -8,7 +8,7 @@ from mpmath import mp
 from collections import namedtuple
 from utils import load_probabilities, PrecomputationRequired
 from config import MagicConstants
-from probabilities import W, C, pf
+from probabilities import W, C, pf, ngr_pf, ngr
 from ge19 import estimate_abstract_to_physical
 
 """
@@ -621,7 +621,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
 
 
 RandomBucketsResult = namedtuple(
-    "RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "metric", "detailed_costs")
+    "RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "eta", "metric", "detailed_costs")
 )
 
 
@@ -650,7 +650,8 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
-        N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
+        eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1)/ngr(pr.d, beta=T1)
+        N = 2 / ((1 - eta) * C(pr.d, mp.pi / 3))
         W0 = W(pr.d, T1, T1, mp.pi / 3)
         buckets = 1.0 / W0
         bucket_size = N * C(pr.d, T1)
@@ -667,7 +668,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric)
         full_cost = buckets * (fill_bucket_cost + search_bucket_cost)
 
-        return full_cost, look_cost
+        return full_cost, look_cost, eta
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
@@ -685,7 +686,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    fc, dc = cost(pr, theta)
+    fc, dc, eta = cost(pr, theta)
 
     return RandomBucketsResult(
         d=pr.d,
@@ -694,13 +695,14 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         theta=float(theta),
         log_cost=float(log2(fc)),
         pf_inv=int(round(1 / positive_rate)),
+        eta=eta,
         metric=metric,
         detailed_costs=dc,
     )
 
 
 ListDecodingResult = namedtuple(
-    "ListDecodingResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "metric", "detailed_costs")
+    "ListDecodingResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "eta", "metric", "detailed_costs")
 )
 
 
@@ -730,8 +732,9 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
+        eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1)/ngr(pr.d, beta=T1)
         T2 = T1
-        N = 2 / ((1 - pr.eta) * C(d, mp.pi / 3))
+        N = 2 / ((1 - eta) * C(d, mp.pi / 3))
         W0 = W(d, T1, T2, mp.pi / 3)
         filters = 1.0 / W0
         insert_cost = filters * C(d, T2) * ip_cost
@@ -750,7 +753,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
             search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
 
         search_cost = raw_cost(search_one_cost, metric)
-        return N * insert_cost + N * query_cost + N * search_cost, search_one_cost
+        return N * insert_cost + N * query_cost + N * search_cost, search_one_cost, eta
 
     if optimize:
         theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
@@ -768,7 +771,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
 
-    fc, dc = cost(pr, theta)
+    fc, dc, eta = cost(pr, theta)
 
     return ListDecodingResult(
         d=pr.d,
@@ -778,6 +781,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         theta2=float(theta),
         log_cost=float(log2(fc)),
         pf_inv=int(round(1 / positive_rate)),
+        eta = eta,
         metric=metric,
         detailed_costs=dc,
     )
