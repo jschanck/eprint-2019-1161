@@ -587,12 +587,16 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         if metric in ClassicalMetrics:
             look_cost = classical_popcount_costf(pr.n, pr.k)
             looks = (N ** 2 - N) / 2.0
+            search_one_cost = ClassicalCosts(
+                label="search", gates=look_cost.gates * looks, depth=look_cost.depth * looks
+            )
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_factor = 11.0/15
             looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
+            search_one_cost = compose_k_sequential(look_cost, looks)
 
-        full_cost = looks * raw_cost(look_cost, metric)
+        full_cost = raw_cost(search_one_cost, metric)
         return full_cost, look_cost
 
     positive_rate = pf(pr.d, pr.n, pr.k)
@@ -658,13 +662,17 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         if metric in ClassicalMetrics:
             look_cost = classical_popcount_costf(pr.n, pr.k)
             looks_per_bucket = (bucket_size ** 2 - bucket_size) / 2.0
+            search_one_cost = ClassicalCosts(
+                label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
+            )
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_factor = (2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
             looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
+            search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
 
         fill_bucket_cost = N * ip_cost
-        search_bucket_cost = looks_per_bucket * raw_cost(look_cost, metric)
+        search_bucket_cost = raw_cost(search_one_cost, metric)
         full_cost = buckets * (fill_bucket_cost + search_bucket_cost)
 
         return full_cost, look_cost, eta
