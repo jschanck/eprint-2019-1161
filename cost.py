@@ -592,8 +592,29 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
             )
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
-            looks_factor = 11.0/15
-            looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
+
+            # first discover maximum index j s.t. we expect Q > 1.
+            p = pr.ngr_pf
+            j_mid = int(N - (1. / p))
+            assert j_mid >= 0
+
+            looks_Q = (j_mid / (2 * p**.5)) + (p**.5 / 4.) * ((N - 1) * N - (N - j_mid - 1) * (N - j_mid))
+
+            # above j_mid we fix Q = 1, as before, and therefore need E--M
+            # we split into the approximation of L_i^3/2 and L_i^1/2
+
+            def sum_three_halves_powers(n, m):
+                # sum of i^3/2 for integer values, m, m + 1, ..., n; m >= 1
+                return (2./5) * (n**(5./2) - m**(5./2)) + (1./2) * (n**(3./2) + m**(3./2)) + (1./8) * (n**(1./2) - m**(1./2))
+
+            def sum_half_powers(n, m):
+                # sum of i^1/2 for integer values, m, m + 1, ..., n; m >= 1
+                return (2./3) * (n**(3./2) - m**(3./2)) + (1./2) * (n**(1./2) + m**(1./2)) + (1./24) * (n**(-1./2) - m**(-1./2))
+
+            looks_32 = (p/2.) * sum_three_halves_powers(N - 1, j_mid + 1)
+            looks_12 = (1./2) * sum_half_powers(N - 1, j_mid + 1)
+
+            looks = int(mp.ceil(looks_Q + looks_32 + looks_12))
             search_one_cost = compose_k_sequential(look_cost, looks)
 
         full_cost = raw_cost(search_one_cost, metric)
