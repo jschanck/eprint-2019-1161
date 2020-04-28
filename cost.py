@@ -327,8 +327,7 @@ def carry_costf(m):
     x+c for an arbitrary m bit constant c.
 
     ..  note :: numbers here are adapted from Fig 3 of https://arxiv.org/pdf/1611.07995.pdf
-                m is equivalent to \ell in the LaTeX
-
+                m is equivalent to ell in the LaTeX
     """
     if m < 2:
         raise NotImplementedError("Case m==1 not implemented.")
@@ -439,8 +438,11 @@ def n_toffoli_costf(n, have_ancilla=False):
         n_tof_gates = MagicConstants.AMMR12_tof_gates
         n_tof_depth = MagicConstants.AMMR12_tof_depth
         n_tof_dw = n_tof_depth * (n + 1)
-    elif n == 4: # Note: the cost can be smaller if using "clean" ancillas
-                 # (see first "Ours" in Table 1 of Maslov's paper)
+    elif n == 4:
+        """
+        Note: the cost can be smaller if using "clean" ancillas
+        (see first "Ours" in Table 1 of Maslov's paper)
+        """
         n_tof_t_count = 16
         n_tof_t_depth = 16
         n_tof_gates = 36
@@ -450,7 +452,7 @@ def n_toffoli_costf(n, have_ancilla=False):
         n_tof_t_count = 8 * n - 16
         n_tof_t_depth = 8 * n - 16
         n_tof_gates = (8 * n - 16) + (8 * n - 20) + (4 * n - 10)
-        n_tof_depth = (8 * n - 16) + (8 * n - 20) + (4 * n - 10) 
+        n_tof_depth = (8 * n - 16) + (8 * n - 20) + (4 * n - 10)
         n_tof_dw = n_tof_depth * (n + 1)
 
     n_tof_qubits_max = n if have_ancilla else n + 1
@@ -632,7 +634,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
     """
     Nearest Neighbor Search using random buckets as in BGJ1.
 
-    :param d: search in \(S^{d-1}\)
+    :param d: search in S^{d-1}
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
     :param theta1: bucket angle
@@ -717,7 +719,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     """
     Nearest Neighbor Search via a decodable buckets as in BDGL16.
 
-    :param d: search in \(S^{d-1}\)
+    :param d: search in S^{d-1}
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
     :param theta1: filter creation angle
@@ -788,7 +790,60 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         theta2=float(theta),
         log_cost=float(log2(fc)),
         pf_inv=int(round(1 / positive_rate)),
-        eta = eta,
+        eta=eta,
         metric=metric,
         detailed_costs=dc,
     )
+
+
+def cost_factor_Q(bucket_size, p_for_Q):
+    """
+    Calculates a lower bound on the cost saved factor in quantum search
+    if Q is taken into account, i.e. 1/2 * sqrt{N/Q} calls to G(g) made in an
+    application of Prop 1, rather than 1/2 * sqrt{N}
+
+    Determines for which search spaces Q >= 1, but does not decrement Q when
+    neighbours found within one search space
+
+    :param bucket_size: size of bucket to be searched; whole list if all_pairs
+    :param p_for_Q: P[P_{k, n} AND R_theta | bucketing conditions]
+    """
+
+    # for i in range 1, ..., k, (bucket_size - i) * p_for_Q >= 1
+    k = max(mp.floor(bucket_size - 1./p_for_Q), 0)
+
+    if k == 0:
+        return 1
+
+    def sum_ints(n, i):
+        """
+        Sum n - 1 + ... + n - i
+        """
+        return .5 * ((n - 1) * n - (n - i - 1) * (n - i))
+        # more compact but less readable return i * n - .5 * i * (i + 1)
+
+    def sum_without_Q(n, p):
+        """
+        Sum sqrt{n - j} * ((n - j) * p + 1) for j in 1, ...., n - 1, using
+        Euler--Maclaurin
+        """
+
+        n = n - 1
+
+        # the (n - j)^{3/2} * p term, with error O(n^{-3/2})
+        a = p * (2./5 * (n**(5./2)-1) + .5 * (n**(3./2)+1) + .125 * (n**.5-1))
+
+        # the (n - j)^{1/2} term, with error O(n^{-5/2})
+        b = 2./3 * (n**(3./2)-1) + .5 * (n**.5 + 1) + 1./24 * (n**-.5 - 1)
+
+        return a + b
+
+    numer_1 = p_for_Q**.5 * sum_ints(bucket_size, k) + k / p_for_Q**.5
+    numer_2 = sum_without_Q(bucket_size - k, p_for_Q)
+
+    denom = sum_without_Q(bucket_size, p_for_Q)
+
+    assert numer_1 <= denom - numer_2, "something wrong in sum"
+    assert numer_2 <= numer_1, "something wrong in E--M calculation"
+
+    return (numer_1 + numer_2) / denom
