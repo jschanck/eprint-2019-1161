@@ -620,7 +620,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         n=pr.n,
         k=pr.k,
         log_cost=float(log2(fc)),
-        pf_inv=int(round(1 / positive_rate)),
+        pf_inv=int(1 / positive_rate),
         metric=metric,
         detailed_costs=dc,
     )
@@ -707,7 +707,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         k=pr.k,
         theta=float(theta),
         log_cost=float(log2(fc)),
-        pf_inv=int(round(1 / positive_rate)),
+        pf_inv=int(1 / positive_rate),
         eta=eta,
         metric=metric,
         detailed_costs=dc,
@@ -793,7 +793,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         theta1=float(theta),
         theta2=float(theta),
         log_cost=float(log2(fc)),
-        pf_inv=int(round(1 / positive_rate)),
+        pf_inv=int(1 / positive_rate),
         eta=eta,
         metric=metric,
         detailed_costs=dc,
@@ -813,10 +813,12 @@ def cost_factor_Q(bucket_size, p_for_Q):
     :param p_for_Q: P[P_{k, n} ∧ ¬G| bucketing condition]
     """
 
-    # for i in range 1, ..., k, (bucket_size - i) * p_for_Q >= 1
-    k = max(mp.floor(bucket_size - 1./p_for_Q), 0)
+    assert bucket_size, p_for_Q > mp.mpf(0)
 
-    if k == 0:
+    # for i in range 1, ..., k, (bucket_size - i) * p_for_Q >= 1
+    k = max(mp.floor(bucket_size - mp.mpf(1.)/p_for_Q), 0)
+
+    if k == 0 or bucket_size == 1:
         return 1
 
     def sum_ints(n, i):
@@ -843,7 +845,10 @@ def cost_factor_Q(bucket_size, p_for_Q):
         return a + b
 
     numer_1 = p_for_Q**.5 * sum_ints(bucket_size, k) + k / p_for_Q**.5
-    numer_2 = sum_without_Q(bucket_size - k, p_for_Q)
+    if k != bucket_size:
+        numer_2 = sum_without_Q(bucket_size - k, p_for_Q)
+    else:
+        numer_2 = 0
 
     denom = sum_without_Q(bucket_size, p_for_Q)
 
