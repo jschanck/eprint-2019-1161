@@ -566,7 +566,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
     """
     Nearest Neighbor Search via a quadratic search over all pairs.
 
-    :param d: search in \(S^{d-1}\)
+    :param d: search in S^{d-1}
     :param n: number of entries in popcount filter
     :param k: we accept if two vectors agree on ≤ k
     :param optimize: optimize `n`
@@ -595,7 +595,8 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_factor = 11.0/15
-            looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
+            save_factor = cost_factor_Q(N, pr.ngr_pf)
+            looks = int(save_factor * mp.ceil(looks_factor * N ** (3 / 2.0)))
             search_one_cost = compose_k_sequential(look_cost, looks)
 
         full_cost = raw_cost(search_one_cost, metric)
@@ -668,9 +669,12 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
                 label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
             )
         else:
+            # calculate Pr[P_{k,n} ∧ ¬G | C(w,β)] for cost_factor_Q
+            p_for_Q = ngr_pf(pr.d, pr.n, pr.k, beta=T1)
+            save_factor = cost_factor_Q(N, p_for_Q)
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_factor = (2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
-            looks_per_bucket = looks_factor * bucket_size ** (3 / 2.0)
+            looks_per_bucket = int(save_factor * looks_factor * bucket_size ** (3 / 2.0))
             search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
 
         fill_bucket_cost = N * ip_cost
@@ -806,7 +810,7 @@ def cost_factor_Q(bucket_size, p_for_Q):
     neighbours found within one search space
 
     :param bucket_size: size of bucket to be searched; whole list if all_pairs
-    :param p_for_Q: P[P_{k, n} AND R_theta | bucketing conditions]
+    :param p_for_Q: P[P_{k, n} ∧ ¬G| bucketing condition]
     """
 
     # for i in range 1, ..., k, (bucket_size - i) * p_for_Q >= 1
@@ -843,7 +847,7 @@ def cost_factor_Q(bucket_size, p_for_Q):
 
     denom = sum_without_Q(bucket_size, p_for_Q)
 
-    assert numer_1 <= denom - numer_2, "something wrong in sum"
-    assert numer_2 <= numer_1, "something wrong in E--M calculation"
+    assert numer_1 <= denom - numer_2
+    assert numer_2 <= numer_1
 
     return (numer_1 + numer_2) / denom
