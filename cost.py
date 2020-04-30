@@ -671,6 +671,8 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         else:
             # calculate Pr[P_{k,n} ∧ ¬G | C(w,β)] for cost_factor_Q
             p_for_Q = ngr_pf(pr.d, pr.n, pr.k, beta=T1)
+            # calculate it as r(theta_1, k, n) from the paper
+            # p_for_Q = (2 * W0) / (bucket_size * C(pr.d, T1))
             save_factor = cost_factor_Q(N, p_for_Q)
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_factor = (2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
@@ -814,19 +816,19 @@ def cost_factor_Q(bucket_size, p_for_Q):
     """
 
     assert bucket_size, p_for_Q > mp.mpf(0)
+    bucket_size = int(bucket_size)
 
     # for i in range 1, ..., k, (bucket_size - i) * p_for_Q >= 1
-    k = max(mp.floor(bucket_size - mp.mpf(1.)/p_for_Q), 0)
+    k = int(max(mp.floor(bucket_size - 1./p_for_Q), 0))
 
     if k == 0 or bucket_size == 1:
         return 1
 
     def sum_ints(n, i):
         """
-        Sum n - 1 + ... + n - i
+        Sum n - 1 + ... + i
         """
-        return .5 * ((n - 1) * n - (n - i - 1) * (n - i))
-        # more compact but less readable return i * n - .5 * i * (i + 1)
+        return .5 * ((n - 1) * n - (i - 1) * i)
 
     def sum_without_Q(n, p):
         """
@@ -844,11 +846,8 @@ def cost_factor_Q(bucket_size, p_for_Q):
 
         return a + b
 
-    numer_1 = p_for_Q**.5 * sum_ints(bucket_size, k) + k / p_for_Q**.5
-    if k != bucket_size:
-        numer_2 = sum_without_Q(bucket_size - k, p_for_Q)
-    else:
-        numer_2 = 0
+    numer_1 = p_for_Q**.5 * sum_ints(bucket_size, int(1./p_for_Q)) + k / p_for_Q**.5
+    numer_2 = sum_without_Q(int(1./p_for_Q), p_for_Q)
 
     denom = sum_without_Q(bucket_size, p_for_Q)
 
