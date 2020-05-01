@@ -673,8 +673,8 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
             p_for_Q = ngr_pf(pr.d, pr.n, pr.k, beta=T1)
             # calculate it as r(theta_1, k, n) from the paper
             # p_for_Q = (2 * W0) / (bucket_size * C(pr.d, T1))
-            save_factor = cost_factor_Q(N, p_for_Q)
-            look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+            save_factor = cost_factor_Q(bucket_size, p_for_Q)
+            look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k)
             looks_factor = (2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
             looks_per_bucket = int(save_factor * looks_factor * bucket_size ** (3 / 2.0))
             search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
@@ -763,7 +763,7 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
                 label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
             )
         else:
-            look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+            look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k)
             looks_per_bucket = bucket_size ** (1 / 2.0)
             search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
 
