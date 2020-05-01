@@ -10,7 +10,7 @@ def estimate_abstract_to_physical(tof_count,
                                   measurement_depth,
                                   prefers_parallel = False,
                                   prefers_serial = False):
-    for code_distance in range(25, 101):
+    for code_distance in range(25, 501):
         logical_qubit_area = code_distance**2 * 2
         ccz_factory_duration = 5*code_distance
         ccz_factory_footprint = 15*8*logical_qubit_area
