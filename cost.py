@@ -595,8 +595,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
             looks_factor = 11.0/15
-            save_factor = cost_factor_Q(N, pr.ngr_pf)
-            looks = int(save_factor * mp.ceil(looks_factor * N ** (3 / 2.0)))
+            looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
             search_one_cost = compose_k_sequential(look_cost, looks)
 
         full_cost = raw_cost(search_one_cost, metric)
@@ -669,14 +668,9 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
                 label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
             )
         else:
-            # calculate Pr[P_{k,n} ∧ ¬G | C(w,β)] for cost_factor_Q
-            p_for_Q = ngr_pf(pr.d, pr.n, pr.k, beta=T1)
-            # calculate it as r(theta_1, k, n) from the paper
-            # p_for_Q = (2 * W0) / (bucket_size * C(pr.d, T1))
-            save_factor = cost_factor_Q(bucket_size, p_for_Q)
             look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k)
             looks_factor = (2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
-            looks_per_bucket = int(save_factor * looks_factor * bucket_size ** (3 / 2.0))
+            looks_per_bucket = int(looks_factor * bucket_size ** (3 / 2.0))
             search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
 
         fill_bucket_cost = N * ip_cost
@@ -800,58 +794,3 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         metric=metric,
         detailed_costs=dc,
     )
-
-
-def cost_factor_Q(bucket_size, p_for_Q):
-    """
-    Calculates a lower bound on the cost saved factor in quantum search
-    if Q is taken into account, i.e. 1/2 * sqrt{N/Q} calls to G(g) made in an
-    application of Prop 1, rather than 1/2 * sqrt{N}
-
-    Determines for which search spaces Q >= 1, but does not decrement Q when
-    neighbours found within one search space
-
-    :param bucket_size: size of bucket to be searched; whole list if all_pairs
-    :param p_for_Q: P[P_{k, n} ∧ ¬G| bucketing condition]
-    """
-
-    assert bucket_size, p_for_Q > mp.mpf(0)
-    bucket_size = int(bucket_size)
-
-    # for i in range 1, ..., k, (bucket_size - i) * p_for_Q >= 1
-    k = int(max(mp.floor(bucket_size - 1./p_for_Q), 0))
-
-    if k == 0 or bucket_size == 1:
-        return 1
-
-    def sum_ints(n, i):
-        """
-        Sum n - 1 + ... + i
-        """
-        return .5 * ((n - 1) * n - (i - 1) * i)
-
-    def sum_without_Q(n, p):
-        """
-        Sum sqrt{n - j} * ((n - j) * p + 1) for j in 1, ...., n - 1, using
-        Euler--Maclaurin
-        """
-
-        n = n - 1
-
-        # the (n - j)^{3/2} * p term, with error O(n^{-3/2})
-        a = p * (2./5 * (n**(5./2)-1) + .5 * (n**(3./2)+1) + .125 * (n**.5-1))
-
-        # the (n - j)^{1/2} term, with error O(n^{-5/2})
-        b = 2./3 * (n**(3./2)-1) + .5 * (n**.5 + 1) + 1./24 * (n**-.5 - 1)
-
-        return a + b
-
-    numer_1 = p_for_Q**.5 * sum_ints(bucket_size, int(1./p_for_Q)) + k / p_for_Q**.5
-    numer_2 = sum_without_Q(int(1./p_for_Q), p_for_Q)
-
-    denom = sum_without_Q(bucket_size, p_for_Q)
-
-    assert numer_1 <= denom - numer_2
-    assert numer_2 <= numer_1
-
-    return (numer_1 + numer_2) / denom
