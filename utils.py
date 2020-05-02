@@ -180,7 +180,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     :returns: ``None``, but files are written to disk.
 
     """
-    from cost import LogicalCosts, ClassicalCosts, QuantumMetrics, ClassicalMetrics
+    from cost import LogicalCosts, ClassicalCosts, QuantumMetrics, ClassicalMetrics, SizeMetrics
 
     try:
         for f_ in f:
@@ -220,6 +220,8 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
             fields += LogicalCosts._fields[1:]
         elif r[0].metric in ClassicalMetrics:
             fields += ClassicalCosts._fields[1:]
+        elif r[0].metric in SizeMetrics:
+            pass
         else:
             raise ValueError("Unknown metric {metric}".format(metric=r[0].metric))
         csvwriter.writerow(fields)

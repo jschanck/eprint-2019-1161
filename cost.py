@@ -74,6 +74,7 @@ QuantumMetrics = {
 
 Metrics = ClassicalMetrics | QuantumMetrics
 
+SizeMetrics = { "vectors", "bits" }
 
 def log2(x):
     return mp.log(x) / mp.log(2)
@@ -794,3 +795,17 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         metric=metric,
         detailed_costs=dc,
     )
+
+
+SieveSizeResult = namedtuple(
+    "ListSizeResult", ("d", "log2_size", "metric", "detailed_costs")
+)
+
+def sieve_size(d, metric=None):
+    N = 2 / (C(d, mp.pi / 3))
+    if metric=="vectors":
+        log2_size = log2(N)
+    if metric=="bits":
+        log2_size = log2(N) + log2(d)
+    return SieveSizeResult(d=d, log2_size=log2_size, metric=metric, detailed_costs=(0,))
+
