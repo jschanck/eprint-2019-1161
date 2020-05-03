@@ -16,29 +16,34 @@ def main():
         else:
             print("/consts/{:s}/.initial={:.1f},".format(name, val))
 
-    d = 256
-    while float(list_decoding(d + 16, metric="classical").log_cost - list_decoding(d + 16, metric="ge19").log_cost) < 0:
-        d += 16
-        p("ge19crossover", d)
-        p(
-            "ge19adv512",
-            float(list_decoding(512, metric="classical").log_cost - list_decoding(512, metric="ge19").log_cost),
-        )
-        p(
-            "ge19adv768",
-            float(list_decoding(768, metric="classical").log_cost - list_decoding(768, metric="ge19").log_cost),
-        )
-        p(
-            "ge19adv784",
-            float(list_decoding(784, metric="classical").log_cost - list_decoding(784, metric="ge19").log_cost),
-        )
-        p(
-            "ge19adv1024",
-            float(list_decoding(1024, metric="classical").log_cost - list_decoding(1024, metric="ge19").log_cost),
-        )
+    p(
+        "ge19adv512",
+        float(list_decoding(512, metric="classical").log_cost - list_decoding(512, metric="ge19").log_cost),
+    )
+    p(
+        "ge19adv768",
+        float(list_decoding(768, metric="classical").log_cost - list_decoding(768, metric="ge19").log_cost),
+    )
+    p(
+        "ge19adv784",
+        float(list_decoding(784, metric="classical").log_cost - list_decoding(784, metric="ge19").log_cost),
+    )
+    p(
+        "ge19adv1024",
+        float(list_decoding(1024, metric="classical").log_cost - list_decoding(1024, metric="ge19").log_cost),
+    )
     p("classical784", float(list_decoding(784, metric="classical").log_cost))
     p("classical1024", float(list_decoding(1024, metric="classical").log_cost))
 
+    d = 256
+    while float(list_decoding(d + 16, metric="classical").log_cost - list_decoding(d + 16, metric="ge19").log_cost) < 0:
+        d += 16
+    p("ge19crossover", d)
+
+    d = 256
+    while float(list_decoding(d + 16, metric="classical").log_cost - list_decoding(d + 16, metric="ge19").log_cost) < 1:
+        d += 16
+    p("ge19crossover2", d)
 
     d = 432
     xc = list_decoding(d, metric="classical")
