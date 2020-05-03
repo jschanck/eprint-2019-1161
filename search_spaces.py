@@ -30,29 +30,29 @@ def cpolyt_search_size(d, metric='dw'):
                 n_pop = int(row[1])
                 k_pop = int(row[2])
 
-    def int_f(theta):
-        # Eq 12.3 Thijs' thesis
-        cpolyt_prob = mp.exp(-mp.log(d) * mp.tan(theta / mp.mpf(2))**mp.mpf(2))
-        return cpolyt_prob * A(d, theta, prec=mp.prec)
+    def cpolyt(theta):
+        # Eq 12.3 Thijs' thesis: bucketing probability in terms of d, theta
+        bucket_prob = mp.exp(-mp.log(d) * mp.tan(theta / mp.mpf(2))**mp.mpf(2))
+        return bucket_prob * A(d, theta, prec=mp.prec)
 
-    def int_pop_f(theta):
-        # Eq 12.3 Thijs' thesis
-        cpolyt_prob = mp.exp(-mp.log(d) * mp.tan(theta / mp.mpf(2))**mp.mpf(2))
-        return P(n_pop, k_pop, theta) * cpolyt_prob * A(d, theta, prec=mp.prec)
+    def cpolyt_int(theta):
+        return mp.quad(cpolyt, (mp.mpf(0), theta), error=True)[0]
 
     # prob for fixed u a uniform v on sphere will fall into the same bucket
-    expected = mp.quad(int_f, (mp.mpf(0), mp.pi), error=True)[0]
-    # prob for fixed u a uniform v falls into all k buckets
+    expected = cpolyt_int(mp.pi)
+    # prob for fixed u a uniform v falls into k buckets
     expected_k = expected**k
     # prob for fixed u a uniform v falls into at least one of t `k-AND buckets'
     expected_k_t = mp.mpf(1) - (mp.mpf(1) - expected_k)**t
 
-    # eta = 1 - P[P_{k, n} | ngr AND falls into the same cpolyt bucket]
-    ngr_l = mp.mpf(0)
-    ngr_u = mp.pi / mp.mpf(3)
+    def dtheta_expected_k_t(theta):
+        # differentiate 1 - (1 - (cpolyt_int(theta))**k)**t wrt theta
+        return k * t * (1 - cpolyt_int(theta)**k)**(t-1) * cpolyt_int(theta)**(k-1) * cpolyt(theta)
 
-    eta_n = mp.quad(int_pop_f, (ngr_l, ngr_u), error=True)[0]
-    eta_d = mp.quad(int_f, (ngr_l, ngr_u), error=True)[0]
+    # eta = 1 - P[P_{k, n} | ngr AND falls into the same cpolyt bucket]
+    eta_n = mp.quad(lambda x: dtheta_expected_k_t(x) * P(n_pop, k_pop, x),
+                    (0, mp.pi / 3), error=True)[0]
+    eta_d = mp.quad(dtheta_expected_k_t, (0, mp.pi / 3), error=True)[0]
 
     eta = mp.mpf(1) - eta_n / eta_d
 
