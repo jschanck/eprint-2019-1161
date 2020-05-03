@@ -2,93 +2,83 @@
 """
 Constants to be dumped into the LaTeX file.
 """
+import os
+import csv
+
 from mpmath import mp
 from probabilities import C
 from cost import list_decoding, log2, load_probabilities
 
 
+def p(name, val):
+    if type(val) is int:
+        print("/consts/{:s}/.initial={:d},".format(name, val))
+    elif type(val) is str:
+        print("/consts/{:s}/.initial={:s},".format(name, val))
+    else:
+        print("/consts/{:s}/.initial={:.1f},".format(name, val))
+
+def load_csv(f, metric):
+    filename = os.path.join("..", "data", "cost-estimate-{f}-{metric}.csv")
+    filename = filename.format(f=f, metric=metric)
+    with open(filename, "r") as csvfile:
+        csvreader = csv.DictReader(csvfile, delimiter=",", quotechar='"',
+                                   quoting=csv.QUOTE_MINIMAL)
+        D = {int(L['d']) : L for L in csvreader}
+    return D
+
 def main():
-    def p(name, val):
-        if type(val) is int:
-            print("/consts/{:s}/.initial={:d},".format(name, val))
-        elif type(val) is str:
-            print("/consts/{:s}/.initial={:s},".format(name, val))
-        else:
-            print("/consts/{:s}/.initial={:.1f},".format(name, val))
+    data_bdgl_dw = load_csv("list_decoding", "dw")
+    data_bdgl_ge19 = load_csv("list_decoding", "ge19")
+    data_bdgl_classical = load_csv("list_decoding", "classical")
+    data_size_bits = load_csv("sieve_size", "bits")
 
-    p(
-        "ge19adv512",
-        float(list_decoding(512, metric="classical").log_cost - list_decoding(512, metric="ge19").log_cost),
-    )
-    p(
-        "ge19adv768",
-        float(list_decoding(768, metric="classical").log_cost - list_decoding(768, metric="ge19").log_cost),
-    )
-    p(
-        "ge19adv784",
-        float(list_decoding(784, metric="classical").log_cost - list_decoding(784, metric="ge19").log_cost),
-    )
-    p(
-        "ge19adv1024",
-        float(list_decoding(1024, metric="classical").log_cost - list_decoding(1024, metric="ge19").log_cost),
-    )
-    p("classical784", float(list_decoding(784, metric="classical").log_cost))
-    p("classical1024", float(list_decoding(1024, metric="classical").log_cost))
+    #p("classical784", float(list_decoding(784, metric="classical").log_cost))
+    #p("classical1024", float(list_decoding(1024, metric="classical").log_cost))
 
-    d = 256
-    while float(list_decoding(d + 16, metric="classical").log_cost - list_decoding(d + 16, metric="ge19").log_cost) < 0:
-        d += 16
-    p("ge19crossover", d)
+    for d in sorted(data_bdgl_ge19):
+        if float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_ge19[d]['log_cost']) > 0:
+            p("bdgl/ge19/crossover", d)
+            break
 
-    d = 256
-    while float(list_decoding(d + 16, metric="classical").log_cost - list_decoding(d + 16, metric="ge19").log_cost) < 1:
-        d += 16
-    p("ge19crossover2", d)
+    for d in sorted(data_bdgl_ge19):
+        if float(data_bdgl_ge19[d]['log_cost']) > 128:
+            p("bdgl/ge19/dim/cost128", d)
+            p("bdgl/ge19/adv/cost128", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_ge19[d]['log_cost']))
+            break
 
-    d = 432
-    xc = list_decoding(d, metric="classical")
-    xdw = list_decoding(d, metric="dw")
+    for d in sorted(data_bdgl_ge19):
+        if float(data_bdgl_ge19[d]['log_cost']) > 256:
+            p("bdgl/ge19/dim/cost256", d)
+            p("bdgl/ge19/adv/cost256", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_ge19[d]['log_cost']))
+            break
 
-    p("para/dim40", int(d))
-    p("para/depth40", float(log2(xdw.detailed_costs.depth)))
-    p("para/adv40", float(xc.log_cost - xdw.log_cost))
+    for d in sorted(data_bdgl_dw):
+        if float(data_bdgl_dw[d]['log_cost']) > 128:
+            p("bdgl/dw/dim/cost128", d)
+            p("bdgl/dw/adv/cost128", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_dw[d]['log_cost']))
+            break
 
-    d = 800
-    xc = list_decoding(d, metric="classical")
-    xdw = list_decoding(d, metric="dw")
+    for d in sorted(data_bdgl_dw):
+        if float(data_bdgl_dw[d]['log_cost']) > 256:
+            p("bdgl/dw/dim/cost256", d)
+            p("bdgl/dw/adv/cost256", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_dw[d]['log_cost']))
+            break
 
-    p("para/dim64", int(d))
-    p("para/depth64", float(log2(xdw.detailed_costs.depth)))
-    p("para/adv64", float(xc.log_cost - xdw.log_cost))
+    for d in sorted(data_size_bits):
+        if d % 16 == 0 and float(data_size_bits[d]['log2_size']) > 127:
+            p("size128/dim", d)
+            p("bdgl/ge19/adv/size128", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_ge19[d]['log_cost']))
+            p("bdgl/dw/adv/size128", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_dw[d]['log_cost']))
+            break
 
-
-    d = 352
-    p("real/dim", int(d))
-    xc = list_decoding(d, metric="classical")
-    xdw = list_decoding(d, metric="dw")
-    p("real/ram", float(xc.log_cost))
-    p("real/dw", float(xdw.log_cost))
-    p("real/adv", float(log2(2 ** xc.log_cost / 2 ** xdw.log_cost)))
-    p("real/one/dw", float(log2(xdw.detailed_costs.dw)))
-    p("real/one/depth", float(log2(xdw.detailed_costs.depth)))
-    p("real/one/width", float(log2(xdw.detailed_costs.qubits_max)))
-    p("real/one/ram", float(log2(xc.detailed_costs.gates)))
-    p("real/one/ramdepth", float(log2(xc.detailed_costs.depth)))
-
-    md = 96
-
-    pr = load_probabilities(xdw.d, xdw.n, xdw.k)
-    tot = log2(2 / ((1 - pr.eta) * C(d, mp.pi / 3)))
-    seq = md - log2(xdw.detailed_costs.depth)
-    qpar = tot - seq
-    p("real/md96/qpar", float(qpar))
-    p("real/md96/qubits", float(log2(2 ** qpar * xdw.detailed_costs.qubits_max)))
-
-    pr = load_probabilities(xc.d, xc.n, xc.k)
-    tot = log2(2 / ((1 - pr.eta) * C(d, mp.pi / 3)))
-    seq = md - log2(xc.detailed_costs.depth)
-    cpar = tot - seq
-    p("real/md96/cpar", float(cpar))
+    # Assume a moon sized memory with 1 petabyte per gram density
+    for d in sorted(data_size_bits):
+        if d % 16 == 0 and float(data_size_bits[d]['log2_size']) > 139:
+            p("size140/dim", d)
+            p("bdgl/ge19/adv/size140", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_ge19[d]['log_cost']))
+            p("bdgl/dw/adv/size140", float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_dw[d]['log_cost']))
+            break
 
 
 if __name__ == "__main__":
