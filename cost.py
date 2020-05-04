@@ -74,7 +74,8 @@ QuantumMetrics = {
 
 Metrics = ClassicalMetrics | QuantumMetrics
 
-SizeMetrics = { "vectors", "bits" }
+SizeMetrics = {"vectors", "bits"}
+
 
 def log2(x):
     return mp.log(x) / mp.log(2)
@@ -259,7 +260,6 @@ def classical_popcount_costf(n, k):
 
     """
     ell = mp.ceil(mp.log(n, 2))
-    t = mp.ceil(mp.log(k, 2))
     gates = 11 * n - 9 * ell - 10
     depth = 2 * ell
 
