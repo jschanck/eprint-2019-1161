@@ -97,17 +97,25 @@ def local_min(f, x, d1=1, d2=5, low=None, high=None):
     :param high: upper bound on input space
 
     """
+    low = mp.mpf("-inf") if low is None else low
+    high = mp.mpf("inf") if high is None else high
     y = f(x)
     for k in range(d1, d2 + 1):
         d = 0.1 ** k
-        y2 = f(x + d) if x + d < high else f(high)
-        if y2 > y:
-            d = -d
-            y2 = f(x + d) if x + d > low else f(low)
-        while (y2 < y) and (low < x + d) and (x + d < high):
+        # look left and right
+        yl = f(x - d) if x + d > low else f(low)
+        yr = f(x + d) if x + d < high else f(high)
+        # choose better direction
+        d = d if yr < yl else -d
+        x2 = x + d
+        y2 = min(yl, yr)
+        # walk
+        while (y2 < y):
+            x = x2
             y = y2
-            x = x + d
-            y2 = f(x)
+            if (low < x + d) and (x + d < high):
+                x2 = x + d
+                y2 = f(x2)
     return x
 
 
@@ -685,7 +693,9 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
-                pr = load_probabilities(pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * (2 * (pr.n + 1) - 1)))
+                n = 2 * (pr.n + 1) - 1
+                k =  int(MagicConstants.k_div_n * n)
+                pr = load_probabilities(pr.d, n, k)
             except PrecomputationRequired as e:
                 if allow_suboptimal:
                     break
