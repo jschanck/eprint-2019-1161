@@ -98,25 +98,27 @@ def local_min(f, x, d1=1, d2=5, low=None, high=None):
     :param high: upper bound on input space
 
     """
+    assert low < high
     low = mp.mpf("-inf") if low is None else low
     high = mp.mpf("inf") if high is None else high
+    x = x if (x >= low) and (x <= high) else (low+high)/2
     y = f(x)
     for k in range(d1, d2 + 1):
         d = 0.1 ** k
-        # look left and right
-        yl = f(x - d) if x - d > low else f(low)
-        yr = f(x + d) if x + d < high else f(high)
+        # look left and right, avoid re-computing if possible
+        xl = x-d if x-d > low else low
+        xr = x+d if x+d < high else high
+        yl = y if xl == x else f(xl)
+        yr = y if xr == x else f(xr)
         # choose better direction
-        d = d if yr < yl else -d
-        x2 = x + d
-        y2 = min(yl, yr)
+        (d,x2,y2) = (d,xr,yr) if yr < yl else (-d,xl,yl)
         # walk
-        while (y2 < y):
-            x = x2
-            y = y2
-            if (low < x + d) and (x + d < high):
-                x2 = x + d
-                y2 = f(x2)
+        while (y2 < y) and (x2 != low) and (x2 != high):
+            (x,y) = (x2,y2)
+            if d < 0:
+                (x2,y2) = (x+d, f(x+d)) if x+d > low else (low, f(low))
+            else:
+                (x2,y2) = (x+d, f(x+d)) if x+d < high else (high, f(high))
     return x
 
 
