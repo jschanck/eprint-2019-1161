@@ -113,12 +113,13 @@ def local_min(f, x, d1=1, d2=5, low=None, high=None):
         # choose better direction
         (d,x2,y2) = (d,xr,yr) if yr < yl else (-d,xl,yl)
         # walk
-        while (y2 < y) and (x2 != low) and (x2 != high):
+        while (y2 < y):
             (x,y) = (x2,y2)
             if d < 0:
-                (x2,y2) = (x+d, f(x+d)) if x+d > low else (low, f(low))
+                x2 = x+d if x+d > low else low
             else:
-                (x2,y2) = (x+d, f(x+d)) if x+d < high else (high, f(high))
+                x2 = x+d if x+d < high else high
+            y2 = y if x2 == x else f(x2)
     return x
 
 
