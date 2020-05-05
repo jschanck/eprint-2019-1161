@@ -104,7 +104,7 @@ def local_min(f, x, d1=1, d2=5, low=None, high=None):
     for k in range(d1, d2 + 1):
         d = 0.1 ** k
         # look left and right
-        yl = f(x - d) if x + d > low else f(low)
+        yl = f(x - d) if x - d > low else f(low)
         yr = f(x + d) if x + d < high else f(high)
         # choose better direction
         d = d if yr < yl else -d
