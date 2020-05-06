@@ -254,7 +254,7 @@ def compose_parallel(cost1, cost2, label="_"):
     )
 
 
-def classical_popcount_costf(n, k):
+def classical_popcount_costf(n, k, metric):
     """
     Classical gate count for popcount.
 
@@ -262,12 +262,15 @@ def classical_popcount_costf(n, k):
     :param k: we accept if two vectors agree on ≤ k
 
     """
+    if metric == "naive_classical":
+        cc = ClassicalCosts(label="popcount", gates=1, depth=1)
+        return cc
+
     ell = mp.ceil(mp.log(n, 2))
     gates = 11 * n - 9 * ell - 10
     depth = 2 * ell
 
     cc = ClassicalCosts(label="popcount", gates=gates, depth=depth)
-
     return cc
 
 
@@ -521,7 +524,7 @@ def diffusion_costf(L):
     return qc
 
 
-def popcount_grover_iteration_costf(L, n, k):
+def popcount_grover_iteration_costf(L, n, k, metric):
     """
     Logical cost of G(popcount) = (D R_0 D^-1) R_popcount.
 
@@ -533,6 +536,10 @@ def popcount_grover_iteration_costf(L, n, k):
     :param k: we accept if two vectors agree on <= k
 
     """
+    if metric == "naive_quantum":
+        return LogicalCosts(label="oracle", qubits_in=1, qubits_out=1,
+                            qubits_max=1, depth=1, gates=1, dw=1,
+                            toffoli_count=1, t_count=1, t_depth=1)
 
     popcount_cost = popcount_costf(L, n, k)
     diffusion_cost = diffusion_costf(L)
@@ -563,9 +570,9 @@ def raw_cost(cost, metric):
     elif metric == "classical":
         result = cost.gates
     elif metric == "naive_quantum":
-        return 1
+        return cost.gates
     elif metric == "naive_classical":
-        return 1
+        return cost.gates
     else:
         raise ValueError("Unknown metric '%s'" % metric)
     return result
@@ -599,13 +606,13 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
 
         if metric in ClassicalMetrics:
-            look_cost = classical_popcount_costf(pr.n, pr.k)
+            look_cost = classical_popcount_costf(pr.n, pr.k, metric)
             looks = (N ** 2 - N) / 2.0
             search_one_cost = ClassicalCosts(
                 label="search", gates=look_cost.gates * looks, depth=look_cost.depth * looks
             )
         else:
-            look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k)
+            look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k, metric)
             looks_factor = 11.0/15
             looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
             search_one_cost = compose_k_sequential(look_cost, looks)
@@ -674,13 +681,13 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         bucket_size = N * C(pr.d, T1)
 
         if metric in ClassicalMetrics:
-            look_cost = classical_popcount_costf(pr.n, pr.k)
+            look_cost = classical_popcount_costf(pr.n, pr.k, metric)
             looks_per_bucket = (bucket_size ** 2 - bucket_size) / 2.0
             search_one_cost = ClassicalCosts(
                 label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
             )
         else:
-            look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k)
+            look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k, metric)
             looks_factor = (2 * W0) / (5 * C(pr.d, T1)) + 1.0 / 3
             looks_per_bucket = int(looks_factor * bucket_size ** (3 / 2.0))
             search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
@@ -765,13 +772,13 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         bucket_size = (filters * C(d, T1)) * (N * C(d, T2))
 
         if metric in ClassicalMetrics:
-            look_cost = classical_popcount_costf(pr.n, pr.k)
+            look_cost = classical_popcount_costf(pr.n, pr.k, metric)
             looks_per_bucket = bucket_size
             search_one_cost = ClassicalCosts(
                 label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
             )
         else:
-            look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k)
+            look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k, metric)
             looks_per_bucket = bucket_size ** (1 / 2.0)
             search_one_cost = compose_k_sequential(look_cost, looks_per_bucket)
 
