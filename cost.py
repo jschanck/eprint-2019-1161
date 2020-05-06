@@ -101,24 +101,24 @@ def local_min(f, x, d1=1, d2=5, low=None, high=None):
     assert low < high
     low = mp.mpf("-inf") if low is None else low
     high = mp.mpf("inf") if high is None else high
-    x = x if (x >= low) and (x <= high) else (low+high)/2
+    x = x if (x >= low) and (x <= high) else (low + high) / 2
     y = f(x)
     for k in range(d1, d2 + 1):
         d = 0.1 ** k
         # look left and right, avoid re-computing if possible
-        xl = x-d if x-d > low else low
-        xr = x+d if x+d < high else high
+        xl = x - d if x - d > low else low
+        xr = x + d if x + d < high else high
         yl = y if xl == x else f(xl)
         yr = y if xr == x else f(xr)
         # choose better direction
-        (d,x2,y2) = (d,xr,yr) if yr < yl else (-d,xl,yl)
+        (d, x2, y2) = (d, xr, yr) if yr < yl else (-d, xl, yl)
         # walk
-        while (y2 < y):
-            (x,y) = (x2,y2)
+        while y2 < y:
+            (x, y) = (x2, y2)
             if d < 0:
-                x2 = x+d if x+d > low else low
+                x2 = x + d if x + d > low else low
             else:
-                x2 = x+d if x+d < high else high
+                x2 = x + d if x + d < high else high
             y2 = y if x2 == x else f(x2)
     return x
 
@@ -400,7 +400,9 @@ def popcount_costf(L, n, k):
     # Use tree of adders compute hamming weight
     #     |i>|u^v_i>|0>     ->    |i>|u^v_i>|wt(u^v_i)>
     hamming_wt = hamming_wt_costf(n)
-    qc = compose_sequential(qc, null_costf(qubits_in=qc.qubits_out, qubits_out=index_wires + hamming_wt.qubits_in))
+    qc = compose_sequential(
+        qc, null_costf(qubits_in=qc.qubits_out, qubits_out=index_wires + hamming_wt.qubits_in)
+    )
     qc = compose_sequential(qc, hamming_wt)
 
     # Compute the high bit of (2^ceil(log(n)) - k) + hamming_wt
@@ -443,8 +445,12 @@ def n_toffoli_costf(n, have_ancilla=False):
         n1 = int(mp.ceil((n - 1) / 2.0)) + 1
         n2 = n - n1 + 1
         return compose_sequential(
-            compose_parallel(null_costf(qubits_in=n - n1, qubits_out=n - n1), n_toffoli_costf(n1, True)),
-            compose_parallel(null_costf(qubits_in=n - n2, qubits_out=n - n2), n_toffoli_costf(n2, True)),
+            compose_parallel(
+                null_costf(qubits_in=n - n1, qubits_out=n - n1), n_toffoli_costf(n1, True)
+            ),
+            compose_parallel(
+                null_costf(qubits_in=n - n2, qubits_out=n - n2), n_toffoli_costf(n2, True)
+            ),
         )
 
     if n == 3:  # Normal toffoli gate
@@ -537,9 +543,18 @@ def popcount_grover_iteration_costf(L, n, k, metric):
 
     """
     if metric == "naive_quantum":
-        return LogicalCosts(label="oracle", qubits_in=1, qubits_out=1,
-                            qubits_max=1, depth=1, gates=1, dw=1,
-                            toffoli_count=1, t_count=1, t_depth=1)
+        return LogicalCosts(
+            label="oracle",
+            qubits_in=1,
+            qubits_out=1,
+            qubits_max=1,
+            depth=1,
+            gates=1,
+            dw=1,
+            toffoli_count=1,
+            t_count=1,
+            t_depth=1,
+        )
 
     popcount_cost = popcount_costf(L, n, k)
     diffusion_cost = diffusion_costf(L)
@@ -562,7 +577,11 @@ def raw_cost(cost, metric):
         result = cost.dw
     elif metric == "ge19":
         phys = estimate_abstract_to_physical(
-            cost.toffoli_count, cost.qubits_max, cost.depth, prefers_parallel=False, prefers_serial=True
+            cost.toffoli_count,
+            cost.qubits_max,
+            cost.depth,
+            prefers_parallel=False,
+            prefers_serial=True,
         )
         result = cost.dw * phys[0] ** 2
     elif metric == "t_count":
@@ -578,7 +597,9 @@ def raw_cost(cost, metric):
     return result
 
 
-AllPairsResult = namedtuple("AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric", "detailed_costs"))
+AllPairsResult = namedtuple(
+    "AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric", "detailed_costs")
+)
 
 
 def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=False):
@@ -598,9 +619,9 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         while n < d:
             n = 2 * n
 
-    k = k if k else int(MagicConstants.k_div_n * (n-1))
+    k = k if k else int(MagicConstants.k_div_n * (n - 1))
 
-    pr = load_probabilities(d, n-1, k)
+    pr = load_probabilities(d, n - 1, k)
 
     def cost(pr):
         N = 2 / ((1 - pr.eta) * C(pr.d, mp.pi / 3))
@@ -613,7 +634,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
             )
         else:
             look_cost = popcount_grover_iteration_costf(N, pr.n, pr.k, metric)
-            looks_factor = 11.0/15
+            looks_factor = 11.0 / 15
             looks = int(mp.ceil(looks_factor * N ** (3 / 2.0)))
             search_one_cost = compose_k_sequential(look_cost, looks)
 
@@ -623,7 +644,9 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
     positive_rate = pf(pr.d, pr.n, pr.k)
     while optimize and not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
         try:
-            pr = load_probabilities(pr.d, 2 * (pr.n+1) - 1, int(MagicConstants.k_div_n * (2 * (pr.n+1) - 1)))
+            pr = load_probabilities(
+                pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * (2 * (pr.n + 1) - 1))
+            )
         except PrecomputationRequired as e:
             if allow_suboptimal:
                 break
@@ -645,11 +668,14 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
 
 
 RandomBucketsResult = namedtuple(
-    "RandomBucketsResult", ("d", "n", "k", "theta", "log_cost", "pf_inv", "eta", "metric", "detailed_costs")
+    "RandomBucketsResult",
+    ("d", "n", "k", "theta", "log_cost", "pf_inv", "eta", "metric", "detailed_costs"),
 )
 
 
-def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", allow_suboptimal=False):
+def random_buckets(
+    d, n=None, k=None, theta1=None, optimize=True, metric="dw", allow_suboptimal=False
+):
     """
     Nearest Neighbor Search using random buckets as in BGJ1.
 
@@ -668,13 +694,13 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         while n < d:
             n = 2 * n
 
-    k = k if k else int(MagicConstants.k_div_n * (n-1))
+    k = k if k else int(MagicConstants.k_div_n * (n - 1))
     theta = theta1 if theta1 else 1.2860
-    pr = load_probabilities(d, n-1, k)
+    pr = load_probabilities(d, n - 1, k)
     ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
-        eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1)/ngr(pr.d, beta=T1)
+        eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1) / ngr(pr.d, beta=T1)
         N = 2 / ((1 - eta) * C(pr.d, mp.pi / 3))
         W0 = W(pr.d, T1, T1, mp.pi / 3)
         buckets = 1.0 / W0
@@ -684,7 +710,9 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
             look_cost = classical_popcount_costf(pr.n, pr.k, metric)
             looks_per_bucket = (bucket_size ** 2 - bucket_size) / 2.0
             search_one_cost = ClassicalCosts(
-                label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
+                label="search",
+                gates=look_cost.gates * looks_per_bucket,
+                depth=look_cost.depth * looks_per_bucket,
             )
         else:
             look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k, metric)
@@ -704,7 +732,7 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
                 n = 2 * (pr.n + 1) - 1
-                k =  int(MagicConstants.k_div_n * n)
+                k = int(MagicConstants.k_div_n * n)
                 pr = load_probabilities(pr.d, n, k)
             except PrecomputationRequired as e:
                 if allow_suboptimal:
@@ -732,11 +760,14 @@ def random_buckets(d, n=None, k=None, theta1=None, optimize=True, metric="dw", a
 
 
 ListDecodingResult = namedtuple(
-    "ListDecodingResult", ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "eta", "metric", "detailed_costs")
+    "ListDecodingResult",
+    ("d", "n", "k", "theta1", "theta2", "log_cost", "pf_inv", "eta", "metric", "detailed_costs"),
 )
 
 
-def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw", allow_suboptimal=False):
+def list_decoding(
+    d, n=None, k=None, theta1=None, theta2=None, optimize=True, metric="dw", allow_suboptimal=False
+):
     """
     Nearest Neighbor Search via a decodable buckets as in BDGL16.
 
@@ -756,13 +787,13 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         while n < d:
             n = 2 * n
 
-    k = k if k else int(MagicConstants.k_div_n * (n-1))
+    k = k if k else int(MagicConstants.k_div_n * (n - 1))
     theta = theta1 if theta1 else mp.pi / 3
-    pr = load_probabilities(d, n-1, k)
+    pr = load_probabilities(d, n - 1, k)
     ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
-        eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1)/ngr(pr.d, beta=T1)
+        eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1) / ngr(pr.d, beta=T1)
         T2 = T1
         N = 2 / ((1 - eta) * C(d, mp.pi / 3))
         W0 = W(d, T1, T2, mp.pi / 3)
@@ -775,7 +806,9 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
             look_cost = classical_popcount_costf(pr.n, pr.k, metric)
             looks_per_bucket = bucket_size
             search_one_cost = ClassicalCosts(
-                label="search", gates=look_cost.gates * looks_per_bucket, depth=look_cost.depth * looks_per_bucket
+                label="search",
+                gates=look_cost.gates * looks_per_bucket,
+                depth=look_cost.depth * looks_per_bucket,
             )
         else:
             look_cost = popcount_grover_iteration_costf(bucket_size, pr.n, pr.k, metric)
@@ -790,7 +823,9 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
-                pr = load_probabilities(pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * (2 * (pr.n + 1) - 1)))
+                pr = load_probabilities(
+                    pr.d, 2 * (pr.n + 1) - 1, int(MagicConstants.k_div_n * (2 * (pr.n + 1) - 1))
+                )
             except PrecomputationRequired as e:
                 if allow_suboptimal:
                     break
@@ -817,15 +852,13 @@ def list_decoding(d, n=None, k=None, theta1=None, theta2=None, optimize=True, me
     )
 
 
-SieveSizeResult = namedtuple(
-    "ListSizeResult", ("d", "log2_size", "metric", "detailed_costs")
-)
+SieveSizeResult = namedtuple("ListSizeResult", ("d", "log2_size", "metric", "detailed_costs"))
+
 
 def sieve_size(d, metric=None):
     N = 2 / (C(d, mp.pi / 3))
-    if metric=="vectors":
+    if metric == "vectors":
         log2_size = log2(N)
-    if metric=="bits":
+    if metric == "bits":
         log2_size = log2(N) + log2(d)
     return SieveSizeResult(d=d, log2_size=log2_size, metric=metric, detailed_costs=(0,))
-
