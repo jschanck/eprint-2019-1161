@@ -39,6 +39,8 @@ def main():
     for d in sorted(data_bdgl_ge19):
         if float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_ge19[d]['log_cost']) > 0:
             p("bdgl/ge19/crossover", d)
+            p("bdgl/ge19/crossover/cost", float(data_bdgl_ge19[d]['log_cost']))
+            p("bdgl/ge19/crossover/size", float(data_size_bits[d]['log2_size']))
             break
 
     for d in sorted(data_bdgl_ge19):
