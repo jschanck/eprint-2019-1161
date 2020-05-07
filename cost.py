@@ -852,13 +852,13 @@ def list_decoding(
     )
 
 
-SieveSizeResult = namedtuple("ListSizeResult", ("d", "log2_size", "metric", "detailed_costs"))
+SieveSizeResult = namedtuple("SieveSizeResult", ("d", "log2_size", "metric", "detailed_costs"))
 
 
 def sieve_size(d, metric=None):
     N = 2 / (C(d, mp.pi / 3))
     if metric == "vectors":
         log2_size = log2(N)
-    if metric == "bits":
+    elif metric == "bits":
         log2_size = log2(N) + log2(d)
     return SieveSizeResult(d=d, log2_size=log2_size, metric=metric, detailed_costs=(0,))
