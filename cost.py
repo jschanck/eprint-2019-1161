@@ -576,7 +576,7 @@ def raw_cost(cost, metric):
 
 
 AllPairsResult = namedtuple(
-    "AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "metric", "detailed_costs")
+    "AllPairsResult", ("d", "n", "k", "log_cost", "pf_inv", "eta", "metric", "detailed_costs")
 )
 
 
@@ -640,6 +640,7 @@ def all_pairs(d, n=None, k=None, optimize=True, metric="dw", allow_suboptimal=Fa
         k=pr.k,
         log_cost=float(log2(fc)),
         pf_inv=int(1 / positive_rate),
+        eta=pr.eta,
         metric=metric,
         detailed_costs=dc,
     )
