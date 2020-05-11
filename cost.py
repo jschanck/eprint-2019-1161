@@ -81,46 +81,24 @@ def log2(x):
     return mp.log(x) / mp.log(2)
 
 
-def local_min(f, x, d1=1, d2=5, low=None, high=None):
+def local_min(f, low=None, high=None):
     """
     Search the neighborhood around ``f(x)`` for a local minimum between ``low`` and ``high``.
 
-    ..  note :: We could replace this function with a call to ``scipy.optimize.fminbound``.
-    However, this doesn't seem to be faster.  Also, ``f(x)`` is not necessarily defined on all of
-    `[low … high]`, raising an ``AssertionError`` which would need to be caught by a wrapper around
-    ``f``.
-
     :param f: function to call
-    :param x: initial guess for ``x`` minimizing ``f(x)``
-    :param d1: We move in steps of size `0.1^{d1}` … 0.1^{d2}`, starting with ``d1``
-    :param d2: We move in steps of size `0.1^{d1}` … 0.1^{d2}`, finishing at ``d2``
     :param low: lower bound on input space
     :param high: upper bound on input space
 
     """
-    assert low < high
-    low = mp.mpf("-inf") if low is None else low
-    high = mp.mpf("inf") if high is None else high
-    x = x if (x >= low) and (x <= high) else (low + high) / 2
-    y = f(x)
-    for k in range(d1, d2 + 1):
-        d = 0.1 ** k
-        # look left and right, avoid re-computing if possible
-        xl = x - d if x - d > low else low
-        xr = x + d if x + d < high else high
-        yl = y if xl == x else f(xl)
-        yr = y if xr == x else f(xr)
-        # choose better direction
-        (d, x2, y2) = (d, xr, yr) if yr < yl else (-d, xl, yl)
-        # walk
-        while y2 < y:
-            (x, y) = (x2, y2)
-            if d < 0:
-                x2 = x + d if x + d > low else low
-            else:
-                x2 = x + d if x + d < high else high
-            y2 = y if x2 == x else f(x2)
-    return x
+    from scipy.optimize import fminbound
+
+    def ff(x):
+        try:
+            return float(f(float(x)))
+        except AssertionError:
+            return mp.mpf("inf")
+
+    return fminbound(ff, float(low), float(high))
 
 
 def null_costf(qubits_in=0, qubits_out=0):
@@ -727,7 +705,7 @@ def random_buckets(
         return full_cost, look_cost, eta
 
     if optimize:
-        theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
+        theta = local_min(lambda T: cost(pr, T)[0], low=mp.pi / 6, high=mp.pi / 2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
@@ -739,7 +717,7 @@ def random_buckets(
                     break
                 else:
                     raise e
-            theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
+            theta = local_min(lambda T: cost(pr, T)[0], low=mp.pi / 6, high=mp.pi / 2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
@@ -819,7 +797,7 @@ def list_decoding(
         return N * insert_cost + N * query_cost + N * search_cost, search_one_cost, eta
 
     if optimize:
-        theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
+        theta = local_min(lambda T: cost(pr, T)[0], low=mp.pi / 6, high=mp.pi / 2)
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
         while not popcounts_dominate_cost(positive_rate, pr.d, pr.n, metric):
             try:
@@ -831,7 +809,7 @@ def list_decoding(
                     break
                 else:
                     raise e
-            theta = local_min(lambda T: cost(pr, T)[0], theta, low=mp.pi / 6, high=mp.pi / 2)
+            theta = local_min(lambda T: cost(pr, T)[0], low=mp.pi / 6, high=mp.pi / 2)
             positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
     else:
         positive_rate = pf(pr.d, pr.n, pr.k, beta=theta)
