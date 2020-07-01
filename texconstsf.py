@@ -28,13 +28,55 @@ def load_csv(f, metric):
     return D
 
 def main():
+    data_bgj1_g = load_csv("random_buckets", "g")
+    data_bgj1_dw = load_csv("random_buckets", "dw")
+    data_bgj1_ge19 = load_csv("random_buckets", "ge19")
+    data_bgj1_classical= load_csv("random_buckets", "classical")
+
+    data_bdgl_g = load_csv("list_decoding", "g")
     data_bdgl_dw = load_csv("list_decoding", "dw")
     data_bdgl_ge19 = load_csv("list_decoding", "ge19")
     data_bdgl_classical = load_csv("list_decoding", "classical")
+
     data_size_bits = load_csv("sieve_size", "bits")
 
     #p("classical784", float(list_decoding(784, metric="classical").log_cost))
     #p("classical1024", float(list_decoding(1024, metric="classical").log_cost))
+
+    for d in sorted(data_bgj1_g):
+        if float(data_bgj1_classical[d]['log_cost']) - float(data_bgj1_g[d]['log_cost']) > 0:
+            p("bgj1/g/crossover", d)
+            p("bgj1/g/crossover/cost", float(data_bgj1_g[d]['log_cost']))
+            p("bgj1/g/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
+
+    for d in sorted(data_bgj1_dw):
+        if float(data_bgj1_classical[d]['log_cost']) - float(data_bgj1_dw[d]['log_cost']) > 0:
+            p("bgj1/dw/crossover", d)
+            p("bgj1/dw/crossover/cost", float(data_bgj1_dw[d]['log_cost']))
+            p("bgj1/dw/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
+
+    for d in sorted(data_bgj1_ge19):
+        if float(data_bgj1_classical[d]['log_cost']) - float(data_bgj1_ge19[d]['log_cost']) > 0:
+            p("bgj1/ge19/crossover", d)
+            p("bgj1/ge19/crossover/cost", float(data_bgj1_ge19[d]['log_cost']))
+            p("bgj1/ge19/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
+
+    for d in sorted(data_bdgl_g):
+        if float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_g[d]['log_cost']) > 0:
+            p("bdgl/g/crossover", d)
+            p("bdgl/g/crossover/cost", float(data_bdgl_g[d]['log_cost']))
+            p("bdgl/g/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
+
+    for d in sorted(data_bdgl_dw):
+        if float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_dw[d]['log_cost']) > 0:
+            p("bdgl/dw/crossover", d)
+            p("bdgl/dw/crossover/cost", float(data_bdgl_dw[d]['log_cost']))
+            p("bdgl/dw/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
 
     for d in sorted(data_bdgl_ge19):
         if float(data_bdgl_classical[d]['log_cost']) - float(data_bdgl_ge19[d]['log_cost']) > 0:
