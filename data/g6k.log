@@ -1,0 +1,135 @@
+(fpylll2) malb@solardiesel:: ~/projects/lattices/g6k plain-sieve> ./plain_sieve.py -t 8 -w 8 40 -u 81 -s 1 --sieve gauss bgj1 --log-filename ~/projects/lattices/quantum-sieving-revisited/g6k-plain-sieves.log --loglvl INFO
+root: Did not find 'svpchallenge/svpchallenge-dim-041-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-043-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-045-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-047-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-049-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-043-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-041-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-047-seed-00.txt', downloading ...
+root: 200 OK
+root: 200 OK
+root: 200 OK
+root: 200 OK
+root: 200 OK
+root: 200 OK
+root: 200 OK
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-051-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-053-seed-00.txt', downloading ...
+root: 200 OK
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-055-seed-00.txt', downloading ...
+root: Did not find 'svpchallenge/svpchallenge-dim-057-seed-00.txt', downloading ...
+root: 200 OK
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-059-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-061-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-063-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-065-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-067-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-069-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-071-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-075-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-073-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-078-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-079-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-077-seed-00.txt', downloading ...
+root: 200 OK
+root: Did not find 'svpchallenge/svpchallenge-dim-080-seed-00.txt', downloading ...
+root: 200 OK
+
+root:                         'default_sieve': gauss,  :: m: 1, n: 40, cputime : 0.0881s, walltime : 0.0881s, avr_max |db|: 2^9.94, max_max db |db|: 2^10.00
+root:                          'default_sieve': bgj1,  :: m: 1, n: 40, cputime : 0.0883s, walltime : 0.0883s, avr_max |db|: 2^9.93, max_max db |db|: 2^10.00
+root:                         'default_sieve': gauss,  :: m: 1, n: 41, cputime : 0.1318s, walltime : 0.1318s, avr_max |db|: 2^10.10, max_max db |db|: 2^10.17
+root:                          'default_sieve': bgj1,  :: m: 1, n: 41, cputime : 0.1269s, walltime : 0.1270s, avr_max |db|: 2^10.10, max_max db |db|: 2^10.17
+root:                         'default_sieve': gauss,  :: m: 1, n: 42, cputime : 0.1496s, walltime : 0.1497s, avr_max |db|: 2^10.35, max_max db |db|: 2^10.41
+root:                          'default_sieve': bgj1,  :: m: 1, n: 42, cputime : 0.1436s, walltime : 0.1436s, avr_max |db|: 2^10.37, max_max db |db|: 2^10.41
+root:                         'default_sieve': gauss,  :: m: 1, n: 43, cputime : 0.2020s, walltime : 0.2021s, avr_max |db|: 2^10.54, max_max db |db|: 2^10.63
+root:                          'default_sieve': bgj1,  :: m: 1, n: 43, cputime : 0.1882s, walltime : 0.1883s, avr_max |db|: 2^10.53, max_max db |db|: 2^10.63
+root:                         'default_sieve': gauss,  :: m: 1, n: 44, cputime : 0.2389s, walltime : 0.2390s, avr_max |db|: 2^10.68, max_max db |db|: 2^10.71
+root:                          'default_sieve': bgj1,  :: m: 1, n: 44, cputime : 0.2226s, walltime : 0.2227s, avr_max |db|: 2^10.68, max_max db |db|: 2^10.71
+root:                         'default_sieve': gauss,  :: m: 1, n: 45, cputime : 0.3114s, walltime : 0.3114s, avr_max |db|: 2^10.89, max_max db |db|: 2^10.96
+root:                          'default_sieve': bgj1,  :: m: 1, n: 45, cputime : 0.2954s, walltime : 0.2955s, avr_max |db|: 2^10.91, max_max db |db|: 2^10.99
+root:                         'default_sieve': gauss,  :: m: 1, n: 46, cputime : 0.3633s, walltime : 0.3634s, avr_max |db|: 2^11.06, max_max db |db|: 2^11.13
+root:                          'default_sieve': bgj1,  :: m: 1, n: 46, cputime : 0.3490s, walltime : 0.3491s, avr_max |db|: 2^11.05, max_max db |db|: 2^11.13
+root:                         'default_sieve': gauss,  :: m: 1, n: 47, cputime : 0.4914s, walltime : 0.4915s, avr_max |db|: 2^11.30, max_max db |db|: 2^11.37
+root:                          'default_sieve': bgj1,  :: m: 1, n: 47, cputime : 0.4970s, walltime : 0.4970s, avr_max |db|: 2^11.31, max_max db |db|: 2^11.37
+root:                         'default_sieve': gauss,  :: m: 1, n: 48, cputime : 0.6902s, walltime : 0.6904s, avr_max |db|: 2^11.66, max_max db |db|: 2^11.70
+root:                          'default_sieve': bgj1,  :: m: 1, n: 48, cputime : 0.6981s, walltime : 0.6982s, avr_max |db|: 2^11.65, max_max db |db|: 2^11.70
+root:                         'default_sieve': gauss,  :: m: 1, n: 49, cputime : 0.8717s, walltime : 0.8719s, avr_max |db|: 2^11.76, max_max db |db|: 2^11.80
+root:                          'default_sieve': bgj1,  :: m: 1, n: 49, cputime : 0.8081s, walltime : 0.8082s, avr_max |db|: 2^11.77, max_max db |db|: 2^11.80
+root:                         'default_sieve': gauss,  :: m: 1, n: 50, cputime : 1.0726s, walltime : 1.0728s, avr_max |db|: 2^11.98, max_max db |db|: 2^12.02
+root:                          'default_sieve': bgj1,  :: m: 1, n: 50, cputime : 1.0065s, walltime : 1.0067s, avr_max |db|: 2^12.05, max_max db |db|: 2^12.05
+root:                         'default_sieve': gauss,  :: m: 1, n: 51, cputime : 1.5875s, walltime : 1.5878s, avr_max |db|: 2^12.25, max_max db |db|: 2^12.28
+root:                          'default_sieve': bgj1,  :: m: 1, n: 51, cputime : 1.2967s, walltime : 1.2969s, avr_max |db|: 2^12.26, max_max db |db|: 2^12.26
+root:                         'default_sieve': gauss,  :: m: 1, n: 52, cputime : 1.8372s, walltime : 1.8375s, avr_max |db|: 2^12.43, max_max db |db|: 2^12.46
+root:                          'default_sieve': bgj1,  :: m: 1, n: 52, cputime : 1.5964s, walltime : 1.5968s, avr_max |db|: 2^12.47, max_max db |db|: 2^12.47
+root:                         'default_sieve': gauss,  :: m: 1, n: 53, cputime : 2.5235s, walltime : 2.5240s, avr_max |db|: 2^12.63, max_max db |db|: 2^12.68
+root:                          'default_sieve': bgj1,  :: m: 1, n: 53, cputime : 2.1688s, walltime : 2.1694s, avr_max |db|: 2^12.68, max_max db |db|: 2^12.68
+root:                         'default_sieve': gauss,  :: m: 1, n: 54, cputime : 3.3640s, walltime : 3.3649s, avr_max |db|: 2^12.87, max_max db |db|: 2^12.89
+root:                          'default_sieve': bgj1,  :: m: 1, n: 54, cputime : 2.6541s, walltime : 2.6546s, avr_max |db|: 2^12.88, max_max db |db|: 2^12.88
+root:                         'default_sieve': gauss,  :: m: 1, n: 55, cputime : 4.5479s, walltime : 4.5490s, avr_max |db|: 2^13.07, max_max db |db|: 2^13.11
+root:                          'default_sieve': bgj1,  :: m: 1, n: 55, cputime : 3.7450s, walltime : 3.7459s, avr_max |db|: 2^13.09, max_max db |db|: 2^13.09
+root:                         'default_sieve': gauss,  :: m: 1, n: 56, cputime : 5.9035s, walltime : 5.9049s, avr_max |db|: 2^13.32, max_max db |db|: 2^13.35
+root:                          'default_sieve': bgj1,  :: m: 1, n: 56, cputime : 5.0669s, walltime : 5.0683s, avr_max |db|: 2^13.30, max_max db |db|: 2^13.30
+root:                         'default_sieve': gauss,  :: m: 1, n: 57, cputime : 8.1186s, walltime : 8.1204s, avr_max |db|: 2^13.51, max_max db |db|: 2^13.55
+root:                          'default_sieve': bgj1,  :: m: 1, n: 57, cputime : 7.0025s, walltime : 7.0043s, avr_max |db|: 2^13.51, max_max db |db|: 2^13.51
+root:                         'default_sieve': gauss,  :: m: 1, n: 58, cputime :11.3934s, walltime :11.3962s, avr_max |db|: 2^13.74, max_max db |db|: 2^13.76
+root:                          'default_sieve': bgj1,  :: m: 1, n: 58, cputime : 8.4585s, walltime : 8.4601s, avr_max |db|: 2^13.71, max_max db |db|: 2^13.71
+root:                         'default_sieve': gauss,  :: m: 1, n: 59, cputime :15.9473s, walltime :15.9501s, avr_max |db|: 2^14.01, max_max db |db|: 2^14.06
+root:                          'default_sieve': bgj1,  :: m: 1, n: 59, cputime :11.4367s, walltime :11.4393s, avr_max |db|: 2^13.92, max_max db |db|: 2^13.92
+root:                         'default_sieve': gauss,  :: m: 1, n: 60, cputime :21.0917s, walltime :21.0979s, avr_max |db|: 2^14.17, max_max db |db|: 2^14.17
+root:                          'default_sieve': bgj1,  :: m: 1, n: 60, cputime :15.6902s, walltime :15.6949s, avr_max |db|: 2^14.13, max_max db |db|: 2^14.13
+root:                         'default_sieve': gauss,  :: m: 1, n: 61, cputime :29.4500s, walltime :29.4553s, avr_max |db|: 2^14.41, max_max db |db|: 2^14.44
+root:                          'default_sieve': bgj1,  :: m: 1, n: 61, cputime :20.1651s, walltime :20.1695s, avr_max |db|: 2^14.34, max_max db |db|: 2^14.34
+root:                         'default_sieve': gauss,  :: m: 1, n: 62, cputime :37.9389s, walltime :37.9484s, avr_max |db|: 2^14.65, max_max db |db|: 2^14.67
+root:                          'default_sieve': bgj1,  :: m: 1, n: 62, cputime :27.6268s, walltime :27.6356s, avr_max |db|: 2^14.54, max_max db |db|: 2^14.54
+root:                         'default_sieve': gauss,  :: m: 1, n: 63, cputime :60.5886s, walltime :60.6077s, avr_max |db|: 2^14.84, max_max db |db|: 2^14.84
+root:                          'default_sieve': bgj1,  :: m: 1, n: 63, cputime :38.4110s, walltime :38.4228s, avr_max |db|: 2^14.75, max_max db |db|: 2^14.75
+root:                         'default_sieve': gauss,  :: m: 1, n: 64, cputime :82.1041s, walltime :82.1300s, avr_max |db|: 2^15.07, max_max db |db|: 2^15.08
+root:                          'default_sieve': bgj1,  :: m: 1, n: 64, cputime :47.3602s, walltime :47.3740s, avr_max |db|: 2^14.96, max_max db |db|: 2^14.96
+root:                         'default_sieve': gauss,  :: m: 1, n: 65, cputime :110.2384s, walltime :110.2708s, avr_max |db|: 2^15.26, max_max db |db|: 2^15.28
+root:                          'default_sieve': bgj1,  :: m: 1, n: 65, cputime :63.0296s, walltime :63.0490s, avr_max |db|: 2^15.17, max_max db |db|: 2^15.17
+root:                         'default_sieve': gauss,  :: m: 1, n: 66, cputime :150.1057s, walltime :150.1493s, avr_max |db|: 2^15.48, max_max db |db|: 2^15.48
+root:                          'default_sieve': bgj1,  :: m: 1, n: 66, cputime :79.2390s, walltime :79.2602s, avr_max |db|: 2^15.37, max_max db |db|: 2^15.37
+root:                         'default_sieve': gauss,  :: m: 1, n: 67, cputime :216.4057s, walltime :216.4670s, avr_max |db|: 2^15.68, max_max db |db|: 2^15.68
+root:                          'default_sieve': bgj1,  :: m: 1, n: 67, cputime :108.0711s, walltime :108.1058s, avr_max |db|: 2^15.58, max_max db |db|: 2^15.58
+root:                         'default_sieve': gauss,  :: m: 1, n: 68, cputime :293.8716s, walltime :293.9636s, avr_max |db|: 2^15.94, max_max db |db|: 2^15.94
+root:                          'default_sieve': bgj1,  :: m: 1, n: 68, cputime :140.3971s, walltime :140.4343s, avr_max |db|: 2^15.79, max_max db |db|: 2^15.79
+root:                         'default_sieve': gauss,  :: m: 1, n: 69, cputime :395.7486s, walltime :395.8645s, avr_max |db|: 2^16.15, max_max db |db|: 2^16.17
+root:                          'default_sieve': bgj1,  :: m: 1, n: 69, cputime :192.6171s, walltime :192.6776s, avr_max |db|: 2^16.00, max_max db |db|: 2^16.00
+root:                         'default_sieve': gauss,  :: m: 1, n: 70, cputime :540.8989s, walltime :541.0667s, avr_max |db|: 2^16.37, max_max db |db|: 2^16.37
+root:                          'default_sieve': bgj1,  :: m: 1, n: 70, cputime :252.6288s, walltime :252.7163s, avr_max |db|: 2^16.20, max_max db |db|: 2^16.20
+root:                         'default_sieve': gauss,  :: m: 1, n: 71, cputime :771.9054s, walltime :772.2021s, avr_max |db|: 2^16.58, max_max db |db|: 2^16.60
+root:                          'default_sieve': bgj1,  :: m: 1, n: 71, cputime :332.9120s, walltime :333.0152s, avr_max |db|: 2^16.41, max_max db |db|: 2^16.41
+root:                         'default_sieve': gauss,  :: m: 1, n: 72, cputime :1020.2674s, walltime :1020.5468s, avr_max |db|: 2^16.78, max_max db |db|: 2^16.80
+root:                          'default_sieve': bgj1,  :: m: 1, n: 72, cputime :437.2688s, walltime :437.3928s, avr_max |db|: 2^16.62, max_max db |db|: 2^16.62
+root:                         'default_sieve': gauss,  :: m: 1, n: 73, cputime :1426.9915s, walltime :1427.4198s, avr_max |db|: 2^17.00, max_max db |db|: 2^17.00
+root:                          'default_sieve': bgj1,  :: m: 1, n: 73, cputime :622.5373s, walltime :622.7376s, avr_max |db|: 2^16.83, max_max db |db|: 2^16.83
+root:                         'default_sieve': gauss,  :: m: 1, n: 74, cputime :1922.8179s, walltime :1923.4388s, avr_max |db|: 2^17.20, max_max db |db|: 2^17.20
+root:                          'default_sieve': bgj1,  :: m: 1, n: 74, cputime :823.7099s, walltime :823.9818s, avr_max |db|: 2^17.03, max_max db |db|: 2^17.03
+root:                         'default_sieve': gauss,  :: m: 1, n: 75, cputime :2452.8739s, walltime :2453.4944s, avr_max |db|: 2^17.43, max_max db |db|: 2^17.43
+root:                          'default_sieve': bgj1,  :: m: 1, n: 75, cputime :1139.7663s, walltime :1140.2157s, avr_max |db|: 2^17.24, max_max db |db|: 2^17.24
+root:                         'default_sieve': gauss,  :: m: 1, n: 76, cputime :3805.0284s, walltime :3806.4079s, avr_max |db|: 2^17.66, max_max db |db|: 2^17.66
+root:                          'default_sieve': bgj1,  :: m: 1, n: 76, cputime :1317.6768s, walltime :1318.1210s, avr_max |db|: 2^17.45, max_max db |db|: 2^17.45
+root:                         'default_sieve': gauss,  :: m: 1, n: 77, cputime :4848.3219s, walltime :4849.8206s, avr_max |db|: 2^17.87, max_max db |db|: 2^17.89
+root:                          'default_sieve': bgj1,  :: m: 1, n: 77, cputime :1690.0646s, walltime :1690.5987s, avr_max |db|: 2^17.66, max_max db |db|: 2^17.66
+root:                         'default_sieve': gauss,  :: m: 1, n: 78, cputime :6654.7736s, walltime :6656.6785s, avr_max |db|: 2^18.09, max_max db |db|: 2^18.09
+root:                          'default_sieve': bgj1,  :: m: 1, n: 78, cputime :2346.8513s, walltime :2347.5111s, avr_max |db|: 2^17.86, max_max db |db|: 2^17.86
+root:                         'default_sieve': gauss,  :: m: 1, n: 79, cputime :9843.9661s, walltime :9847.2863s, avr_max |db|: 2^18.29, max_max db |db|: 2^18.29
+root:                          'default_sieve': bgj1,  :: m: 1, n: 79, cputime :2911.6346s, walltime :2912.4937s, avr_max |db|: 2^18.07, max_max db |db|: 2^18.07
+root:                         'default_sieve': gauss,  :: m: 1, n: 80, cputime :11829.8184s, walltime :11833.1254s, avr_max |db|: 2^18.52, max_max db |db|: 2^18.52
+root:                          'default_sieve': bgj1,  :: m: 1, n: 80, cputime :3966.1722s, walltime :3967.3243s, avr_max |db|: 2^18.28, max_max db |db|: 2^18.28
+./plain_sieve.py -t 8 -w 8 40 -u 81 -s 1 --sieve gauss bgj1 --log-filename     505978.09s user 107.80s system 315% cpu 44:36:33.48 total
