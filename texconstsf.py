@@ -28,6 +28,11 @@ def load_csv(f, metric):
     return D
 
 def main():
+    data_allpair_g = load_csv("all_pairs", "g")
+    data_allpair_dw = load_csv("all_pairs", "dw")
+    data_allpair_ge19 = load_csv("all_pairs", "ge19")
+    data_allpair_classical= load_csv("all_pairs", "classical")
+
     data_bgj1_g = load_csv("random_buckets", "g")
     data_bgj1_dw = load_csv("random_buckets", "dw")
     data_bgj1_ge19 = load_csv("random_buckets", "ge19")
@@ -42,6 +47,27 @@ def main():
 
     #p("classical784", float(list_decoding(784, metric="classical").log_cost))
     #p("classical1024", float(list_decoding(1024, metric="classical").log_cost))
+
+    for d in sorted(data_allpair_g):
+        if float(data_allpair_classical[d]['log_cost']) - float(data_allpair_g[d]['log_cost']) > 0:
+            p("allpair/g/crossover", d)
+            p("allpair/g/crossover/cost", float(data_allpair_g[d]['log_cost']))
+            p("allpair/g/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
+
+    for d in sorted(data_allpair_dw):
+        if float(data_allpair_classical[d]['log_cost']) - float(data_allpair_dw[d]['log_cost']) > 0:
+            p("allpair/dw/crossover", d)
+            p("allpair/dw/crossover/cost", float(data_allpair_dw[d]['log_cost']))
+            p("allpair/dw/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
+
+    for d in sorted(data_allpair_ge19):
+        if float(data_allpair_classical[d]['log_cost']) - float(data_allpair_ge19[d]['log_cost']) > 0:
+            p("allpair/ge19/crossover", d)
+            p("allpair/ge19/crossover/cost", float(data_allpair_ge19[d]['log_cost']))
+            p("allpair/ge19/crossover/size", float(data_size_bits[d]['log2_size']))
+            break
 
     for d in sorted(data_bgj1_g):
         if float(data_bgj1_classical[d]['log_cost']) - float(data_bgj1_g[d]['log_cost']) > 0:
