@@ -62,7 +62,10 @@ ClassicalCosts = namedtuple("ClassicalCosts", ("label", "gates", "depth"))
 METRICS
 """
 
-ClassicalMetrics = {"classical", "naive_classical"}
+ClassicalMetrics = {
+    "classical",  # gate count
+    "naive_classical",  # query cost
+}
 
 QuantumMetrics = {
     "g",  # gate count
@@ -777,8 +780,8 @@ def list_decoding(
         N = 2 / ((1 - eta) * C(d, mp.pi / 3))
         W0 = W(d, T1, T2, mp.pi / 3)
         filters = 1.0 / W0
-        insert_cost = filters * C(d, T2) * ip_cost
-        query_cost = filters * C(d, T1) * ip_cost
+        insert_cost = filters * C(d, T2) * ip_cost * log2(d) # Alg 4, Line 5
+        query_cost = filters * C(d, T1) * ip_cost * log2(d)  # Alg 4, Line 8
         bucket_size = (filters * C(d, T1)) * (N * C(d, T2))
 
         if metric in ClassicalMetrics:
