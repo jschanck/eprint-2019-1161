@@ -772,7 +772,7 @@ def list_decoding(
     k = k if k else int(MagicConstants.k_div_n * (n - 1))
     theta = theta1 if theta1 else mp.pi / 3
     pr = load_probabilities(d, n - 1, k)
-    ip_cost = MagicConstants.word_size ** 2 * d
+    dimension_d_ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
         eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1) / ngr(pr.d, beta=T1)
@@ -780,8 +780,8 @@ def list_decoding(
         N = 2 / ((1 - eta) * C(d, mp.pi / 3))
         W0 = W(d, T1, T2, mp.pi / 3)
         filters = 1.0 / W0
-        insert_cost = filters * C(d, T2) * ip_cost * log2(d) # Alg 4, Line 5
-        query_cost = filters * C(d, T1) * ip_cost * log2(d)  # Alg 4, Line 8
+        insert_cost = filters * C(d, T2) * dimension_d_ip_cost # Alg 4, Line 5
+        query_cost = filters * C(d, T1) * dimension_d_ip_cost  # Alg 4, Line 8
         bucket_size = (filters * C(d, T1)) * (N * C(d, T2))
 
         if metric in ClassicalMetrics:
