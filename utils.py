@@ -208,7 +208,7 @@ def bulk_cost_estimate(f, D, metric, filename=None, ncores=1, **kwds):
     r = sorted(r)  # relying on "d" being the first entry here
 
     if filename is None:
-        filename = os.path.join("..", "data", "cost-estimate-{f}-{metric}.csv")
+        filename = os.path.join("data", "cost-estimate-{f}-{metric}.csv")
 
     filename = filename.format(f=f.__name__, metric=metric)
 
