@@ -772,7 +772,6 @@ def list_decoding(
     k = k if k else int(MagicConstants.k_div_n * (n - 1))
     theta = theta1 if theta1 else mp.pi / 3
     pr = load_probabilities(d, n - 1, k)
-    ip_cost = MagicConstants.word_size ** 2 * d
 
     def cost(pr, T1):
         eta = 1 - ngr_pf(pr.d, pr.n, pr.k, beta=T1) / ngr(pr.d, beta=T1)
@@ -780,8 +779,27 @@ def list_decoding(
         N = 2 / ((1 - eta) * C(d, mp.pi / 3))
         W0 = W(d, T1, T2, mp.pi / 3)
         filters = 1.0 / W0
-        insert_cost = filters * C(d, T2) * ip_cost * log2(d) # Alg 4, Line 5
-        query_cost = filters * C(d, T1) * ip_cost * log2(d)  # Alg 4, Line 8
+
+        m = log2(d)
+        ip_cost = d/m * MagicConstants.word_size ** 2
+
+        Z = filters**(1/m) # number of vectors per subcode
+
+        # we assume a cost of one word addition (five gates per bit)
+        # + dealing with a pointer into asubcode per iteration node.
+        COST_TREE_ITER    = 5 * MagicConstants.word_size + log2(Z)
+        # we assume a cost of one word operation for the sorting + dealing with a pointer
+        COST_COMPARE_SWAP = MagicConstants.word_size + log2(Z)
+
+        # cost of inner products and cost of sorting the lists
+        preprocess_cost = m * Z * ip_cost  +  m * Z * log2(Z) * COST_COMPARE_SWAP
+
+        # We assume the enumeration procedure from the "Report on the Security of LWE: Improved Dual
+        # Lattice Attack" https://doi.org/10.5281/zenodo.6412487 such that number of enumeration
+        # nodes is a constant multiple of the number of solutions.
+
+        insert_cost = preprocess_cost + filters * C(d , T2) * COST_TREE_ITER
+        query_cost  = preprocess_cost + filters * C(d , T1) * COST_TREE_ITER
         bucket_size = (filters * C(d, T1)) * (N * C(d, T2))
 
         if metric in ClassicalMetrics:
