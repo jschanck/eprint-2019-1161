@@ -19,7 +19,7 @@ def p(name, val):
         print("/consts/{:s}/.initial={:.1f},".format(name, val))
 
 def load_csv(f, metric):
-    filename = os.path.join("..", "data", "cost-estimate-{f}-{metric}.csv")
+    filename = os.path.join("data", "cost-estimate-{f}-{metric}.csv")
     filename = filename.format(f=f, metric=metric)
     with open(filename, "r") as csvfile:
         csvreader = csv.DictReader(csvfile, delimiter=",", quotechar='"',
