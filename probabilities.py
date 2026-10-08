@@ -7,13 +7,35 @@ To run doctests, run: ``PYTHONPATH=`pwd` sage -t probabilities.py``
 """
 from mpmath import mp
 
+import math
+import numpy as np
 from collections import namedtuple
 from functools import partial
 from memoize import memoize
+from scipy.integrate import quad
+from scipy.special import betainc
 
 Probabilities = namedtuple(
     "Probabilities", ("d", "n", "k", "gr", "ngr", "pf", "ngr_pf", "gr_pf", "rho", "eta", "beta", "prec")
 )
+
+
+def _quad(f, a, b, epsrel=1e-10):
+    """
+    Integrate ``f`` over ``[a, b]`` with QUADPACK, using a breakpoint at the peak of ``f``.
+
+    A single ``mp.quad`` call does not converge for these sharply peaked integrands.  Raises
+    ``ArithmeticError`` if QUADPACK's error estimate exceeds the requested relative error.
+    """
+    a, b = float(a), float(b)
+    if b <= a:
+        return mp.mpf(0)
+    xs = np.linspace(a, b, 65)[1:-1]
+    peak = xs[np.argmax([float(f(x)) for x in xs])]
+    r, err = quad(f, a, b, points=[peak], epsabs=0, epsrel=epsrel, limit=200)
+    if not err <= epsrel * abs(r):
+        raise ArithmeticError("quad on [%g, %g] gave %g with error estimate %g" % (a, b, r, err))
+    return mp.mpf(r)
 
 
 def C(d, theta, integrate=False, prec=None):
@@ -110,21 +132,15 @@ def W(d, alpha, beta, theta, integrate=True, prec=None):
         if integrate:
             c = mp.atan(mp.cos(alpha) / (mp.cos(beta) * mp.sin(theta)) - 1 / mp.tan(theta))
 
-            def f_alpha(x):
-                return mp.sin(x) ** (d - 2) * mp.betainc(
-                    (d - 2) / 2,
-                    1 / 2.0,
-                    x2=mp.sin(mp.re(mp.acos(mp.tan(theta - c) / mp.tan(x)))) ** 2,
-                    regularized=True,
-                )
+            e = float(d) - 2
 
-            def f_beta(x):
-                return mp.sin(x) ** (d - 2) * mp.betainc(
-                    (d - 2) / 2, 1 / 2.0, x2=mp.sin(mp.re(mp.acos(mp.tan(c) / mp.tan(x)))) ** 2, regularized=True
-                )
+            def f(x, t):
+                y = max(-1.0, min(1.0, t / math.tan(x)))
+                return math.sin(x) ** e * betainc(e / 2, 0.5, math.sin(math.acos(y)) ** 2)
 
-            S_alpha = mp.quad(f_alpha, (theta - c, alpha), error=True)[0] / 2
-            S_beta = mp.quad(f_beta, (c, beta), error=True)[0] / 2
+            ta, tc = float(mp.tan(theta - c)), float(mp.tan(c))
+            S_alpha = _quad(lambda x: f(x, ta), theta - c, alpha) / 2
+            S_beta = _quad(lambda x: f(x, tc), c, beta) / 2
 
             return (S_alpha + S_beta) * sphere(d - 1) / sphere(d)
         else:
@@ -278,11 +294,11 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
         if ub is None:
             ub = mp.pi
         if beta is None:
-            return mp.quad(lambda x: P(n, k, x) * A(d, x), (lb, ub), error=True)[0]
+            return _quad(lambda x: P(n, k, x) * A(d, x), lb, ub)
         else:
-            num = mp.quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (lb, min(ub, 2 * beta)), error=True)[0]
+            num = _quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), lb, min(ub, 2 * beta))
             if not beta_and:
-                den = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, 2 * beta), error=True)[0]
+                den = _quad(lambda x: W(d, beta, beta, x) * A(d, x), 0, 2 * beta)
             else:
                 den = 1
             return num / den
@@ -309,9 +325,9 @@ def ngr(d, beta=None, prec=None):
             return mp.mpf(1.0)
         else:
             # Pr[¬G ∧ E]
-            num = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
+            num = _quad(lambda x: W(d, beta, beta, x) * A(d, x), 0, mp.pi / 3)
             # Pr[E]
-            den = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, 2 * beta), error=True)[0]
+            den = _quad(lambda x: W(d, beta, beta, x) * A(d, x), 0, 2 * beta)
             # Pr[¬G | E] = Pr[¬G ∧ E]/Pr[E]
             return num / den
 
