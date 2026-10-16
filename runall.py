@@ -15,12 +15,8 @@ import click
 @click.option("--probabilities", default=False, help="compute and store probabilities", type=bool)
 def runall(d_min=64, d_max=1024, d_stepsize=16, jobs=4, probabilities=False):
     if probabilities:
-        D = range(d_min, 256 + 1, d_stepsize)
-        N = [2 ** i - 1 for i in range(5, 16)]
-        _ = bulk_create_and_store_bundles(D, N, BETA=[], ncores=jobs)
-
-        D = range(256 + d_stepsize, d_max + 1, d_stepsize)
-        N = [2 ** i - 1 for i in range(5, 14)]
+        D = range(d_min, d_max + 1, d_stepsize)
+        N = [2 ** i - 1 for i in range(5, 18)]
         _ = bulk_create_and_store_bundles(D, N, BETA=[], ncores=jobs)
 
     bulk_cost_estimate(
