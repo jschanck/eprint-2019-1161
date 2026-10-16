@@ -4,8 +4,9 @@ Useful functions that don't need to go into the appendix of the paper.
 """
 
 from config import MagicConstants
-from probabilities import A, C, P, W, Probabilities
+from probabilities import C, Probabilities, _log_int
 from mpmath import mp
+import math
 from utils import load_probabilities
 import os
 import csv
@@ -28,28 +29,21 @@ def fast_probabilities(d, n, k, beta=None, prec=None):
 
     with mp.workprec(prec):
         if beta is None:
-            S1 = mp.quad(lambda x: P(n, k, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
-            S2 = mp.quad(lambda x: P(n, k, x) * A(d, x), (mp.pi / 3, mp.pi), error=True)[0]
+            S1 = mp.exp(_log_int(d, n, k, None, 0.0, math.pi / 3))
+            S2 = mp.exp(_log_int(d, n, k, None, math.pi / 3, math.pi))
             pf_ = S1 + S2
             ngr_ = C(d, mp.pi / 3)
             ngr_pf_ = S1
         elif beta < mp.pi / 6:
-            pf_ = mp.quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (0, min(mp.pi, 2 * beta)), error=True)[
-                0
-            ]
+            pf_ = mp.exp(_log_int(d, n, k, float(beta), 0.0, math.pi))
             ngr_ = mp.mpf(1.0)
             ngr_pf_ = mp.mpf(1.0)
         else:
-            S1 = mp.quad(
-                lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), (0, min(mp.pi / 3, 2 * beta)), error=True
-            )[0]
-            S2 = mp.quad(
-                lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x),
-                (min(mp.pi / 3, 2 * beta), min(mp.pi, 2 * beta)),
-                error=True,
-            )[0]
-            S3 = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (0, mp.pi / 3), error=True)[0]
-            S4 = mp.quad(lambda x: W(d, beta, beta, x) * A(d, x), (mp.pi / 3, 2 * beta), error=True)[0]
+            beta = float(beta)
+            S1 = mp.exp(_log_int(d, n, k, beta, 0.0, math.pi / 3))
+            S2 = mp.exp(_log_int(d, n, k, beta, math.pi / 3, math.pi))
+            S3 = mp.exp(_log_int(d, None, None, beta, 0.0, math.pi / 3))
+            S4 = mp.exp(_log_int(d, None, None, beta, math.pi / 3, math.pi))
             ngr_ = S3 / (S3 + S4)
             pf_ = (S1 + S2) / (S3 + S4)
             ngr_pf_ = S1 / (S3 + S4)

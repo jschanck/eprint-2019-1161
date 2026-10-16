@@ -135,7 +135,7 @@ def bulk_create_and_store_bundles(
     D,
     N=(128, 256, 512, 1024, 2048, 4096, 8192),
     BETA=(None, mp.pi / 3 - mp.pi / 10, mp.pi / 3, mp.pi / 3 + mp.pi / 10),
-    prec=2 * 53,
+    prec=53,
     ncores=1,
 ):
     """

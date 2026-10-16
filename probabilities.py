@@ -13,29 +13,144 @@ from collections import namedtuple
 from functools import partial
 from memoize import memoize
 from scipy.integrate import quad
-from scipy.special import betainc
+from scipy.special import betainc, betaln, gammaln
 
 Probabilities = namedtuple(
     "Probabilities", ("d", "n", "k", "gr", "ngr", "pf", "ngr_pf", "gr_pf", "rho", "eta", "beta", "prec")
 )
 
 
-def _quad(f, a, b, epsrel=1e-10):
-    """
-    Integrate ``f`` over ``[a, b]`` with QUADPACK, using a breakpoint at the peak of ``f``.
+# Relative error of the integrals.  The inner integrals in ``W`` are more accurate than the outer
+# integrals that use them.
+EPSREL = 1e-10
+EPSREL_INNER = 1e-12
 
-    A single ``mp.quad`` call does not converge for these sharply peaked integrands.  Raises
-    ``ArithmeticError`` if QUADPACK's error estimate exceeds the requested relative error.
+
+def _log_quad(logf, a, b, epsrel=EPSREL, peak=None):
+    """
+    Return log ∫_a^b exp(logf(x)) dx with relative error ``epsrel`` (``-inf`` if ``b <= a``).
+
+    The integrands are far below the smallest double (e.g. ``W(1024, β, β, θ) ≈ 1e-188``), so we divide
+    by their value at the peak and integrate in double precision with QUADPACK, using the peak as a
+    breakpoint.  The peak is found on a grid unless given.  If ``logf(peak)`` is ``-inf`` for a given peak,
+    the integral is zero.
+
+    :raises ArithmeticError: if the integrand vanishes on the grid or QUADPACK's error estimate exceeds
+        ``epsrel`` times the result.
+
     """
     a, b = float(a), float(b)
     if b <= a:
-        return mp.mpf(0)
-    xs = np.linspace(a, b, 65)[1:-1]
-    peak = xs[np.argmax([float(f(x)) for x in xs])]
-    r, err = quad(f, a, b, points=[peak], epsabs=0, epsrel=epsrel, limit=200)
-    if not err <= epsrel * abs(r):
-        raise ArithmeticError("quad on [%g, %g] gave %g with error estimate %g" % (a, b, r, err))
-    return mp.mpf(r)
+        return -math.inf
+    if peak is None:
+        peak = max((a + (b - a) * i / 64 for i in range(1, 64)), key=logf)
+        m = logf(peak)
+        if m == -math.inf:
+            raise ArithmeticError("integrand vanishes on [%g, %g]" % (a, b))
+    else:
+        m = logf(peak)
+        if m == -math.inf:
+            return -math.inf
+    points = [peak] if a < peak < b else None
+    r, err = quad(lambda x: math.exp(logf(x) - m), a, b, points=points, epsabs=0, epsrel=epsrel, limit=200)
+    if not err <= epsrel * r:
+        raise ArithmeticError("integral over [%g, %g] did not converge: %g ± %g" % (a, b, r, err))
+    return m + math.log(r)
+
+
+def _log_betainc(a, b, z):
+    """
+    Return log I_z(a, b), the regularized incomplete beta function, also where it underflows.
+    """
+    if z <= 0:
+        return -math.inf
+    if z >= 1:
+        return 0.0
+    r = betainc(a, b, z)
+    if r > 1e-200:
+        return math.log(r)
+    # I_z(a, b) = z^a⋅(1-z)^b / (a⋅B(a, b)) ⋅ 2F1(a+b, 1; a+1; z), see DLMF 8.17.8.  For such small I_z,
+    # z < a/(a+b) and the terms of the hypergeometric series decrease geometrically.
+    s = t = 1.0
+    j = 0
+    while t > 1e-17 * s:
+        t *= (a + b + j) * z / (a + 1 + j)
+        s += t
+        j += 1
+        if j > 10 ** 6:
+            raise ArithmeticError("I_%g(%g, %g) did not converge" % (z, a, b))
+    return a * math.log(z) + b * math.log1p(-z) - math.log(a) - betaln(a, b) + math.log(s)
+
+
+def _log_sphere_ratio(d):
+    # log(sphere(d-1)/sphere(d)) = log(Γ(d/2) / (√π⋅Γ((d-1)/2)))
+    return gammaln(d / 2) - gammaln((d - 1) / 2) - math.log(math.pi) / 2
+
+
+def _log_A(d, theta):
+    s = math.sin(theta)
+    if s <= 0:
+        return -math.inf
+    return _log_sphere_ratio(d) + (d - 2) * math.log(s)
+
+
+def _log_P(n, k, theta):
+    if k >= n:
+        return 0.0
+    # binomial cdf for 0 <= successes <= k, i.e. I_{1-θ/π}(n-k, k+1)
+    return _log_betainc(n - k, k + 1, 1 - theta / math.pi)
+
+
+@memoize
+def _log_W(d, alpha, beta, theta):
+    if theta >= alpha + beta:
+        return -math.inf
+
+    # c = atan(cos(α)/(cos(β)⋅sin(θ)) - cot(θ)), rewritten to avoid cancellation for small θ
+    num = math.cos(beta) * math.sin(theta / 2) ** 2 - math.sin((alpha + beta) / 2) * math.sin((alpha - beta) / 2)
+    c = math.atan(2 * num / (math.cos(beta) * math.sin(theta)))
+
+    def log_S(c0, h):
+        # log ∫_{c0}^{c0+h} sin(x)^(d-2)⋅I_z((d-2)/2, 1/2) dx with z = 1 - tan(c0)^2/tan(x)^2.  We integrate over
+        # u = x - c0 so that z is accurate when x is close to c0.  Where I_z is close to 1, z is so close to 1 that
+        # 1 - z is inaccurate, so we use I_z(a, b) = 1 - I_{1-z}(b, a) and compute 1 - z directly.  The integrand
+        # increases with x, so it peaks at u = h.
+        def logf(u):
+            x = c0 + u
+            z = math.sin(u) * math.sin(2 * c0 + u) / (math.sin(x) * math.cos(c0)) ** 2
+            if z <= 0:
+                return -math.inf
+            if betainc((d - 2) / 2, 0.5, z) <= 0.5:
+                log_I = _log_betainc((d - 2) / 2, 0.5, z)
+            else:
+                log_I = math.log1p(-betainc(0.5, (d - 2) / 2, (math.tan(c0) / math.tan(x)) ** 2))
+            return (d - 2) * math.log(math.sin(x)) + log_I
+
+        return _log_quad(logf, 0, h, EPSREL_INNER, peak=h)
+
+    log_S_alpha = log_S(theta - c, alpha - (theta - c))
+    log_S_beta = log_S(c, beta - c)
+    return float(np.logaddexp(log_S_alpha, log_S_beta)) - math.log(2) + _log_sphere_ratio(d)
+
+
+@memoize
+def _log_int(d, n, k, beta, lb, ub):
+    """
+    Return log ∫_lb^ub P(n, k, x)⋅W(d, β, β, x)⋅A(d, x) dx, leaving out ``P`` if ``n`` is ``None`` and ``W`` if
+    ``beta`` is ``None``.  Arguments are floats, so that calls with the same arguments hit the cache.
+    """
+
+    def logf(x):
+        r = _log_A(d, x)
+        if n is not None:
+            r += _log_P(n, k, x)
+        if beta is not None:
+            r += _log_W(d, beta, beta, x)
+        return r
+
+    if beta is not None:
+        ub = min(ub, 2 * beta)
+    return _log_quad(logf, lb, ub)
 
 
 def C(d, theta, integrate=False, prec=None):
@@ -58,13 +173,7 @@ def C(d, theta, integrate=False, prec=None):
         theta = mp.mpf(theta)
         d = mp.mpf(d)
         if integrate:
-            r = (
-                1
-                / mp.sqrt(mp.pi)
-                * mp.gamma(d / 2)
-                / mp.gamma((d - 1) / 2)
-                * mp.quad(lambda x: mp.sin(x) ** (d - 2), (0, theta), error=True)[0]
-            )
+            r = mp.exp(_log_quad(lambda x: _log_A(float(d), x), 0, theta))
         else:
             r = mp.betainc((d - 1) / 2, 1 / 2.0, x2=mp.sin(theta) ** 2, regularized=True) / 2
         return r
@@ -107,15 +216,12 @@ def log2_sphere(d):
         return (d / 2 * mp.log(mp.pi, 2) + 1) / mp.gamma(d / 2)
 
 
-@memoize
-def sphere(d):
-    # NOTE: hardcoding 53 here
-    with mp.workprec(53):
-        return 2 ** (d / 2 * mp.log(mp.pi, 2) + 1) / mp.gamma(d / 2)
-
-
-@memoize
 def W(d, alpha, beta, theta, integrate=True, prec=None):
+    """
+    The probability that a random w from the sphere has angle at most α with u and at most β with v,
+    where u and v have angle θ.  The integral is computed in double precision with relative error about
+    ``EPSREL_INNER``.
+    """
     assert alpha <= mp.pi / 2
     assert beta <= mp.pi / 2
     assert 0 >= (mp.cos(beta) - mp.cos(alpha) * mp.cos(theta)) * (mp.cos(beta) * mp.cos(theta) - mp.cos(alpha))
@@ -125,24 +231,8 @@ def W(d, alpha, beta, theta, integrate=True, prec=None):
 
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
-        alpha = mp.mpf(alpha)
-        beta = mp.mpf(beta)
-        theta = mp.mpf(theta)
-        d = mp.mpf(d)
         if integrate:
-            c = mp.atan(mp.cos(alpha) / (mp.cos(beta) * mp.sin(theta)) - 1 / mp.tan(theta))
-
-            e = float(d) - 2
-
-            def f(x, t):
-                y = max(-1.0, min(1.0, t / math.tan(x)))
-                return math.sin(x) ** e * betainc(e / 2, 0.5, math.sin(math.acos(y)) ** 2)
-
-            ta, tc = float(mp.tan(theta - c)), float(mp.tan(c))
-            S_alpha = _quad(lambda x: f(x, ta), theta - c, alpha) / 2
-            S_beta = _quad(lambda x: f(x, tc), c, beta) / 2
-
-            return (S_alpha + S_beta) * sphere(d - 1) / sphere(d)
+            return mp.exp(_log_W(d, float(alpha), float(beta), float(theta)))
         else:
             # Wedge volume formula from Lemma 2.2 of [BDGL16] Anja Becker, Léo Ducas, Nicolas Gama,
             # Thijs Laarhoven. "New directions in nearest neighbor searching with applications to
@@ -162,7 +252,6 @@ def binomial(n, i):
         return mp.binomial(n, i)
 
 
-@memoize
 def P(n, k, theta, prec=None):
     """
     Probability that two vectors with angle θ pass a popcount filter
@@ -174,26 +263,7 @@ def P(n, k, theta, prec=None):
     """
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
-        theta = mp.mpf(theta)
-        # binomial cdf for 0 <= successes <= k
-        # r = 0
-        # for i in range(k):
-        #     r += binomial(n, i) * (theta/mp.pi)**i * (1-theta/mp.pi)**(n-i)
-        # r = mp.betainc(n-k, k+1, x2=1-(theta/mp.pi), regularized=True)
-        # NOTE: This routine uses obscene precision
-
-        def _betainc(a, b, x2):
-            return (
-                x2 ** a
-                * mp.hyp2f1(
-                    a, 1 - b, a + 1, x2, maxprec=2 ** mp.ceil(2 * mp.log(n, 2)), maxterms=2 ** mp.ceil(mp.log(n, 2))
-                )
-                / a
-                / mp.beta(a, b)
-            )
-
-        r = _betainc(n - k, k + 1, x2=1 - (theta / mp.pi))
-        return r
+        return mp.exp(_log_P(n, k, float(theta)))
 
 
 def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
@@ -258,7 +328,7 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
         sage: ngr_pf(80, 128, 128, beta=mp.pi/3)
         mpf('0.0021964683579090904')
         sage: ngr(80, beta=mp.pi/3)
-        mpf('0.0021964683579090904')
+        mpf('0.0021964683571495717')
 
     Pr[Pr_{k,n} ∧ G | C(w,β)]::
 
@@ -275,7 +345,7 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
         sage: gr_pf(80, 128, 128, beta=mp.pi/3)
         mpf('0.99780353164285229')
         sage: gr(80, beta=mp.pi/3)
-        mpf('0.9978035316420909')
+        mpf('0.99780353164285041')
 
     :param d: We consider the sphere `S^{d-1}`
     :param n: Number of popcount vectors
@@ -284,24 +354,23 @@ def pf(d, n, k, beta=None, lb=None, ub=None, beta_and=False, prec=None):
     :param lb: lower bound of integration (see above)
     :param ub: upper bound of integration (see above)
     :param beta_and: return Pr[P_{k,n} ∧ C(w,β)] instead of Pr[P_{k,n} | C(w,β)]
-    :param prec: compute with this precision
+    :param prec: precision of the result; the integrals are computed in double precision with relative
+        error about ``EPSREL``
 
     """
     prec = prec if prec else mp.prec
     with mp.workprec(prec):
-        if lb is None:
-            lb = 0
-        if ub is None:
-            ub = mp.pi
+        lb = 0.0 if lb is None else float(lb)
+        ub = math.pi if ub is None else float(ub)
         if beta is None:
-            return _quad(lambda x: P(n, k, x) * A(d, x), lb, ub)
+            return mp.exp(_log_int(d, n, k, None, lb, ub))
         else:
-            num = _quad(lambda x: P(n, k, x) * W(d, beta, beta, x) * A(d, x), lb, min(ub, 2 * beta))
-            if not beta_and:
-                den = _quad(lambda x: W(d, beta, beta, x) * A(d, x), 0, 2 * beta)
-            else:
-                den = 1
-            return num / den
+            beta = float(beta)
+            num = _log_int(d, n, k, beta, lb, ub)
+            if beta_and:
+                return mp.exp(num)
+            den = _log_int(d, None, None, beta, 0.0, math.pi)
+            return mp.exp(num - den)
 
 
 ngr_pf = partial(pf, lb=0, ub=mp.pi / 3)
@@ -314,7 +383,8 @@ def ngr(d, beta=None, prec=None):
 
     :param d: We consider the sphere `S^{d-1}`
     :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
-    :param prec: compute with this precision
+    :param prec: precision of the result; the integrals are computed in double precision with relative
+        error about ``EPSREL``
 
     """
     prec = prec if prec else mp.prec
@@ -324,12 +394,13 @@ def ngr(d, beta=None, prec=None):
         elif beta < mp.pi / 6:
             return mp.mpf(1.0)
         else:
+            beta = float(beta)
             # Pr[¬G ∧ E]
-            num = _quad(lambda x: W(d, beta, beta, x) * A(d, x), 0, mp.pi / 3)
+            num = _log_int(d, None, None, beta, 0.0, math.pi / 3)
             # Pr[E]
-            den = _quad(lambda x: W(d, beta, beta, x) * A(d, x), 0, 2 * beta)
+            den = _log_int(d, None, None, beta, 0.0, math.pi)
             # Pr[¬G | E] = Pr[¬G ∧ E]/Pr[E]
-            return num / den
+            return mp.exp(num - den)
 
 
 def gr(d, beta=None, prec=None):
@@ -338,7 +409,8 @@ def gr(d, beta=None, prec=None):
 
     :param d: We consider the sphere `S^{d-1}`
     :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
-    :param prec: compute with this precision
+    :param prec: precision of the result; the integrals are computed in double precision with relative
+        error about ``EPSREL``
 
     """
     prec = prec if prec else mp.prec
@@ -354,7 +426,8 @@ def probabilities(d, n, k, beta=None, prec=None):
     :param n: Number of popcount vectors
     :param k: popcount threshold
     :param beta: If not ``None`` vectors are considered in a bucket around some `w` with angle β.
-    :param prec: compute with this precision
+    :param prec: precision of the result; the integrals are computed in double precision with relative
+        error about ``EPSREL``
 
     """
     prec = prec if prec else mp.prec
